@@ -24,11 +24,14 @@ include_directories(${PTGREY_SDK_INCLUDE_DIR})
 
 
 set(MY_HEADER_FILES
-        include/single_calibrate.hpp
+        include/Acquisition.hpp
+        include/operation.h
+        include/DataProcess.h 
+        include/TemplateMatch.h
         )
 
 set(MY_SOURCE_FILES
-        src/Acquisition.cpp
+        src/main.cpp
         )
 
 

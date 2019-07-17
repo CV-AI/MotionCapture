@@ -98,7 +98,10 @@ int DisableHeartbeat(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDev
     return 0;
 }
 #endif
-
+cv::Mat ConvertToCVmat(ImagePtr spinImage);
+cv::Mat AcquireImages(CameraPtr  pCam);
+int ConfigCamera(CameraPtr pCam);
+int PrintDeviceInfo(INodeMap & nodeMap);
 /*
  * This function shows how to convert between Spinnaker ImagePtr container to CVmat container used in OpenCV.
 */
@@ -147,6 +150,15 @@ cv::Mat AcquireImages(CameraPtr  pCam)
         }
         else
         {
+            // size_t width = pResultImage->GetWidth();
+            // size_t height = pResultImage->GetHeight();
+            // size_t channles = pResultImage->GetNumChannels();
+            // cout << "Grabbed image " << ", width = " << width << ", height = " << height << ", channles = "<<channles<<endl;
+            // ostringstream filename;
+
+            // filename << "Acquisition.jpg";
+            // // Save image
+            // pResultImage->Save(filename.str().c_str());
             // Print image information; height and width recorded in pixels
             cvImage = ConvertToCVmat(pResultImage);
             // original image is in RGB format, needs to be converted into BGR(OpenCV uses BGR)
@@ -160,24 +172,17 @@ cv::Mat AcquireImages(CameraPtr  pCam)
         // images) need to be released in order to keep from filling the
         // buffer.
         //
+        return cvImage;
         pResultImage->Release();
     }
     catch (Spinnaker::Exception &e)
     {
         std::cout << "Error during acquiring images: " << e.what() << endl;
     }
-
-    //
-    // End acquisition
-    //
-    // *** NOTES ***
-    // Ending acquisition appropriately helps ensure that devices clean up
-    // properly and do not need to be power-cycled to maintain integrity.
-    //
     return cvImage;
 }
 // This function config the camera settings
-int ConfigCamera(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice)
+int ConfigCamera(CameraPtr pCam)
 {
     int result = 0;
     
@@ -185,29 +190,17 @@ int ConfigCamera(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice)
     
     try
     {
-        //
-        // Set acquisition mode to continuous
-        //
-        // *** NOTES ***
-        // Because the example acquires and saves 10 images, setting acquisition 
-        // mode to continuous lets the example finish. If set to single frame
-        // or multiframe (at a lower number of images), the example would just
-        // hang. This would happen because the example has been written to
-        // acquire 10 images while the camera would have been programmed to 
-        // retrieve less than that.
-        // 
-        // Setting the value of an enumeration node is slightly more complicated
-        // than other node types. Two nodes must be retrieved: first, the 
-        // enumeration node is retrieved from the nodemap; and second, the entry
-        // node is retrieved from the enumeration node. The integer value of the
-        // entry node is then set as the new value of the enumeration node.
-        //
-        // Notice that both the enumeration and the entry nodes are checked for
-        // availability and readability/writability. Enumeration nodes are
-        // generally readable and writable whereas their entry nodes are only
-        // ever readable.
-        // 
-        // Retrieve enumeration node from nodemap
+        INodeMap & nodeMapTLDevice = pCam->GetTLDeviceNodeMap();
+
+        result = PrintDeviceInfo(nodeMapTLDevice);
+
+        // Initialize camera
+        pCam->Init();
+        pCam->BeginAcquisition();
+        // Retrieve GenICam nodemap
+        INodeMap & nodeMap = pCam->GetNodeMap();
+
+
         CEnumerationPtr ptrAcquisitionMode = nodeMap.GetNode("AcquisitionMode");
         if (!IsAvailable(ptrAcquisitionMode) || !IsWritable(ptrAcquisitionMode))
         {
@@ -270,9 +263,7 @@ int ConfigCamera(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice)
         // *** LATER ***
         // Image acquisition must be ended when no more images are needed.
         //
-        // pCam->BeginAcquisition();
 
-        std::cout << "Configing Camera..." << endl;
         
         //
         // Retrieve device serial number for filename
@@ -290,8 +281,6 @@ int ConfigCamera(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice)
 
             std::cout << "Device serial number retrieved as " << deviceSerialNumber << "..." << endl;
         }
-        std::cout << endl;
-
     }
     catch (Spinnaker::Exception &e)
     {
@@ -338,158 +327,5 @@ int PrintDeviceInfo(INodeMap & nodeMap)
         result = -1;
     }
     
-    return result;
-}
-
-// This function acts as the body of the example; please see NodeMapInfo example 
-// for more in-depth comments on setting up cameras.
-int RunSingleCamera(CameraPtr pCam)
-{
-    int result = 0;
-
-    try
-    {
-        // Retrieve TL device nodemap and print device information
-        INodeMap & nodeMapTLDevice = pCam->GetTLDeviceNodeMap();
-
-        result = PrintDeviceInfo(nodeMapTLDevice);
-
-        // Initialize camera
-        pCam->Init();
-        
-        // Retrieve GenICam nodemap
-        INodeMap & nodeMap = pCam->GetNodeMap();
-        // Acquire images
-        ConfigCamera(pCam, nodeMap, nodeMapTLDevice);
-        pCam->BeginAcquisition();
-        cv::Mat image;
-        cv::namedWindow("Camera", 0);
-        while(true)
-        {
-            image = AcquireImages(pCam);
-            cv::imshow("Camera", image);
-            cv::waitKey(1);
-            int key = cv::waitKey(1);
-            if ( key == 27) // press "Esc" to stop
-            {break;}
-        } 
-        // Deinitialize camera
-        pCam->EndAcquisition();
-        pCam->DeInit();
-    }
-    catch (Spinnaker::Exception &e)
-    {
-        std::cout << "Error during RunSingleCamera: " << e.what() << endl;
-        result = -1;
-    }
-
-    return result;
-}
-
-// Example entry point; please see Enumeration example for more in-depth 
-// comments on preparing and cleaning up the system.
-int main(int /*argc*/, char** /*argv*/)
-{
-    // Since this application saves images in the current folder
-    // we must ensure that we have permission to write to this folder.
-    // If we do not have permission, fail right away.
-    FILE *tempFile = fopen("test.txt", "w+");
-    if (tempFile == NULL)
-    {
-        std::cout << "Failed to create file in current folder.  Please check "
-            "permissions."
-            << endl;
-        std::cout << "Press Enter to exit..." << endl;
-        getchar();
-        return -1;
-    }
-    fclose(tempFile);
-    remove("test.txt");
-
-    int result = 0;
-    
-    // Print application build information
-    std::cout << "Application build date: " << __DATE__ << " " << __TIME__ << endl << endl;
-    
-    // Retrieve singleton reference to system object
-    SystemPtr system = System::GetInstance();
-
-    // Print Spinnaker library version
-    const LibraryVersion spinnakerLibraryVersion = system->GetLibraryVersion();
-    std::cout << "Spinnaker library version: "
-        << spinnakerLibraryVersion.major << "."
-        << spinnakerLibraryVersion.minor << "."
-        << spinnakerLibraryVersion.type << "."
-        << spinnakerLibraryVersion.build << endl << endl;
-
-    // Retrieve list of cameras from the system
-    CameraList camList = system->GetCameras();
-
-    unsigned int numCameras = camList.GetSize();
-    
-    std::cout << "Number of cameras detected: " << numCameras << endl << endl;
-    
-    // Finish if there are no cameras
-    if (numCameras == 0)
-    {
-        // Clear camera list before releasing system
-        camList.Clear();
-
-        // Release system
-        system->ReleaseInstance();
-
-        std::cout << "Not enough cameras!" << endl;
-        std::cout << "Done! Press Enter to exit..." << endl;
-        getchar();
-        
-        return -1;
-    }
-
-    //
-    // Create shared pointer to camera
-    //
-    // *** NOTES ***
-    // The CameraPtr object is a shared pointer, and will generally clean itself
-    // up upon exiting its scope. However, if a shared pointer is created in the
-    // same scope that a system object is explicitly released (i.e. this scope),
-    // the reference to the shared point must be broken manually.
-    //
-    // *** LATER ***
-    // Shared pointers can be terminated manually by assigning them to NULL.
-    // This keeps releasing the system from throwing an exception.
-    //
-    CameraPtr pCam = NULL;
-
-    // Run example on each camera
-    for (unsigned int i = 0; i < numCameras; i++)
-    {
-        // Select camera
-        pCam = camList.GetByIndex(i);
-
-        std::cout << endl << "Running example for camera " << i << "..." << endl;
-        
-        // Run example
-        result = result | RunSingleCamera(pCam);
-        
-        std::cout << "Camera " << i << " example complete..." << endl << endl;
-    }
-
-    //
-    // Release reference to the camera
-    //
-    // *** NOTES ***
-    // Had the CameraPtr object been created within the for-loop, it would not
-    // be necessary to manually break the reference because the shared pointer
-    // would have automatically cleaned itself up upon exiting the loop.
-    //
-    pCam = NULL;
-
-    // Clear camera list before releasing system
-    camList.Clear();
-
-    // Release system
-    system->ReleaseInstance();
-    std::cout << endl << "Done! Press Enter to exit..." << endl;
-    getchar();
     return result;
 }
