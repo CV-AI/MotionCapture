@@ -172,7 +172,6 @@ cv::Mat AcquireImages(CameraPtr  pCam)
         // images) need to be released in order to keep from filling the
         // buffer.
         //
-        return cvImage;
         pResultImage->Release();
     }
     catch (Spinnaker::Exception &e)
@@ -194,9 +193,6 @@ int ConfigCamera(CameraPtr pCam)
 
         result = PrintDeviceInfo(nodeMapTLDevice);
 
-        // Initialize camera
-        pCam->Init();
-        pCam->BeginAcquisition();
         // Retrieve GenICam nodemap
         INodeMap & nodeMap = pCam->GetNodeMap();
 
@@ -204,7 +200,7 @@ int ConfigCamera(CameraPtr pCam)
         CEnumerationPtr ptrAcquisitionMode = nodeMap.GetNode("AcquisitionMode");
         if (!IsAvailable(ptrAcquisitionMode) || !IsWritable(ptrAcquisitionMode))
         {
-            std::cout << "Unable to set acquisition mode to continuous (enum retrieval). Aborting..." << endl << endl;
+            std::cout << "Unable to set acquisition mode to continuous (enum retrieval). Aborting..." << "\n" << endl;
             return -1;
         }
         
@@ -212,7 +208,7 @@ int ConfigCamera(CameraPtr pCam)
         CEnumEntryPtr ptrAcquisitionModeContinuous = ptrAcquisitionMode->GetEntryByName("Continuous");
         if (!IsAvailable(ptrAcquisitionModeContinuous) || !IsReadable(ptrAcquisitionModeContinuous))
         {
-            std::cout << "Unable to set acquisition mode to continuous (entry retrieval). Aborting..." << endl << endl;
+            std::cout << "Unable to set acquisition mode to continuous (entry retrieval). Aborting..." << "\n" << endl;
             return -1;
         }
         
@@ -225,20 +221,34 @@ int ConfigCamera(CameraPtr pCam)
         std::cout << "Acquisition mode set to continuous..." << endl;
 
         // Set pixel format to RGB8
-        CEnumerationPtr ptrPixelFormat = nodeMap.GetNode("PixelFormat");
-        if (!IsAvailable(ptrPixelFormat) || !IsWritable(ptrPixelFormat))
-        {
-            std::cout<< "Unable to set Pixel Format to RGB8(enum retrieval). Aborting"<<endl;
-            return -1;
-        }
-        CEnumEntryPtr ptrPixelFormat_RGB8 = ptrPixelFormat->GetEntryByName("RGB8");
-        if ((!IsAvailable(ptrPixelFormat_RGB8)) || !IsReadable(ptrPixelFormat_RGB8))
-        {
-            std::cout<< "Unable to set Pixel Format to RGB8(entry retrieval). Aborting"<<endl;
-            return -1;
-        }
-        int64_t pixelFormatRGB8 = ptrPixelFormat_RGB8->GetValue();
-        ptrPixelFormat->SetIntValue(pixelFormatRGB8);
+        // CEnumerationPtr ptrPixelFormat = nodeMap.GetNode("PixelFormat");
+        // if (!IsAvailable(ptrPixelFormat) || !IsWritable(ptrPixelFormat))
+        // {
+        //     std::cout<< "Unable to get Pixel Format (enum retrieval). Aborting"<<endl;
+        //     std::cout<< IsAvailable(ptrPixelFormat) <<IsWritable(ptrPixelFormat)<<endl;
+        //     return -1;
+        // }
+        // CEnumEntryPtr ptrPixelFormat_RGB8 = ptrPixelFormat->GetEntryByName("RGB8");
+        // if ((!IsAvailable(ptrPixelFormat_RGB8)) || !IsReadable(ptrPixelFormat_RGB8))
+        // {
+        //     std::cout<< "Unable to set Pixel Format to RGB8(entry retrieval). Aborting"<<endl;
+        //     return -1;
+        // }
+        // int64_t pixelFormatRGB8 = ptrPixelFormat_RGB8->GetValue();
+        // use QuickSpin API to set pixelFormatRGB8
+        // ptrPixelFormat->SetIntValue(pixelFormatRGB8);
+        if (pCam->PixelFormat != NULL && pCam->PixelFormat.GetAccessMode() == RW)
+		{
+			pCam->PixelFormat.SetValue(PixelFormat_RGB8);
+
+			cout << "Pixel format set to " << pCam->PixelFormat.GetCurrentEntry()->GetSymbolic() << "..." << endl;
+		}
+		else
+		{
+			cout << "Pixel format not available..." << endl;
+			result = -1;
+		}
+
 
 #ifdef _DEBUG
         cout << endl << endl << "*** DEBUG ***" << endl << endl;
@@ -281,6 +291,7 @@ int ConfigCamera(CameraPtr pCam)
 
             std::cout << "Device serial number retrieved as " << deviceSerialNumber << "..." << endl;
         }
+        
     }
     catch (Spinnaker::Exception &e)
     {
@@ -296,7 +307,7 @@ int PrintDeviceInfo(INodeMap & nodeMap)
 {
     int result = 0;
     
-    std::cout << endl << "*** DEVICE INFORMATION ***" << endl << endl;
+    std::cout << "\n" << "*** DEVICE INFORMATION ***" << "\n" << endl;
 
     try
     {

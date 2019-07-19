@@ -60,55 +60,80 @@ int main(int /*argc*/, char** /*argv*/)
         return -1;
     }
     CameraPtr pCam = NULL;
-
-    // Config each camera
-    for (unsigned int i = 0; i < numCameras; i++)
+    try 
     {
-        // Select camera
-        pCam = camList.GetByIndex(i);
-
-        std::cout << endl << "Configuring Camera " << i << "..." << endl;
-        
-        // Run example
-        result = result | ConfigCamera(pCam);
-        
-        // pCam->BeginAcquisition();
-        std::cout << "Camera " << i << " config complete..." << endl << endl;
-        // pCam =NULL;
-    }
-    // acquire images and do something
-    while(true)
-    {
+        // Config each camera
         for (unsigned int i = 0; i < numCameras; i++)
         {
             // Select camera
             pCam = camList.GetByIndex(i);
-            if(i==0)
+
+            std::cout << endl << "Configuring Camera " << i << "..." << endl;
+            if(pCam->IsInitialized() || pCam->IsStreaming())
             {
-                auto start = std::chrono::system_clock::now();
-                image_l = AcquireImages(pCam);
-                imwrite("image_l.jpg", image_l);
-                
-                auto end = std::chrono::system_clock::now();
-                cout<<image_l.channels()<<" "<<image_l.cols <<endl;
-                std::chrono::duration<double> elapsed_seconds = end-start;
-                cout << "acquire time: "<<elapsed_seconds.count()<<endl;
-                cv::imshow("Left", image_l);
-                cv::waitKey(1);
+                pCam->EndAcquisition();
+                pCam->DeInit();
+                cout <<"Error: during Init Camera(camera is already IsInitialized"<<endl;
             }
-            else
+            pCam->Init();  
+            pCam->BeginAcquisition();
+            // Run example
+            result = result | ConfigCamera(pCam);
+            
+            // pCam->BeginAcquisition();
+            std::cout << "Camera " << i << " config complete..." << endl << endl;
+            // pCam =NULL;
+        }
+        // acquire images and do something
+        bool ACQUISITION = true;
+        while(true)
+        {
+            for (unsigned int i = 0; i < numCameras; i++)
             {
-                cout<<"right"<< endl;
-                image_r = AcquireImages(pCam);
-                cv::imshow("Right", image_r);
-                cv::imwrite("Right.jpg", image_r);
-                cv::waitKey(1);
+                // Select camera
+                pCam = camList.GetByIndex(i);
+                if(i==0)
+                {
+                    auto start = std::chrono::system_clock::now();
+                    image_l = AcquireImages(pCam);
+                    imwrite("image_l.jpg", image_l);
+                    
+                    auto end = std::chrono::system_clock::now();
+                    cout<<image_l.channels()<<" "<<image_l.cols <<endl;
+                    std::chrono::duration<double> elapsed_seconds = end-start;
+                    cout << "acquire time: "<<elapsed_seconds.count()<<endl;
+                    cv::imshow("Left", image_l);
+                    int key = cv::waitKey(1);
+                    if ( key == 27) // press "Esc" to stop
+                    {ACQUISITION = false;}
+
+                }
+                else
+                {
+                    cout<<"right"<< endl;
+                    image_r = AcquireImages(pCam);
+                    cv::imshow("Right", image_r);
+                    cv::imwrite("Right.jpg", image_r);
+                    int key = cv::waitKey(1);
+                    if ( key == 27) // press "Esc" to stop
+                    {ACQUISITION = false;}
+                }
+                // pCam = NULL;
             }
-            // pCam = NULL;
         }
     }
-
-       
+    // sometimes AcquireImages may throw cv::Exception or Spinnaker::Exception
+    // using try catch makes sure we EndAcquisition for each camera
+    catch(Spinnaker::Exception &e)
+    {
+        std::cout << "Error: during print Device information" << e.what() << endl;
+        result = -1;
+    }
+    catch (cv::Exception& e)  
+    {      
+        std::cout << "Error: during print Device information" << e.what() << endl;
+        result = -1;
+    }  
     // EndAcquisition
     for (unsigned int i = 0; i < numCameras; i++)
     {
