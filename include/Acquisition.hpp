@@ -183,15 +183,13 @@ cv::Mat AcquireImages(CameraPtr  pCam)
 // This function config the camera settings
 int ConfigCamera(CameraPtr pCam)
 {
-    int result = 0;
+    bool process_status = true;
     
     std::cout << endl << endl << "*** IMAGE ACQUISITION ***" << endl << endl;
     
     try
     {
         INodeMap & nodeMapTLDevice = pCam->GetTLDeviceNodeMap();
-
-        result = PrintDeviceInfo(nodeMapTLDevice);
 
         // Retrieve GenICam nodemap
         INodeMap & nodeMap = pCam->GetNodeMap();
@@ -244,12 +242,13 @@ int ConfigCamera(CameraPtr pCam)
 			cout << "Pixel format set to " << pCam->PixelFormat.GetCurrentEntry()->GetSymbolic() << "..." << endl;
 		}
 		else
-		{
+		{               
 			cout << "Pixel format not available..." << endl;
-			result = -1;
+			process_status = false;
 		}
-
-
+        // BeginAcquisition after camera pixelFormatRGB8 was set and before printDeviceInfo
+        pCam->BeginAcquisition();
+        process_status = PrintDeviceInfo(nodeMapTLDevice);
 #ifdef _DEBUG
         cout << endl << endl << "*** DEBUG ***" << endl << endl;
         // If using a GEV camera and debugging, should disable heartbeat first to prevent further issues
@@ -272,8 +271,6 @@ int ConfigCamera(CameraPtr pCam)
         // 
         // *** LATER ***
         // Image acquisition must be ended when no more images are needed.
-        //
-
         
         //
         // Retrieve device serial number for filename
@@ -295,17 +292,22 @@ int ConfigCamera(CameraPtr pCam)
     }
     catch (Spinnaker::Exception &e)
     {
-        std::cout << "Error during config Camera: " << e.what() << endl;
-        result = -1;
+        std::cout << "Spinnaker Error during config Camera: " << e.what() << endl;
+        process_status = false;
     }
-    return result;
+    catch (cv::Exception &e)
+    {
+        std::cout << "CV Error during config Camera: " << e.what() << endl;
+        process_status = false;
+    }
+    return process_status;
 }
 // This function prints the device information of the camera from the transport
 // layer; please see NodeMapInfo example for more in-depth comments on printing
 // device information from the nodemap.
 int PrintDeviceInfo(INodeMap & nodeMap)
 {
-    int result = 0;
+    bool process_status = true;
     
     std::cout << "\n" << "*** DEVICE INFORMATION ***" << "\n" << endl;
 
@@ -335,8 +337,8 @@ int PrintDeviceInfo(INodeMap & nodeMap)
     catch (Spinnaker::Exception &e)
     {
         std::cout << "Error: during print Device information" << e.what() << endl;
-        result = -1;
+        process_status = false;
     }
     
-    return result;
+    return process_status;
 }
