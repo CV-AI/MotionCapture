@@ -161,6 +161,7 @@ cv::Mat AcquireImages(CameraPtr  pCam)
             // pResultImage->Save(filename.str().c_str());
             // Print image information; height and width recorded in pixels
             cvImage = ConvertToCVmat(pResultImage);
+            pResultImage->Release();
             // original image is in RGB format, needs to be converted into BGR(OpenCV uses BGR)
             cv::cvtColor(cvImage, cvImage, CV_BGR2RGB);
         }
@@ -172,7 +173,7 @@ cv::Mat AcquireImages(CameraPtr  pCam)
         // images) need to be released in order to keep from filling the
         // buffer.
         //
-        pResultImage->Release();
+
     }
     catch (Spinnaker::Exception &e)
     {
@@ -185,7 +186,7 @@ int ConfigCamera(CameraPtr pCam)
 {
     bool process_status = true;
     
-    std::cout << endl << endl << "*** IMAGE ACQUISITION ***" << endl << endl;
+    std::cout << "\n" << "\n" << "*** IMAGE ACQUISITION ***" << "\n" << endl;
     
     try
     {
@@ -193,7 +194,6 @@ int ConfigCamera(CameraPtr pCam)
 
         // Retrieve GenICam nodemap
         INodeMap & nodeMap = pCam->GetNodeMap();
-
 
         CEnumerationPtr ptrAcquisitionMode = nodeMap.GetNode("AcquisitionMode");
         if (!IsAvailable(ptrAcquisitionMode) || !IsWritable(ptrAcquisitionMode))
@@ -246,9 +246,9 @@ int ConfigCamera(CameraPtr pCam)
 			cout << "Pixel format not available..." << endl;
 			process_status = false;
 		}
-        // BeginAcquisition after camera pixelFormatRGB8 was set and before printDeviceInfo
+        // BeginAcquisition after camera pixelFormat was set and before printDeviceInfo
         pCam->BeginAcquisition();
-        process_status = PrintDeviceInfo(nodeMapTLDevice);
+        process_status = process_status && PrintDeviceInfo(nodeMapTLDevice);
 #ifdef _DEBUG
         cout << endl << endl << "*** DEBUG ***" << endl << endl;
         // If using a GEV camera and debugging, should disable heartbeat first to prevent further issues

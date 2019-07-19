@@ -103,6 +103,13 @@ int main(int /*argc*/, char** /*argv*/)
             else
             {
                 std::cout << "Camera " << i << " config failed..." << "\n" << endl;
+                // Clear camera list before releasing system
+                camList.Clear();
+                // Release system
+                system->ReleaseInstance();
+                std::cout << "Press Any Key to exit..." << endl;
+                getchar();
+                return -1;
             }
             // pCam =NULL;
         }
@@ -116,21 +123,26 @@ int main(int /*argc*/, char** /*argv*/)
                 pCam = camList.GetByIndex(i);
                 if(i==0)
                 {
-                    auto start = std::chrono::system_clock::now();
+                     auto start = std::chrono::system_clock::now();
                     image_l = AcquireImages(pCam);
                     // imwrite("image_l.jpg", image_l);
                     auto end = std::chrono::system_clock::now();
-                    cout<<image_l.channels()<<" "<<image_l.cols <<endl;
                     std::chrono::duration<double> elapsed_seconds = end-start;
                     cout << "acquire time: "<<elapsed_seconds.count()<<endl;
+                }
+                else
+                {
+                    image_r = AcquireImages(pCam);
+                }
+                if(i==0)
+                {
+                    cout<<image_l.channels()<<" "<<image_l.cols <<endl;
                     cv::imshow("Left", image_l);
                 }
                 else
                 {
                     cout<<"right"<< endl;
-                    image_r = AcquireImages(pCam);
                     cv::imshow("Right", image_r);
-                    // cv::imwrite("Right.jpg", image_r);
                 }
                 int key = cv::waitKey(1);
                 if ( key == 27) // press "Esc" to stop
