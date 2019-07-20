@@ -8,11 +8,11 @@
 
 #include<cmath>
 
-class operation
+class Tracker
 {
 	void ColorTheresholding();
 
-	static int CorlorsChosen[4];//��ɫ���,˽�б��������Թ���
+	static int CorlorsChosen[4];
 
 	bool getmomentpointEx=false;
 	
@@ -20,20 +20,25 @@ class operation
 
 
 public:
-	operation();
-	~operation();
+	Tracker();
+	~Tracker();
 
 	static void Mouse_getColor(int event, int x, int y, int, void*);
-	void getContoursAndMoment();
+	bool getContoursAndMoment(int camera_index);
 	//void patternMatch();
 	
 	static cv::Mat image;
 	static bool getColors;
+    cv::Mat ReceivedImages[4]; // Left_Upper, Right_Upper, Right_Lower, Left_Lower
 	cv::Mat detectWindow;
 	cv::Point momentpoints[6];
 	cv::Point detectWindowPosition;
 	int threshold = 50;
-
+	cv::Point currentPos[4][6]; // first entry is the index of image, second entry is the index of marker
+	cv::Point previousPos[4][6];
+	bool InitTracker();
+	bool TrackerIntialized = false;
+	bool UpdateTracker();
 
 };
 

@@ -1,4 +1,4 @@
-#include "operation.h"
+#include "Tracker.hpp"
 
 class DataProcess
 {
@@ -12,7 +12,7 @@ public:
 	DataProcess();
 	~DataProcess();
 
-	void getTime();
+	//void getTime();
 	void mapTo3D();
 	void getJointAngle();
 	cv::Point points[2][6];

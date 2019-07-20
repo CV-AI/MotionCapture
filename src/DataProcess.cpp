@@ -1,4 +1,4 @@
-#include "/DataProcess.h"
+#include "DataProcess.h"
 
 
 
@@ -11,28 +11,28 @@ DataProcess::~DataProcess()
 {
 }
 
-void DataProcess::getTime()
-{
-	SYSTEMTIME sys;
-	GetLocalTime(&sys);
+// void DataProcess::getTime()
+// {
+// 	SYSTEMTIME sys;
+// 	GetLocalTime(&sys);
 
-	if (!gettime)
-	{
-		gettime = true;
-	}
-	else if ((sys.wSecond - second) > 0 || (sys.wSecond - second) == 0)
-	{
-		deltat = sys.wSecond - second + (sys.wMilliseconds - millisecond) / 1000;
-	}
-	else
-	{
-		deltat = sys.wSecond + 60 - second + (sys.wMilliseconds - millisecond) / 1000;
-	}
-	time += deltat;
-	std::cout << "time:  " << time << "  "<<std::endl;
-	second = sys.wSecond;
-	millisecond = sys.wMilliseconds;
-}
+// 	if (!gettime)
+// 	{
+// 		gettime = true;
+// 	}
+// 	else if ((sys.wSecond - second) > 0 || (sys.wSecond - second) == 0)
+// 	{
+// 		deltat = sys.wSecond - second + (sys.wMilliseconds - millisecond) / 1000;
+// 	}
+// 	else
+// 	{
+// 		deltat = sys.wSecond + 60 - second + (sys.wMilliseconds - millisecond) / 1000;
+// 	}
+// 	time += deltat;
+// 	std::cout << "time:  " << time << "  "<<std::endl;
+// 	second = sys.wSecond;
+// 	millisecond = sys.wMilliseconds;
+// }
 
 
 void DataProcess::mapTo3D()
@@ -64,5 +64,5 @@ void DataProcess::getJointAngle()
 
 	std::cout << "_3Dpoints[0].z: " << _3Dpoints[0].z << std::endl;
 	std::cout<< "hip:   " << hip << "   " << "knee:   " << knee << "   " << "ankle:   " << ankle << std::endl;
-	getTime();
+	// getTime();
 }

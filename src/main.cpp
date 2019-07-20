@@ -2,8 +2,7 @@
 #include "SpinGenApi/SpinnakerGenApi.h"
 #include "Acquisition.hpp"
 #include "DataProcess.h"
-#include "operation.h"
-#include "TemplateMatch.h"
+#include "Tracker.hpp"
 #include <iostream>
 #include <sstream>
 #include <chrono>
@@ -20,13 +19,16 @@ using namespace std;
 int main(int /*argc*/, char** /*argv*/)
 {   
     // initialize
-    // operation Operation;
-	// TemplateMatch templ;
-	// DataProcess dataProcess;
+    Tracker tracker;
+	DataProcess dataProcess;
     bool status = true;
-    cv::Mat image_l, image_r;
-    cv::namedWindow("Left",0);
-    cv::namedWindow("Right",0);
+    // let the program know which camera to acquire image from
+    int CameraIndex[4];
+    cv::Mat image_LU, image_RU, image_RL, image_LL; // Left_Upper, Right_Upper, Right_Lower, Left_Lower
+    cv::namedWindow("Left_Upper",0);
+    cv::namedWindow("Right_Upper",0);
+    cv::namedWindow("Right_Lower:", 0);
+    cv::namedWindow("Left_Lower", 0);
     // Retrieve singleton reference to system object
     SystemPtr system = System::GetInstance();
     // Print Spinnaker library version
@@ -67,14 +69,32 @@ int main(int /*argc*/, char** /*argv*/)
         {
             // Select camera
             pCam = camList.GetByIndex(i);
-
+            gcstring deviceSerialNumber;
+            if (pCam->TLDevice.DeviceSerialNumber != NULL && pCam->TLDevice.DeviceSerialNumber.GetAccessMode() == RO)
+            {
+                deviceSerialNumber =  pCam->TLDevice.DeviceSerialNumber.ToString();
+            }
+            else
+            {
+                cout << "Error: DeviceSerialNumber unavailable" << endl;
+            }
+            if (deviceSerialNumber=="18308395")
+            {
+                CameraIndex[0] = i; // image_LU
+            }
+            else if (deviceSerialNumber=="18308397")
+            {
+                CameraIndex[1] = i; // image_LL
+            }
+            else if (deviceSerialNumber == "18308399")
+            {
+                CameraIndex[2] = i; // image_RU                
+            }
+            else if (deviceSerialNumber == "18308391")
+            {
+                CameraIndex[3] = i; // image_RL
+            }
             std::cout << endl << "Configuring Camera " << i << "..." << endl;
-            // if(pCam->IsInitialized() || pCam->IsStreaming())
-            // {
-            //     pCam->EndAcquisition();
-            //     pCam->DeInit();
-            //     cout <<"Error: during Init Camera(camera is already IsInitialized"<<endl;
-            // }
             pCam->Init();  
             // if not IsInitialized, close system 
             // if(!pCam->IsInitialized())
@@ -95,7 +115,6 @@ int main(int /*argc*/, char** /*argv*/)
             // Run example
             status = status && ConfigCamera(pCam);
             
-            // pCam->BeginAcquisition();
             if(status)
             {
                 std::cout << "Camera " << i << " config complete..." << "\n" << endl;
@@ -114,40 +133,36 @@ int main(int /*argc*/, char** /*argv*/)
             // pCam =NULL;
         }
         // acquire images and do something
-        bool ACQUISITION = true;
-        while(ACQUISITION && status)
+        // main part of this program
+        bool first_time = true;
+        cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0);
+        while(status)
         {
+            // acquire images
             for (unsigned int i = 0; i < numCameras; i++)
             {
-                // Select camera
-                pCam = camList.GetByIndex(i);
-                if(i==0)
+                // 注意目前pCam指向的其实是CameraIndex[i]所指的相机，也就是在Config阶段确定的相机
+                // note which camera pCam is pointed into is determined by CameraIndex[i]
+                pCam = camList.GetByIndex(CameraIndex[i]);
+                switch(CameraIndex[i])
                 {
-                     auto start = std::chrono::system_clock::now();
-                    image_l = AcquireImages(pCam);
-                    // imwrite("image_l.jpg", image_l);
-                    auto end = std::chrono::system_clock::now();
-                    std::chrono::duration<double> elapsed_seconds = end-start;
-                    cout << "acquire time: "<<elapsed_seconds.count()<<endl;
-                }
-                else
-                {
-                    image_r = AcquireImages(pCam);
-                }
-                if(i==0)
-                {
-                    cout<<image_l.channels()<<" "<<image_l.cols <<endl;
-                    cv::imshow("Left", image_l);
-                }
-                else
-                {
-                    cout<<"right"<< endl;
-                    cv::imshow("Right", image_r);
+                    case 0: image_LU = AcquireImages(pCam); cv::imshow("Left_Upper", image_LU);break;
+                    case 1: image_LL = AcquireImages(pCam); cv::imshow("Left_Lower", image_LL);break;
+                    case 2: image_RU = AcquireImages(pCam); cv::imshow("Right_Upper", image_RU);break;
+                    case 3: image_RL = AcquireImages(pCam); cv::imshow("Right_Lower", image_RL);break;
                 }
                 int key = cv::waitKey(1);
                 if ( key == 27) // press "Esc" to stop
-                {ACQUISITION = false;}
+                {status = false;}
                 // pCam = NULL;
+            }
+            if(first_time && tracker.getColors)
+            {
+                tracker.InitTracker();
+            }
+            if(tracker.TrackerIntialized)
+            {
+                tracker.UpdateTracker();
             }
         }
         cv::destroyAllWindows();
@@ -156,11 +171,11 @@ int main(int /*argc*/, char** /*argv*/)
     // using try catch makes sure we EndAcquisition for each camera
     catch(Spinnaker::Exception &e)
     {
-        std::cout << "Error: during print Device information" << e.what() << endl;
+        std::cout << "Spinnaker Error: during Running Camera" << e.what() << endl;
     }
     catch (cv::Exception& e)  
     {      
-        std::cout << "Error: during print Device information" << e.what() << endl;
+        std::cout << "CVError: during Running Camera" << e.what() << endl;
     }  
     // EndAcquisition
     for (unsigned int i = 0; i < numCameras; i++)

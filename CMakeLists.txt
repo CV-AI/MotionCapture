@@ -25,13 +25,14 @@ include_directories(${PTGREY_SDK_INCLUDE_DIR})
 
 set(MY_HEADER_FILES
         include/Acquisition.hpp
-        include/operation.h
+        include/Tracker.hpp
         include/DataProcess.h 
-        include/TemplateMatch.h
         )
 
 set(MY_SOURCE_FILES
         src/main.cpp
+        src/DataProcess.cpp
+        src/Tracker.cpp
         )
 
 

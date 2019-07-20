@@ -1,19 +1,21 @@
 // 此文件用于初始化跟踪 
-#include "operation.h"
+#include "Tracker.hpp"
 
 
 
-operation::operation()
+Tracker::Tracker()
 {
 }
 
 
-operation::~operation()
+Tracker::~Tracker()
 {
 }
-
+cv::Mat Tracker:: image;
+int Tracker::CorlorsChosen[4];
+bool Tracker::getColors = false;
 // This function get the color of the marker
-void operation::Mouse_getColor(int event, int x, int y, int, void*)
+void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
 {
 	static cv::Point origin;
 	static cv::Rect selection;
@@ -52,13 +54,12 @@ void operation::Mouse_getColor(int event, int x, int y, int, void*)
 
 		std::cout << "blue green red: " << CorlorsChosen[0] << " " << CorlorsChosen[1] << " " << CorlorsChosen[2] << std::endl;
 	}
+	getColors = true;
 }
 
-cv::Mat operation:: image;
-int operation::CorlorsChosen[4];
-bool operation::getColors = false;
 
-void operation::ColorTheresholding()
+
+void Tracker::ColorTheresholding()
 {
 	for (int j = 0; j < detectWindow.rows; j++)
 	{
@@ -75,8 +76,8 @@ void operation::ColorTheresholding()
 	}
 }
 
-
-void operation:: getContoursAndMoment()
+// This function using contours to get marker position
+bool Tracker:: getContoursAndMoment(int camera_index)
 {	
 	ColorTheresholding();
 	cv::cvtColor(detectWindow, detectWindow, CV_BGRA2GRAY);
@@ -89,17 +90,18 @@ void operation:: getContoursAndMoment()
 	int cmin = 20;
 	int cmax = 120;
 	std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
+	// remove contours that are too small or large
 	while (itc != contours.end())
 	{
 		std::cout << "size: " << itc->size() << std::endl;
 		if (itc->size() < cmin || itc->size() > cmax)
 		{
-			itc = contours.erase(itc);//��ȥ������Ҫ��ĵ�����
+			itc = contours.erase(itc);
 		}
 		else itc++;
 	}
 	std::cout << "The number of contours is " << contours.size() << std::endl;
-	if (contours.size() == 1||contours.size()==2||contours.size()==6)
+	if (contours.size()==6)
 	{
 		std::vector<std::vector<cv::Point>>::const_iterator it = contours.begin();
 
@@ -107,28 +109,42 @@ void operation:: getContoursAndMoment()
 		while (it != contours.end())
 		{
 			cv::Moments mom = cv::moments(cv::Mat(*it++));
-			momentpoints[i] = cv::Point(mom.m10 / mom.m00+detectWindowPosition.x, mom.m01 / mom.m00+ detectWindowPosition.y);
-			cv::circle(image, momentpoints[i], 2, cv::Scalar(0, 255, 0), 2);
+			currentPos[camera_index][i] = cv::Point(mom.m10 / mom.m00+detectWindowPosition.x, mom.m01 / mom.m00+ detectWindowPosition.y);
 			i++;
 		}
-		if (contours.size() == 1)
-		{
-			momentpoints[1] = momentpoints[0];
-		}
-		if (contours.size() == 2 || contours.size() == 6)
-		{
-			if (momentpoints[0].x < momentpoints[1].x)
-			{
-				cv::Point tempP;
-				tempP = momentpoints[0];
-				momentpoints[0] = momentpoints[1];
-				momentpoints[1] = tempP;
-			}
-		}
+		return true;
 	}
 	else
 	{
+		// TODO: 如果使用颜色跟踪失败则需要使用其他跟踪方法
 		std::cout << "Contours numbers are wrong"<<std::endl;
-		return;
+		return false;
+	}
+}
+bool Tracker::InitTracker()
+{
+	bool success = true;
+	for(int i =0; i<4; i++)
+	{
+		// i is the index of camera
+		detectWindow = ReceivedImages[i].clone();
+		success = success && getContoursAndMoment(i);
+	}
+	if(success)
+	{
+		std::cout << "Using Contours to InitTracker success"<<std::endl;
+		TrackerIntialized = true;
+	}
+	return success;
+}
+
+bool Tracker::UpdateTracker()
+{
+	bool success = true;
+	for(int i=0; i<4; i++)
+	{
+		// i is the index of camera
+		detectWindow = ReceivedImages[i].clone();
+		success = success && getContoursAndMoment(i);
 	}
 }
