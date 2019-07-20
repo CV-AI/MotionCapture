@@ -146,10 +146,10 @@ int main(int /*argc*/, char** /*argv*/)
                 pCam = camList.GetByIndex(CameraIndex[i]);
                 switch(CameraIndex[i])
                 {
-                    case 0: image_LU = AcquireImages(pCam); cv::imshow("Left_Upper", image_LU);break;
-                    case 1: image_LL = AcquireImages(pCam); cv::imshow("Left_Lower", image_LL);break;
-                    case 2: image_RU = AcquireImages(pCam); cv::imshow("Right_Upper", image_RU);break;
-                    case 3: image_RL = AcquireImages(pCam); cv::imshow("Right_Lower", image_RL);break;
+                    case 0: tracker.ReceivedImages[0] = AcquireImages(pCam); cv::imshow("Left_Upper", image_LU);break;
+                    case 1: tracker.ReceivedImages[1] = AcquireImages(pCam); cv::imshow("Left_Lower", image_LL);break;
+                    case 2: tracker.ReceivedImages[2] = AcquireImages(pCam); cv::imshow("Right_Upper", image_RU);break;
+                    case 3: tracker.ReceivedImages[3] = AcquireImages(pCam); cv::imshow("Right_Lower", image_RL);break;
                 }
                 int key = cv::waitKey(1);
                 if ( key == 27) // press "Esc" to stop
@@ -159,10 +159,12 @@ int main(int /*argc*/, char** /*argv*/)
             if(first_time && tracker.getColors)
             {
                 tracker.InitTracker();
+                dataProcess.exportGaitData();
             }
             if(tracker.TrackerIntialized)
             {
                 tracker.UpdateTracker();
+                dataProcess.exportGaitData();
             }
         }
         cv::destroyAllWindows();

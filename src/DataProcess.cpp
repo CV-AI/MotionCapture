@@ -1,5 +1,6 @@
 #include "DataProcess.h"
-
+#include <algorithm>
+#include <iostream>
 
 
 DataProcess::DataProcess()
@@ -44,9 +45,9 @@ void DataProcess::mapTo3D()
 
 	for (int i = 0; i < 6; i++)
 	{
-		_3Dpoints[i].x=(2*points[0][i].x-cx)*T/(2*(points[0][i].x-points[1][i].x));
-		_3Dpoints[i].y= -(2 * points[0][i].y - cy)*T / (2 * (points[0][i].x - points[1][i].x));
-		_3Dpoints[i].z = f*T / (2 * (points[0][i].x - points[1][i].x));
+		MarkerPos3D[i].x=(2*points[0][i].x-cx)*T/(2*(points[0][i].x-points[1][i].x));
+		MarkerPos3D[i].y= -(2 * points[0][i].y - cy)*T / (2 * (points[0][i].x - points[1][i].x));
+		MarkerPos3D[i].z = f*T / (2 * (points[0][i].x - points[1][i].x));
 	}
 }
 
@@ -54,15 +55,15 @@ void DataProcess::mapTo3D()
 void DataProcess::getJointAngle()
 {
 	mapTo3D();
-	thigh.x = _3Dpoints[4].x - _3Dpoints[5].x; thigh.y = _3Dpoints[4].y - _3Dpoints[5].y;
-	shank.x = _3Dpoints[2].x - _3Dpoints[3].x; shank.y = _3Dpoints[2].y - _3Dpoints[3].y;
-	foot.x = _3Dpoints[0].x - _3Dpoints[1].x; foot.y = _3Dpoints[0].y - _3Dpoints[1].y;
+	thigh.x = MarkerPos3D[4].x - MarkerPos3D[5].x; thigh.y = MarkerPos3D[4].y - MarkerPos3D[5].y;
+	shank.x = MarkerPos3D[2].x - MarkerPos3D[3].x; shank.y = MarkerPos3D[2].y - MarkerPos3D[3].y;
+	foot.x = MarkerPos3D[0].x - MarkerPos3D[1].x; foot.y = MarkerPos3D[0].y - MarkerPos3D[1].y;
 
 	hip = -((atan(thigh.x / abs(thigh.y))) / pi) * 180;
 	knee = -((acos((thigh.x*shank.x + thigh.y*shank.y) / (sqrt(thigh.x*thigh.x + thigh.y*thigh.y)*sqrt(shank.x*shank.x + shank.y*shank.y)))) / pi) * 180;
 	ankle = ((acos((foot.x*shank.x + foot.y*shank.y) / (sqrt(foot.x*foot.x + foot.y*foot.y)*sqrt(shank.x*shank.x + shank.y*shank.y)))) / pi) * 180 - 90;
 
-	std::cout << "_3Dpoints[0].z: " << _3Dpoints[0].z << std::endl;
+	std::cout << "MarkerPos3D[0].z: " << MarkerPos3D[0].z << std::endl;
 	std::cout<< "hip:   " << hip << "   " << "knee:   " << knee << "   " << "ankle:   " << ankle << std::endl;
 	// getTime();
 }

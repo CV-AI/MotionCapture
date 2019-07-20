@@ -1,6 +1,6 @@
 // 此文件用于初始化跟踪 
 #include "Tracker.hpp"
-
+#include <algorithm>
 
 
 Tracker::Tracker()
@@ -129,6 +129,7 @@ bool Tracker::InitTracker()
 		// i is the index of camera
 		detectWindow = ReceivedImages[i].clone();
 		success = success && getContoursAndMoment(i);
+		success = success && RectifyMarkerPos();
 	}
 	if(success)
 	{
@@ -146,5 +147,28 @@ bool Tracker::UpdateTracker()
 		// i is the index of camera
 		detectWindow = ReceivedImages[i].clone();
 		success = success && getContoursAndMoment(i);
+		success = success && RectifyMarkerPos(i);
 	}
+	return success;
+}
+
+// use bubble_sort to rectify Marker Position, from small to big
+// from top of image to bottom of image
+bool Tracker::RectifyMarkerPos(int camera_index)
+{
+	int i, j, change=1;
+    int len = 6; // length of list to be bubble_sorted
+	for (i = 0; i < len - 1 && change!=0; i++)
+    {
+        change=0;
+		for (j = 0; j < len - 1 - i; j++)
+		{
+			if (currentPos[camera_index][j].y > currentPos[camera_index][j + 1].y)
+			{
+			std::swap(currentPos[camera_index][j], currentPos[camera_index][j + 1]);
+			change = 1;
+			}
+		}
+			
+    }
 }

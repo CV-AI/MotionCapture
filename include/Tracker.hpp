@@ -1,7 +1,7 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
-
+#include <opencv2/gpu/gpu.hpp>
 #include<iostream>
 
 #include<vector>
@@ -39,6 +39,7 @@ public:
 	bool InitTracker();
 	bool TrackerIntialized = false;
 	bool UpdateTracker();
+	bool RectifyMarkerPos(int);
 
 };
 
