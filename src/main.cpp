@@ -159,13 +159,13 @@ int main(int /*argc*/, char** /*argv*/)
             }
             if(first_time && tracker.getColors)
             {
-                tracker.InitTracker();
+                tracker.InitTracker(tracker.ByDetection);
                 dataProcess.exportGaitData();
             }
             if(tracker.TrackerIntialized)
             {
                 memcpy(tracker.previousPos, tracker.currentPos, sizeof(tracker.currentPos));
-                tracker.UpdateTracker();
+                tracker.UpdateTracker(tracker.ByDetection);
                 dataProcess.exportGaitData();
             }
         }

@@ -70,5 +70,7 @@ void DataProcess::getJointAngle()
 
 bool DataProcess::exportGaitData()
 {
-	
+	bool success = true;
+	// Insert your code here
+	return success;
 }

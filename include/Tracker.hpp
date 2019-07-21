@@ -20,7 +20,8 @@ class Tracker
 public:
 	Tracker();
 	~Tracker();
-
+	// enable different tracker 
+	enum TrackerType{ByDetection, CV_KCF};
 	static void Mouse_getColor(int event, int x, int y, int, void*);
 	bool getContoursAndMoment(int camera_index);
 	//void patternMatch();
@@ -37,10 +38,9 @@ public:
 	cv::Point predictPos; // the predicted position of marker in current frame
 	int detectWindowDimX = 50; // the dimension of detectWindow
 	int detectWindowDimY = 50; 
-	bool InitTracker();
+	bool InitTracker(TrackerType);
 	bool TrackerIntialized = false;
-	bool UpdateTracker();
+	bool UpdateTracker(TrackerType);
 	bool RectifyMarkerPos(int);
-
 };
 

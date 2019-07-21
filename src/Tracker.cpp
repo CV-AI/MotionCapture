@@ -123,25 +123,35 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 		return false;
 	}
 }
-bool Tracker::InitTracker()
+
+// 为了方便使用，初始化tracker时都应该实际使用ByDetection（使用其他的tracker都需要自行画出框图）
+bool Tracker::InitTracker(TrackerType tracker_type)
 {
 	bool success = true;
-	for(int i =0; i<4; i++)
+	switch(tracker_type)
 	{
-		// i is the index of camera
-		detectWindow = ReceivedImages[i].clone();
-		success = success && getContoursAndMoment(i);
-		success = success && RectifyMarkerPos(i);
+		case ByDetection: 
+		for(int i =0; i<4; i++)
+		{
+			// i is the index of camera
+			detectWindow = ReceivedImages[i].clone();
+			success = success && getContoursAndMoment(i);
+			success = success && RectifyMarkerPos(i);
+		}	
+		if(success)
+		{
+			std::cout << "Using Contours to InitTracker succeed"<<std::endl;
+			TrackerIntialized = true;
+		}
+		break;
+		default:
+		break;
 	}
-	if(success)
-	{
-		std::cout << "Using Contours to InitTracker succeed"<<std::endl;
-		TrackerIntialized = true;
-	}
+	
 	return success;
 }
 
-bool Tracker::UpdateTracker()
+bool Tracker::UpdateTracker(TrackerType tracker_type)
 {
 	bool success = true;
 	// using contours to update tracker 
