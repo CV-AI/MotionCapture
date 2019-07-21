@@ -67,3 +67,8 @@ void DataProcess::getJointAngle()
 	std::cout<< "hip:   " << hip << "   " << "knee:   " << knee << "   " << "ankle:   " << ankle << std::endl;
 	// getTime();
 }
+
+bool DataProcess::exportGaitData()
+{
+	
+}

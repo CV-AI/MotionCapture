@@ -14,6 +14,7 @@ Tracker::~Tracker()
 cv::Mat Tracker:: image;
 int Tracker::CorlorsChosen[4];
 bool Tracker::getColors = false;
+// initialize with whole image, so detectWindowPosition is (0, 0)
 // This function get the color of the marker
 void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
 {
@@ -101,7 +102,7 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 		else itc++;
 	}
 	std::cout << "The number of contours is " << contours.size() << std::endl;
-	if (contours.size()==6)
+	if (contours.size()==6 || contours.size()==1)
 	{
 		std::vector<std::vector<cv::Point>>::const_iterator it = contours.begin();
 
@@ -109,6 +110,7 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 		while (it != contours.end())
 		{
 			cv::Moments mom = cv::moments(cv::Mat(*it++));
+			// 因为检测窗口不是全部画面，所以要加上检测窗口在全部画面的位置
 			currentPos[camera_index][i] = cv::Point(mom.m10 / mom.m00+detectWindowPosition.x, mom.m01 / mom.m00+ detectWindowPosition.y);
 			i++;
 		}
@@ -129,11 +131,11 @@ bool Tracker::InitTracker()
 		// i is the index of camera
 		detectWindow = ReceivedImages[i].clone();
 		success = success && getContoursAndMoment(i);
-		success = success && RectifyMarkerPos();
+		success = success && RectifyMarkerPos(i);
 	}
 	if(success)
 	{
-		std::cout << "Using Contours to InitTracker success"<<std::endl;
+		std::cout << "Using Contours to InitTracker succeed"<<std::endl;
 		TrackerIntialized = true;
 	}
 	return success;
@@ -142,12 +144,22 @@ bool Tracker::InitTracker()
 bool Tracker::UpdateTracker()
 {
 	bool success = true;
+	// using contours to update tracker 
 	for(int i=0; i<4; i++)
 	{
 		// i is the index of camera
 		detectWindow = ReceivedImages[i].clone();
-		success = success && getContoursAndMoment(i);
-		success = success && RectifyMarkerPos(i);
+		// j is the index of marker
+		for(int j=0; j<6; j++)
+		{
+			// use previous position of marker as the center of detectWindowPosition
+			// and move detectWindowPosition to left_upper corner
+			detectWindowPosition = previousPos[i][j] - cv::Point(int(detectWindowDimX/2), int(detectWindowDimY/2));
+			cv::Rect detectRect(detectWindowPosition.x, detectWindowPosition.y, detectWindowDimX, detectWindowDimY);
+			detectWindow = detectWindow(detectRect);
+			success = success && getContoursAndMoment(i);
+			success = success && RectifyMarkerPos(i);
+		}		
 	}
 	return success;
 }
@@ -172,3 +184,4 @@ bool Tracker::RectifyMarkerPos(int camera_index)
 			
     }
 }
+

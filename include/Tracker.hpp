@@ -1,7 +1,7 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
-#include <opencv2/gpu/gpu.hpp>
+// #include <opencv2/gpu/gpu.hpp>
 #include<iostream>
 
 #include<vector>
@@ -17,8 +17,6 @@ class Tracker
 	bool getmomentpointEx=false;
 	
 	cv::Point speed;
-
-
 public:
 	Tracker();
 	~Tracker();
@@ -32,10 +30,13 @@ public:
     cv::Mat ReceivedImages[4]; // Left_Upper, Right_Upper, Right_Lower, Left_Lower
 	cv::Mat detectWindow;
 	cv::Point momentpoints[6];
-	cv::Point detectWindowPosition;
+	cv::Point detectWindowPosition = cv::Point(0, 0);
 	int threshold = 50;
 	cv::Point currentPos[4][6]; // first entry is the index of image, second entry is the index of marker
 	cv::Point previousPos[4][6];
+	cv::Point predictPos; // the predicted position of marker in current frame
+	int detectWindowDimX = 50; // the dimension of detectWindow
+	int detectWindowDimY = 50; 
 	bool InitTracker();
 	bool TrackerIntialized = false;
 	bool UpdateTracker();

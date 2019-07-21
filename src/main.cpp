@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <chrono>
+#include <cstring>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -163,6 +164,7 @@ int main(int /*argc*/, char** /*argv*/)
             }
             if(tracker.TrackerIntialized)
             {
+                memcpy(tracker.previousPos, tracker.currentPos, sizeof(tracker.currentPos));
                 tracker.UpdateTracker();
                 dataProcess.exportGaitData();
             }
