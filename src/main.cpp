@@ -81,19 +81,19 @@ int main(int /*argc*/, char** /*argv*/)
             }
             if (deviceSerialNumber=="18308395")
             {
-                CameraIndex[0] = i; // image_LU
+                CameraIndex[i] = 0; // image_LU
             }
             else if (deviceSerialNumber=="18308397")
             {
-                CameraIndex[1] = i; // image_LL
+                CameraIndex[i] = 1; // image_LL
             }
-            else if (deviceSerialNumber == "18308399")
+            else if (deviceSerialNumber == "18308393")
             {
-                CameraIndex[2] = i; // image_RU                
+                CameraIndex[i] = 2; // image_RU                
             }
             else if (deviceSerialNumber == "18308391")
             {
-                CameraIndex[3] = i; // image_RL
+                CameraIndex[i] = 3; // image_RL
             }
             std::cout << endl << "Configuring Camera " << i << "..." << endl;
             pCam->Init();  
@@ -144,20 +144,33 @@ int main(int /*argc*/, char** /*argv*/)
             {
                 // 注意目前pCam指向的其实是CameraIndex[i]所指的相机，也就是在Config阶段确定的相机
                 // note which camera pCam is pointed into is determined by CameraIndex[i]
-                pCam = camList.GetByIndex(CameraIndex[i]);
+                pCam = camList.GetByIndex(i);
+				auto start = std::chrono::system_clock::now();
                 switch(CameraIndex[i])
                 {
-                    case 0: tracker.ReceivedImages[0] = AcquireImages(pCam); cv::imshow("Left_Upper", image_LU);break;
-                    case 1: tracker.ReceivedImages[1] = AcquireImages(pCam); cv::imshow("Left_Lower", image_LL);break;
-                    case 2: tracker.ReceivedImages[2] = AcquireImages(pCam); cv::imshow("Right_Upper", image_RU);break;
-                    case 3: tracker.ReceivedImages[3] = AcquireImages(pCam); cv::imshow("Right_Lower", image_RL);break;
+					case 0: tracker.ReceivedImages[0] = AcquireImages(pCam);
+						cv::resize(tracker.ReceivedImages[0], image_LU, cv::Size(512, 512));
+						tracker.image = image_LU.clone(); // tracker.image is used for select color
+						cv::imshow("Left_Upper", image_LU); break; // show resized images to save time
+					case 1: tracker.ReceivedImages[1] = AcquireImages(pCam); 
+						cv::resize(tracker.ReceivedImages[1], image_LL, cv::Size(512, 512));
+						cv::imshow("Left_Lower", image_LL); break;
+					case 2: tracker.ReceivedImages[2] = AcquireImages(pCam);
+						cv::resize(tracker.ReceivedImages[2], image_RU, cv::Size(512, 512)); 
+						cv::imshow("Right_Upper", image_RU); break;
+					case 3: tracker.ReceivedImages[3] = AcquireImages(pCam);
+						cv::resize(tracker.ReceivedImages[3], image_RL, cv::Size(512, 512)); 
+						cv::imshow("Right_Lower", image_RL); break;
                 }
+				auto stop = std::chrono::system_clock::now();
+				std::chrono::duration<double> elapsed_seconds = stop - start;
+				std::cout << "Acquiring time on camera " << CameraIndex[i]<<": " <<elapsed_seconds.count() <<std::endl;
                 int key = cv::waitKey(1);
                 if ( key == 27) // press "Esc" to stop
                 {status = false;}
                 // pCam = NULL;
             }
-            if(first_time && tracker.getColors)
+            /*if(first_time && tracker.getColors)
             {
                 tracker.InitTracker(tracker.ByDetection);
                 dataProcess.exportGaitData();
@@ -167,9 +180,10 @@ int main(int /*argc*/, char** /*argv*/)
                 memcpy(tracker.previousPos, tracker.currentPos, sizeof(tracker.currentPos));
                 tracker.UpdateTracker(tracker.ByDetection);
                 dataProcess.exportGaitData();
-            }
+            }*/
         }
         cv::destroyAllWindows();
+		pCam = NULL;
     }
     // sometimes AcquireImages may throw cv::Exception or Spinnaker::Exception
     // using try catch makes sure we EndAcquisition for each camera

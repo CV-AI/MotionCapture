@@ -30,32 +30,16 @@ void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
 		selection.y = MIN(y, origin.y);
 		selection.width = abs(x - origin.x);
 		selection.height = abs(y - origin.y);
-		getColors = true;
 		std::cout << "Color area has been selected!" << std::endl;
 		std::cout << "Color has been selected" << std::endl;
-		
-		int SumOfChannelOneColor = 0, SumOfChannelTwoColor = 0;
-		int SumOfChannelThreeColor = 0, SumOfChannelFourColor = 0;
-		for (int j = selection.y; j < selection.y + selection.height; j++)
-		{
-			uchar*data = image.ptr<uchar>(j);
-			for (int i = selection.x; i < selection.x + selection.width; i++)
-			{
-				SumOfChannelOneColor += data[i * 4];
-				SumOfChannelTwoColor += data[i * 4 + 1];
-				SumOfChannelThreeColor += data[i * 4 + 2];
-				//SumOfChannelFourColor += data[i * 4 + 3];
-			}
-		}
-		int SumOfPixels = selection.width*selection.height;
-		CorlorsChosen[0] = static_cast<int>(SumOfChannelOneColor / SumOfPixels);
-		CorlorsChosen[1] = static_cast<int>(SumOfChannelTwoColor / SumOfPixels);
-		CorlorsChosen[2] = static_cast<int>(SumOfChannelThreeColor / SumOfPixels);
-		//CorlorsChosen[3] = static_cast<int>(SumOfChannelFourColor / SumOfPixels);
-
+		std::vector<cv::Mat> matChannels(3);
+		cv::split(image, matChannels);
+		CorlorsChosen[0] = static_cast<int>(cv::mean(matChannels[0]).val[0]);
+		CorlorsChosen[1] = static_cast<int>(cv::mean(matChannels[1]).val[0]);
+		CorlorsChosen[2] = static_cast<int>(cv::mean(matChannels[2]).val[0]);
+		getColors = true;
 		std::cout << "blue green red: " << CorlorsChosen[0] << " " << CorlorsChosen[1] << " " << CorlorsChosen[2] << std::endl;
 	}
-	getColors = true;
 }
 
 
@@ -191,7 +175,7 @@ bool Tracker::RectifyMarkerPos(int camera_index)
 			change = 1;
 			}
 		}
-			
     }
+	return true;
 }
 

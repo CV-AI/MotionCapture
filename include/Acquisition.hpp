@@ -112,8 +112,7 @@ cv::Mat ConvertToCVmat(ImagePtr spinImage)
     unsigned int rowsize = spinImage->GetWidth();
     unsigned int colsize = spinImage->GetHeight();
     //image data contains padding. When allocating Mat container size, you need to account for the X,Y image data padding.
-    cv::Mat cvimg = cv::Mat(colsize + YPadding, rowsize + XPadding, CV_8UC3, spinImage->GetData(), spinImage->GetStride());
-    return cvimg;
+    return cv::Mat(colsize + YPadding, rowsize + XPadding, CV_8UC3, spinImage->GetData(), spinImage->GetStride());
 }
 // This function acquires images from a device.
 cv::Mat AcquireImages(CameraPtr  pCam)
@@ -138,7 +137,7 @@ cv::Mat AcquireImages(CameraPtr  pCam)
         //
         ImagePtr pResultImage = pCam->GetNextImage();
 
-        //
+         //
         // Ensure image completion
         //
         if (pResultImage->IsIncomplete())
@@ -150,30 +149,11 @@ cv::Mat AcquireImages(CameraPtr  pCam)
         }
         else
         {
-            // size_t width = pResultImage->GetWidth();
-            // size_t height = pResultImage->GetHeight();
-            // size_t channles = pResultImage->GetNumChannels();
-            // cout << "Grabbed image " << ", width = " << width << ", height = " << height << ", channles = "<<channles<<endl;
-            // ostringstream filename;
-
-            // filename << "Acquisition.jpg";
-            // // Save image
-            // pResultImage->Save(filename.str().c_str());
-            // Print image information; height and width recorded in pixels
             cvImage = ConvertToCVmat(pResultImage);
             pResultImage->Release();
             // original image is in RGB format, needs to be converted into BGR(OpenCV uses BGR)
             cv::cvtColor(cvImage, cvImage, CV_BGR2RGB);
         }
-
-        // Release image
-        //
-        // *** NOTES ***
-        // Images retrieved directly from the camera (i.e. non-converted
-        // images) need to be released in order to keep from filling the
-        // buffer.
-        //
-
     }
     catch (Spinnaker::Exception &e)
     {
@@ -218,23 +198,15 @@ int ConfigCamera(CameraPtr pCam)
         
         std::cout << "Acquisition mode set to continuous..." << endl;
 
-        // Set pixel format to RGB8
-        // CEnumerationPtr ptrPixelFormat = nodeMap.GetNode("PixelFormat");
-        // if (!IsAvailable(ptrPixelFormat) || !IsWritable(ptrPixelFormat))
-        // {
-        //     std::cout<< "Unable to get Pixel Format (enum retrieval). Aborting"<<endl;
-        //     std::cout<< IsAvailable(ptrPixelFormat) <<IsWritable(ptrPixelFormat)<<endl;
-        //     return -1;
-        // }
-        // CEnumEntryPtr ptrPixelFormat_RGB8 = ptrPixelFormat->GetEntryByName("RGB8");
-        // if ((!IsAvailable(ptrPixelFormat_RGB8)) || !IsReadable(ptrPixelFormat_RGB8))
-        // {
-        //     std::cout<< "Unable to set Pixel Format to RGB8(entry retrieval). Aborting"<<endl;
-        //     return -1;
-        // }
-        // int64_t pixelFormatRGB8 = ptrPixelFormat_RGB8->GetValue();
-        // use QuickSpin API to set pixelFormatRGB8
-        // ptrPixelFormat->SetIntValue(pixelFormatRGB8);
+		// Turn off auto exposure
+		pCam->ExposureAuto.SetValue(Spinnaker::ExposureAutoEnums::ExposureAuto_Off);
+		//Set exposure mode to "Timed"
+		pCam->ExposureMode.SetValue(Spinnaker::ExposureModeEnums::ExposureMode_Timed);
+		//Set absolute value of shutter exposure time to microseconds
+		pCam->ExposureTime.SetValue(10000);
+		/*pCam->AasRoiEnable.SetValue(Spinnaker::AutoAlgorithmSelectorEnums::AutoAlgorithmSelector_Ae);
+		pCam->AasRoiHeight.SetValue(1024);
+		pCam->AasRoiWidth.SetValue(1024);*/
         if (pCam->PixelFormat != NULL && pCam->PixelFormat.GetAccessMode() == RW)
 		{
 			pCam->PixelFormat.SetValue(PixelFormat_RGB8);
@@ -244,6 +216,90 @@ int ConfigCamera(CameraPtr pCam)
 		else
 		{               
 			cout << "Pixel format not available..." << endl;
+			process_status = false;
+		}
+		// Apply minimum to offset X
+		//
+		// *** NOTES ***
+		// Numeric nodes have both a minimum and maximum. A minimum is retrieved
+		// with the method GetMin(). Sometimes it can be important to check 
+		// minimums to ensure that your desired value is within range.
+		//
+		if (IsReadable(pCam->OffsetX) && IsWritable(pCam->OffsetX))
+		{
+			pCam->OffsetX.SetValue(pCam->OffsetX.GetMin());
+
+			cout << "Offset X set to " << pCam->OffsetX.GetValue() << "..." << endl;
+		}
+		else
+		{
+			cout << "Offset X not available..." << endl;
+			process_status = false;
+		}
+
+		//
+		// Apply minimum to offset Y
+		// 
+		// *** NOTES ***
+		// It is often desirable to check the increment as well. The increment
+		// is a number of which a desired value must be a multiple. Certain
+		// nodes, such as those corresponding to offsets X and Y, have an
+		// increment of 1, which basically means that any value within range
+		// is appropriate. The increment is retrieved with the method GetInc().
+		//
+		if (IsReadable(pCam->OffsetY) && IsWritable(pCam->OffsetY))
+		{
+			pCam->OffsetY.SetValue(pCam->OffsetY.GetMin());
+
+			cout << "Offset Y set to " << pCam->OffsetY.GetValue() << "..." << endl;
+		}
+		else
+		{
+			cout << "Offset Y not available..." << endl;
+			process_status = false;
+		}
+
+		//
+		// Set maximum width
+		//
+		// *** NOTES ***
+		// Other nodes, such as those corresponding to image width and height, 
+		// might have an increment other than 1. In these cases, it can be
+		// important to check that the desired value is a multiple of the
+		// increment. 
+		//
+		// This is often the case for width and height nodes. However, because
+		// these nodes are being set to their maximums, there is no real reason
+		// to check against the increment.
+		//
+		if (IsReadable(pCam->Width) && IsWritable(pCam->Width) && pCam->Width.GetInc() != 0 && pCam->Width.GetMax() != 0)
+		{
+			pCam->Width.SetValue(pCam->Width.GetMax());
+
+			cout << "Width set to " << pCam->Width.GetValue() << "..." << endl;
+		}
+		else
+		{
+			cout << "Width not available..." << endl;
+			process_status = false;
+		}
+
+		//
+		// Set maximum height
+		//
+		// *** NOTES ***
+		// A maximum is retrieved with the method GetMax(). A node's minimum and
+		// maximum should always be a multiple of its increment.
+		//
+		if (IsReadable(pCam->Height) && IsWritable(pCam->Height) && pCam->Height.GetInc() != 0 && pCam->Height.GetMax() != 0)
+		{
+			pCam->Height.SetValue(pCam->Height.GetMax());
+
+			cout << "Height set to " << pCam->Height.GetValue() << "..." << endl;
+		}
+		else
+		{
+			cout << "Height not available..." << endl;
 			process_status = false;
 		}
         // BeginAcquisition after camera pixelFormat was set and before printDeviceInfo
