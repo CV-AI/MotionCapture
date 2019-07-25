@@ -118,7 +118,7 @@ cv::Mat ConvertToCVmat(ImagePtr spinImage)
     unsigned int rowsize = spinImage->GetWidth();
     unsigned int colsize = spinImage->GetHeight();
     //image data contains padding. When allocating Mat container size, you need to account for the X,Y image data padding.
-    return cv::Mat(colsize + YPadding, rowsize + XPadding, CV_8UC3, spinImage->GetData(), spinImage->GetStride());
+    return cv::Mat(colsize + YPadding, rowsize + XPadding, CV_8UC1, spinImage->GetData(), spinImage->GetStride());
 }
 // This function acquires images from a device.
 cv::Mat AcquireImages(CameraPtr  pCam)
@@ -181,8 +181,8 @@ cv::Mat AcquireImages(CameraPtr  pCam)
         {
             cvImage = ConvertToCVmat(pResultImage);
             pResultImage->Release();
-            // original image is in RGB format, needs to be converted into BGR(OpenCV uses BGR)
-            cv::cvtColor(cvImage, cvImage, CV_BGR2RGB);
+            //needs to be converted into BGR(OpenCV uses BGR)
+            cv::cvtColor(cvImage, cvImage, CV_BayerGB2RGB);
         }
     }
     catch (Spinnaker::Exception &e)
@@ -239,7 +239,7 @@ int ConfigCamera(CameraPtr pCam)
 		pCam->AasRoiWidth.SetValue(1024);*/
         if (pCam->PixelFormat != NULL && pCam->PixelFormat.GetAccessMode() == RW)
 		{
-			pCam->PixelFormat.SetValue(PixelFormat_RGB8);
+			pCam->PixelFormat.SetValue(PixelFormat_BayerGB8);
 
 			cout << "Pixel format set to " << pCam->PixelFormat.GetCurrentEntry()->GetSymbolic() << "..." << endl;
 		}
