@@ -47,6 +47,12 @@ using namespace Spinnaker::GenApi;
 using namespace Spinnaker::GenICam;
 using namespace std;
 
+enum triggerType
+{
+	SOFTWARE,
+	HARDWARE
+};
+const triggerType chosenTrigger = SOFTWARE;
 #ifdef _DEBUG
 // Disables heartbeat on GEV cameras(GigE Vison) so debugging does not incur timeout errors
 int DisableHeartbeat(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice)
@@ -123,10 +129,35 @@ cv::Mat AcquireImages(CameraPtr  pCam)
 
     try
     {
+		// Use trigger to capture image
+		//
+		// *** NOTES ***
+		// The software trigger only feigns being executed by the Enter key;
+		// what might not be immediately apparent is that there is no 
+		// continuous stream of images being captured; in other examples that 
+		// acquire images, the camera captures a continuous stream of images. 
+		// When an image is then retrieved, it is plucked from the stream; 
+		// there are many more images captured than retrieved. However, while 
+		// trigger mode is activated, there is only a single image captured at 
+		// the time that the trigger is activated. 
+		//
+		if (chosenTrigger == SOFTWARE)
+		{
+			// Execute software trigger
+			if (pCam->TriggerSoftware == NULL || pCam->TriggerSoftware.GetAccessMode() != WO)
+			{
+				cout << "Unable to execute trigger..." << endl;
+			}
 
+			pCam->TriggerSoftware.Execute();
+		}
+		else
+		{
+			cout << "Use the hardware to trigger image acquisition." << endl;
+		}
         // Retrieve next received image
         //
-        // *** NOTES ***
+        // *** NOTES ***`
         // Capturing an image houses images on the camera buffer. Trying
         // to capture an image that does not exist will hang the camera.
         //
@@ -137,7 +168,6 @@ cv::Mat AcquireImages(CameraPtr  pCam)
         //
         ImagePtr pResultImage = pCam->GetNextImage();
 
-         //
         // Ensure image completion
         //
         if (pResultImage->IsIncomplete())
@@ -303,8 +333,8 @@ int ConfigCamera(CameraPtr pCam)
 			process_status = false;
 		}
         // BeginAcquisition after camera pixelFormat was set and before printDeviceInfo
-        pCam->BeginAcquisition();
-        process_status = process_status && PrintDeviceInfo(nodeMapTLDevice);
+        //pCam->BeginAcquisition();
+        //process_status = process_status && PrintDeviceInfo(nodeMapTLDevice);
 #ifdef _DEBUG
         cout << endl << endl << "*** DEBUG ***" << endl << endl;
         // If using a GEV camera and debugging, should disable heartbeat first to prevent further issues
@@ -314,24 +344,6 @@ int ConfigCamera(CameraPtr pCam)
         }
         cout << endl << endl << "*** END OF DEBUG ***" << endl << endl;
 #endif
-
-        //
-        // Begin acquiring images
-        //
-        // *** NOTES ***
-        // What happens when the camera begins acquiring images depends on the
-        // acquisition mode. Single frame captures only a single image, multi 
-        // frame catures a set number of images, and continuous captures a 
-        // continuous stream of images. Because the example calls for the 
-        // retrieval of 10 images, continuous mode has been set.
-        // 
-        // *** LATER ***
-        // Image acquisition must be ended when no more images are needed.
-        
-        //
-        // Retrieve device serial number for filename
-        //
-        // *** NOTES ***
         // The device serial number is retrieved in order to keep cameras from 
         // overwriting one another. Grabbing image IDs could also accomplish
         // this.
@@ -344,7 +356,82 @@ int ConfigCamera(CameraPtr pCam)
 
             std::cout << "Device serial number retrieved as " << deviceSerialNumber << "..." << endl;
         }
-        
+		if (chosenTrigger == SOFTWARE)
+		{
+			cout << "Software trigger chosen..." << endl;
+		}
+		else
+		{
+			cout << "Hardware trigger chosen..." << endl;
+		}
+
+		//
+		// Ensure trigger mode off
+		//
+		// *** NOTES ***
+		// The trigger must be disabled in order to configure whether the source
+		// is software or hardware.
+		//
+		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
+		{
+			cout << "Unable to disable trigger mode. Aborting..." << endl;
+			return -1;
+		}
+
+		pCam->TriggerMode.SetValue(TriggerMode_Off);
+
+		cout << "Trigger mode disabled..." << endl;
+
+		//
+		// Select trigger source
+		//
+		// *** NOTES ***
+		// The trigger source must be set to hardware or software while trigger 
+		// mode is off.
+		//
+		if (chosenTrigger == SOFTWARE)
+		{
+			// Set the trigger source to software
+			if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
+			{
+				cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
+				return -1;
+			}
+
+			pCam->TriggerSource.SetValue(TriggerSource_Software);
+
+			cout << "Trigger source set to software..." << endl;
+		}
+		else
+		{
+			// Set the trigger source to hardware (using 'Line0')
+			if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
+			{
+				cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
+				return -1;
+			}
+
+			pCam->TriggerSource.SetValue(TriggerSource_Line0);
+
+			cout << "Trigger source set to hardware..." << endl;
+		}
+
+		//
+		// Turn trigger mode on
+		//
+		// *** LATER ***
+		// Once the appropriate trigger source has been set, turn trigger mode 
+		// back on in order to retrieve images using the trigger.
+		//
+		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
+		{
+			cout << "Unable to disable trigger mode. Aborting..." << endl;
+			return -1;
+		}
+
+		pCam->TriggerMode.SetValue(TriggerMode_On);
+
+		cout << "Trigger mode turned back on..." << endl << endl;
     }
     catch (Spinnaker::Exception &e)
     {

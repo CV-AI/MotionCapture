@@ -137,6 +137,11 @@ int main(int /*argc*/, char** /*argv*/)
         // main part of this program
         bool first_time = true;
         cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0);
+		for (unsigned int i = 0; i < numCameras; i++)
+		{
+			pCam = camList.GetByIndex(i);
+			pCam->BeginAcquisition();
+		}
         while(status)
         {
             // acquire images
