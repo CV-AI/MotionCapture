@@ -1,20 +1,3 @@
-//=============================================================================
-// Copyright © 2018 FLIR Integrated Imaging Solutions, Inc. All Rights Reserved.
-//
-// This software is the confidential and proprietary information of FLIR
-// Integrated Imaging Solutions, Inc. ("Confidential Information"). You
-// shall not disclose such Confidential Information and shall use it only in
-// accordance with the terms of the license agreement you entered into
-// with FLIR Integrated Imaging Solutions, Inc. (FLIR).
-//
-// FLIR MAKES NO REPRESENTATIONS OR WARRANTIES ABOUT THE SUITABILITY OF THE
-// SOFTWARE, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-// PURPOSE, OR NON-INFRINGEMENT. FLIR SHALL NOT BE LIABLE FOR ANY DAMAGES
-// SUFFERED BY LICENSEE AS A RESULT OF USING, MODIFYING OR DISTRIBUTING
-// THIS SOFTWARE OR ITS DERIVATIVES.
-//=============================================================================
-
 /**
  *  @example Acquisition.cpp
  *
@@ -185,8 +168,9 @@ cv::Mat AcquireImages(CameraPtr  pCam)
         {
             cvImage = ConvertToCVmat(pResultImage);
             pResultImage->Release();
-            //needs to be converted into BGR(OpenCV uses BGR)
+            //needs to be converted into BGR(OpenCV uses RGB)
             cv::cvtColor(cvImage, cvImage, CV_BayerGB2RGB);
+			cv::cvtColor(cvImage, cvImage, CV_BGR2HSV);
         }
     }
     catch (Spinnaker::Exception &e)
@@ -209,38 +193,23 @@ int ConfigCamera(CameraPtr pCam)
         // Retrieve GenICam nodemap
         INodeMap & nodeMap = pCam->GetNodeMap();
 
-        CEnumerationPtr ptrAcquisitionMode = nodeMap.GetNode("AcquisitionMode");
-        if (!IsAvailable(ptrAcquisitionMode) || !IsWritable(ptrAcquisitionMode))
-        {
-            std::cout << "Unable to set acquisition mode to continuous (enum retrieval). Aborting..." << "\n" << endl;
-            return -1;
-        }
-        
-        // Retrieve entry node from enumeration node
-        CEnumEntryPtr ptrAcquisitionModeContinuous = ptrAcquisitionMode->GetEntryByName("Continuous");
-        if (!IsAvailable(ptrAcquisitionModeContinuous) || !IsReadable(ptrAcquisitionModeContinuous))
-        {
-            std::cout << "Unable to set acquisition mode to continuous (entry retrieval). Aborting..." << "\n" << endl;
-            return -1;
-        }
-        
-        // Retrieve integer value from entry node
-        int64_t acquisitionModeContinuous = ptrAcquisitionModeContinuous->GetValue();
-        
-        // Set integer value from entry node as new value of enumeration node
-        ptrAcquisitionMode->SetIntValue(acquisitionModeContinuous);
-        
-        std::cout << "Acquisition mode set to continuous..." << endl;
+		// Set acquisition mode to continuous
+		if (!IsReadable(pCam->AcquisitionMode) || !IsWritable(pCam->AcquisitionMode))
+		{
+			cout << "Unable to set acquisition mode to continuous. Aborting..." << endl << endl;
+			return -1;
+		}
 
-		// Turn off auto exposure
-		pCam->ExposureAuto.SetValue(Spinnaker::ExposureAutoEnums::ExposureAuto_Off);
-		//Set exposure mode to "Timed"
-		pCam->ExposureMode.SetValue(Spinnaker::ExposureModeEnums::ExposureMode_Timed);
-		//Set absolute value of shutter exposure time to microseconds
-		pCam->ExposureTime.SetValue(10000);
-		/*pCam->AasRoiEnable.SetValue(Spinnaker::AutoAlgorithmSelectorEnums::AutoAlgorithmSelector_Ae);
-		pCam->AasRoiHeight.SetValue(1024);
-		pCam->AasRoiWidth.SetValue(1024);*/
+		pCam->AcquisitionMode.SetValue(AcquisitionMode_Continuous);
+		cout << "Acquisition mode set to continuous..." << endl;
+
+		//// Turn off auto exposure
+		//pCam->ExposureAuto.SetValue(Spinnaker::ExposureAutoEnums::ExposureAuto_Off);
+		////Set exposure mode to "Timed"
+		//pCam->ExposureMode.SetValue(Spinnaker::ExposureModeEnums::ExposureMode_Timed);
+		////Set absolute value of shutter exposure time to microseconds
+		//pCam->ExposureTime.SetValue(10000);
+		
         if (pCam->PixelFormat != NULL && pCam->PixelFormat.GetAccessMode() == RW)
 		{
 			pCam->PixelFormat.SetValue(PixelFormat_BayerGB8);

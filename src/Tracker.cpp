@@ -32,11 +32,11 @@ void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
 		selection.height = abs(y - origin.y);
 		std::cout << "Color area has been selected!" << std::endl;
 		std::cout << "Color has been selected" << std::endl;
-		std::vector<cv::Mat> matChannels(3);
-		cv::split(image, matChannels);
-		CorlorsChosen[0] = static_cast<int>(cv::mean(matChannels[0]).val[0]);
-		CorlorsChosen[1] = static_cast<int>(cv::mean(matChannels[1]).val[0]);
-		CorlorsChosen[2] = static_cast<int>(cv::mean(matChannels[2]).val[0]);
+		image = image(selection);
+		cv::Scalar meanScalar = cv::mean(image);
+		CorlorsChosen[0] = static_cast<int>(meanScalar.val[0]);
+		CorlorsChosen[1] = static_cast<int>(meanScalar.val[1]);
+		CorlorsChosen[2] = static_cast<int>(meanScalar.val[2]);
 		getColors = true;
 		std::cout << "blue green red: " << CorlorsChosen[0] << " " << CorlorsChosen[1] << " " << CorlorsChosen[2] << std::endl;
 	}
@@ -46,17 +46,26 @@ void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
 
 void Tracker::ColorTheresholding()
 {
+	//cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
+	//cv::inRange(detectWindow, cv::Scalar(MIN_H_RED / 2, 100, 80),
+	//	cv::Scalar(MAX_H_RED / 2, 255, 255), rangeRes);
+	//// <<<<< Color Thresholding
+	//cv::erode(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 2);
+	//cv::dilate(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 2);
+	//detectWindow = rangeRes;
 	for (int j = 0; j < detectWindow.rows; j++)
 	{
 		uchar*data = detectWindow.ptr<uchar>(j);
+		
 		for (int i = 0; i< detectWindow.cols; i++)
 		{
 			
-			if ((abs(data[4 * i] - CorlorsChosen[0]) + abs(data[4 * i + 1] - CorlorsChosen[1]) + abs(data[4 * i + 2] - CorlorsChosen[2]))< threshold)
+			if ((abs(data[3 * i] - CorlorsChosen[0]) + abs(data[3 * i + 1] - CorlorsChosen[1]) +
+					abs(data[3 * i + 2] - CorlorsChosen[2]))< threshold)
 			{
-				data[4 * i] = data[4 * i + 1] = data[4 * i + 2] = 255;
+				data[3 * i] = data[3 * i + 1] = data[3 * i + 2] = 255;
 			}
-			else data[4 * i] = data[4 * i + 1] = data[4 * i + 2] = 0;
+			else data[3 * i] = data[3 * i + 1] = data[3 * i + 2] = 0;
 		}
 	}
 }
@@ -66,19 +75,22 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 {	
 	ColorTheresholding();
 	cv::cvtColor(detectWindow, detectWindow, CV_BGRA2GRAY);
+	std::cout << detectWindow.size << std::endl;
 	cv::Mat mask(3, 3, CV_8U, cv::Scalar(1));
 	cv::morphologyEx(detectWindow, detectWindow, cv::MORPH_CLOSE, mask);
 
 	std::vector<std::vector<cv::Point>>contours;
 	cv::findContours(detectWindow, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
-	
+	cv::namedWindow("detectwindow", 0);
+	cv::imshow("detectwindow", detectWindow);
+	cv::waitKey(1);
 	int cmin = 20;
 	int cmax = 120;
 	std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
 	// remove contours that are too small or large
 	while (itc != contours.end())
 	{
-		std::cout << "size: " << itc->size() << std::endl;
+		//std::cout << "size: " << itc->size() << std::endl;
 		if (itc->size() < cmin || itc->size() > cmax)
 		{
 			itc = contours.erase(itc);
@@ -115,21 +127,21 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 	switch(tracker_type)
 	{
 		case ByDetection: 
-		for(int i =0; i<4; i++)
-		{
-			// i is the index of camera
-			detectWindow = ReceivedImages[i].clone();
-			success = success && getContoursAndMoment(i);
-			success = success && RectifyMarkerPos(i);
-		}	
-		if(success)
-		{
-			std::cout << "Using Contours to InitTracker succeed"<<std::endl;
-			TrackerIntialized = true;
+		{for (int i = 0; i < 4; i++)
+			{
+				// i is the index of camera
+				detectWindow = ReceivedImages[i].clone();
+				success = success && getContoursAndMoment(i);
+				success = success && RectifyMarkerPos(i);
+			}
+			if (success)
+			{
+				std::cout << "Using Contours to InitTracker succeed" << std::endl;
+				TrackerIntialized = true;
+			}
 		}
 		break;
-		default:
-		break;
+		default:break;
 	}
 	
 	return success;

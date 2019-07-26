@@ -215,7 +215,7 @@ int main(int /*argc*/, char** /*argv*/)
 
     // Release system
     system->ReleaseInstance();
-    std::cout << endl << "Done! Press Enter to exit..." << endl;
+    std::cout<< "Done! Press Enter to exit..." << endl;
     getchar();
     return status;
 }

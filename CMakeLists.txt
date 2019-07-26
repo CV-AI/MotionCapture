@@ -4,7 +4,8 @@ project ( ${name} )
 
 add_compile_options(-std=c++11)
 
-# opencv
+# opencv 
+# set(OpenCV_DIR D:/software/OpenCV3/opencv/build)
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
