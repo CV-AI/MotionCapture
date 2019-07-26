@@ -53,6 +53,10 @@ enum triggerType
 	HARDWARE
 };
 const triggerType chosenTrigger = SOFTWARE;
+const int64_t offsetX = 220;
+const int64_t offsetY = 220;
+const int64_t height = 1440;
+const int64_t width = 1440;
 #ifdef _DEBUG
 // Disables heartbeat on GEV cameras(GigE Vison) so debugging does not incur timeout errors
 int DisableHeartbeat(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice)
@@ -248,6 +252,50 @@ int ConfigCamera(CameraPtr pCam)
 			cout << "Pixel format not available..." << endl;
 			process_status = false;
 		}
+		// Set maximum width
+		//
+		// *** NOTES ***
+		// Other nodes, such as those corresponding to image width and height, 
+		// might have an increment other than 1. In these cases, it can be
+		// important to check that the desired value is a multiple of the
+		// increment. 
+		//
+		// This is often the case for width and height nodes. However, because
+		// these nodes are being set to their maximums, there is no real reason
+		// to check against the increment.
+		// The offsetX and offsetY are influenced by height and width
+		// So make sure you config height and width, then config offset
+		// 偏移量offset受到height 和 width影响，所以先设置宽和高
+		if (IsReadable(pCam->Width) && IsWritable(pCam->Width) && pCam->Width.GetInc() != 0 && pCam->Width.GetMax() != 0)
+		{
+			pCam->Width.SetValue(width); // X 方向宽度的递增量为32， 确保Width是32的整倍数
+
+			cout << "Width set to " << pCam->Width.GetValue() << "..." << endl;
+		}
+		else
+		{
+			cout << "Width not available..." << endl;
+			process_status = false;
+		}
+
+		//
+		// Set maximum height
+		//
+		// *** NOTES ***
+		// A maximum is retrieved with the method GetMax(). A node's minimum and
+		// maximum should always be a multiple of its increment.
+		//
+		if (IsReadable(pCam->Height) && IsWritable(pCam->Height) && pCam->Height.GetInc() != 0 && pCam->Height.GetMax() != 0)
+		{
+			pCam->Height.SetValue(height);
+
+			cout << "Height set to " << pCam->Height.GetValue() << "..." << endl;
+		}
+		else
+		{
+			cout << "Height not available..." << endl;
+			process_status = false;
+		}
 		// Apply minimum to offset X
 		//
 		// *** NOTES ***
@@ -257,7 +305,7 @@ int ConfigCamera(CameraPtr pCam)
 		//
 		if (IsReadable(pCam->OffsetX) && IsWritable(pCam->OffsetX))
 		{
-			pCam->OffsetX.SetValue(pCam->OffsetX.GetMin());
+			pCam->OffsetX.SetValue(offsetX);
 
 			cout << "Offset X set to " << pCam->OffsetX.GetValue() << "..." << endl;
 		}
@@ -279,7 +327,7 @@ int ConfigCamera(CameraPtr pCam)
 		//
 		if (IsReadable(pCam->OffsetY) && IsWritable(pCam->OffsetY))
 		{
-			pCam->OffsetY.SetValue(pCam->OffsetY.GetMin());
+			pCam->OffsetY.SetValue(offsetY);
 
 			cout << "Offset Y set to " << pCam->OffsetY.GetValue() << "..." << endl;
 		}
@@ -290,50 +338,7 @@ int ConfigCamera(CameraPtr pCam)
 		}
 
 		//
-		// Set maximum width
-		//
-		// *** NOTES ***
-		// Other nodes, such as those corresponding to image width and height, 
-		// might have an increment other than 1. In these cases, it can be
-		// important to check that the desired value is a multiple of the
-		// increment. 
-		//
-		// This is often the case for width and height nodes. However, because
-		// these nodes are being set to their maximums, there is no real reason
-		// to check against the increment.
-		//
-		if (IsReadable(pCam->Width) && IsWritable(pCam->Width) && pCam->Width.GetInc() != 0 && pCam->Width.GetMax() != 0)
-		{
-			pCam->Width.SetValue(pCam->Width.GetMax());
-
-			cout << "Width set to " << pCam->Width.GetValue() << "..." << endl;
-		}
-		else
-		{
-			cout << "Width not available..." << endl;
-			process_status = false;
-		}
-
-		//
-		// Set maximum height
-		//
-		// *** NOTES ***
-		// A maximum is retrieved with the method GetMax(). A node's minimum and
-		// maximum should always be a multiple of its increment.
-		//
-		if (IsReadable(pCam->Height) && IsWritable(pCam->Height) && pCam->Height.GetInc() != 0 && pCam->Height.GetMax() != 0)
-		{
-			pCam->Height.SetValue(pCam->Height.GetMax());
-
-			cout << "Height set to " << pCam->Height.GetValue() << "..." << endl;
-		}
-		else
-		{
-			cout << "Height not available..." << endl;
-			process_status = false;
-		}
-        // BeginAcquisition after camera pixelFormat was set and before printDeviceInfo
-        //pCam->BeginAcquisition();
+		
         //process_status = process_status && PrintDeviceInfo(nodeMapTLDevice);
 #ifdef _DEBUG
         cout << endl << endl << "*** DEBUG ***" << endl << endl;
