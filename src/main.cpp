@@ -175,7 +175,7 @@ int main(int /*argc*/, char** /*argv*/)
                 {status = false;}
                 // pCam = NULL;
             }
-            /*if(first_time && tracker.getColors)
+            if(first_time && tracker.getColors)
             {
                 tracker.InitTracker(tracker.ByDetection);
                 dataProcess.exportGaitData();
@@ -185,7 +185,7 @@ int main(int /*argc*/, char** /*argv*/)
                 memcpy(tracker.previousPos, tracker.currentPos, sizeof(tracker.currentPos));
                 tracker.UpdateTracker(tracker.ByDetection);
                 dataProcess.exportGaitData();
-            }*/
+            }
         }
         cv::destroyAllWindows();
 		pCam = NULL;
