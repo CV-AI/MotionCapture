@@ -44,7 +44,7 @@ int main(int /*argc*/, char** /*argv*/)
     CameraList camList = system->GetCameras();
   
     unsigned int numCameras = camList.GetSize();
-    
+	tracker.numCameras = numCameras;
     std::cout << "Number of cameras detected: " << numCameras << endl << endl;
     
     // Finish if there are no cameras

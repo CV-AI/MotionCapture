@@ -94,10 +94,6 @@ int DisableHeartbeat(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDev
 cv::Mat ConvertToCVmat(ImagePtr spinImage);
 cv::Mat AcquireImages(CameraPtr  pCam);
 bool ConfigCamera(CameraPtr pCam);
-int ConfigExposure(CameraPtr pCam);
-int ConfigImageFormat(CameraPtr pCam);
-int ConfigTrigger(CameraPtr pCam);
-int ConfigAcquisition(CameraPtr pCam);
 int ResetExposure(CameraPtr pCam);
 int PrintDeviceInfo(INodeMap & nodeMap);
 /*
@@ -167,7 +163,7 @@ cv::Mat AcquireImages(CameraPtr  pCam)
             pResultImage->Release();
             //needs to be converted into BGR(OpenCV uses RGB)
             //cv::cvtColor(cvImage, cvImage, CV_BayerGB2BGR);
-			//cv::cvtColor(cvImage, cvImage, CV_RGB2HSV);
+			cv::cvtColor(cvImage, cvImage, CV_RGB2BGR);
         }
     }
     catch (Spinnaker::Exception &e)
@@ -323,12 +319,6 @@ bool ConfigCamera(CameraPtr pCam)
 		// The trigger must be disabled in order to configure whether the source
 		// is software or hardware.
 		//
-		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
-		{
-			cout << "Unable to disable trigger mode. Aborting..." << endl;
-			return false;
-		}
-
 		pCam->TriggerMode.SetValue(TriggerMode_Off);
 
 		cout << "Trigger mode disabled..." << endl;

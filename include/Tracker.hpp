@@ -8,8 +8,8 @@
 
 #include<cmath>
 
-#define MAX_H_RED 240
-#define MIN_H_RED 300
+constexpr auto MAX_H_RED = 240;
+constexpr auto MIN_H_RED = 300;
 class Tracker
 {
 	void ColorTheresholding();
@@ -34,12 +34,13 @@ public:
 	cv::Mat detectWindow;
 	cv::Point momentpoints[6];
 	cv::Point detectWindowPosition = cv::Point(0, 0);
-	int threshold = 70;
+	int threshold = 100;
 	cv::Point currentPos[4][6]; // first entry is the index of image, second entry is the index of marker
 	cv::Point previousPos[4][6];
 	cv::Point predictPos; // the predicted position of marker in current frame
 	int detectWindowDimX = 50; // the dimension of detectWindow
 	int detectWindowDimY = 50; 
+	int numCameras = 0;
 	bool InitTracker(TrackerType);
 	bool TrackerIntialized = false;
 	bool UpdateTracker(TrackerType);

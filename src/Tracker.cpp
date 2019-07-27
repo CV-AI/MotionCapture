@@ -46,14 +46,14 @@ void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
 
 void Tracker::ColorTheresholding()
 {
-	//cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
-	//cv::inRange(detectWindow, cv::Scalar(MIN_H_RED / 2, 100, 80),
-	//	cv::Scalar(MAX_H_RED / 2, 255, 255), rangeRes);
-	//// <<<<< Color Thresholding
-	//cv::erode(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 2);
-	//cv::dilate(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 2);
-	//detectWindow = rangeRes;
-	for (int j = 0; j < detectWindow.rows; j++)
+	cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
+	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED / 2, 100, 80),
+	cv::Scalar(MAX_H_RED / 2, 255, 255), rangeRes);
+	// <<<<< Color Thresholding
+	cv::erode(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 2);
+	cv::dilate(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 2);
+	detectWindow = rangeRes;
+	/*for (int j = 0; j < detectWindow.rows; j++)
 	{
 		uchar*data = detectWindow.ptr<uchar>(j);
 		
@@ -67,13 +67,14 @@ void Tracker::ColorTheresholding()
 			}
 			else data[3 * i] = data[3 * i + 1] = data[3 * i + 2] = 0;
 		}
-	}
+	}*/
 }
 
 // This function using contours to get marker position
 bool Tracker:: getContoursAndMoment(int camera_index)
 {	
 	ColorTheresholding();
+	cv::Mat detectCopy = detectWindow.clone();
 	cv::cvtColor(detectWindow, detectWindow, CV_BGRA2GRAY);
 	std::cout << detectWindow.size << std::endl;
 	cv::Mat mask(3, 3, CV_8U, cv::Scalar(1));
@@ -81,15 +82,14 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 
 	std::vector<std::vector<cv::Point>>contours;
 	cv::findContours(detectWindow, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
-	cv::namedWindow("detectwindow", 0);
-	cv::imshow("detectwindow", detectWindow);
-	cv::waitKey(1);
-	int cmin = 20;
-	int cmax = 120;
+	
+	int cmin = 120;
+	int cmax = 280;
 	std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
 	// remove contours that are too small or large
 	while (itc != contours.end())
 	{
+		std::cout << itc->size() << std::endl;
 		//std::cout << "size: " << itc->size() << std::endl;
 		if (itc->size() < cmin || itc->size() > cmax)
 		{
@@ -97,6 +97,13 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 		}
 		else itc++;
 	}
+	for (size_t i = 0; i < contours.size(); i++)
+	{
+		cv::drawContours(detectCopy, contours, int(i), cv::Scalar(0, 0, 255), 3);
+	}
+	cv::namedWindow("detectwindow", 0);
+	cv::imshow("detectwindow", detectCopy);
+	cv::waitKey(1);
 	std::cout << "The number of contours is " << contours.size() << std::endl;
 	if (contours.size()==6 || contours.size()==1)
 	{
@@ -127,7 +134,7 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 	switch(tracker_type)
 	{
 		case ByDetection: 
-		{for (int i = 0; i < 4; i++)
+		{for (int i = 0; i < numCameras; i++)
 			{
 				// i is the index of camera
 				detectWindow = ReceivedImages[i].clone();
@@ -151,7 +158,7 @@ bool Tracker::UpdateTracker(TrackerType tracker_type)
 {
 	bool success = true;
 	// using contours to update tracker 
-	for(int i=0; i<4; i++)
+	for(int i=0; i<numCameras; i++)
 	{
 		// i is the index of camera
 		detectWindow = ReceivedImages[i].clone();
