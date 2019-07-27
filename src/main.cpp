@@ -150,7 +150,7 @@ int main(int /*argc*/, char** /*argv*/)
                 // 注意目前pCam指向的其实是CameraIndex[i]所指的相机，也就是在Config阶段确定的相机
                 // note which camera pCam is pointed into is determined by CameraIndex[i]
                 pCam = camList.GetByIndex(i);
-				auto start = std::chrono::system_clock::now();
+				auto start = std::chrono::high_resolution_clock::now();
                 switch(CameraIndex[i])
                 {
 					case 0: tracker.ReceivedImages[0] = AcquireImages(pCam);
@@ -167,7 +167,7 @@ int main(int /*argc*/, char** /*argv*/)
 						cv::resize(tracker.ReceivedImages[3], image_RL, cv::Size(512, 512)); 
 						cv::imshow("Right_Lower", image_RL); break;
                 }
-				auto stop = std::chrono::system_clock::now();
+				auto stop = std::chrono::high_resolution_clock::now();
 				std::chrono::duration<double> elapsed_seconds = stop - start;
 				std::cout << "Acquiring time on camera " << CameraIndex[i]<<": " <<elapsed_seconds.count() <<std::endl;
                 int key = cv::waitKey(1);

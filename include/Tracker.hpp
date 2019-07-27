@@ -34,7 +34,7 @@ public:
 	cv::Mat detectWindow;
 	cv::Point momentpoints[6];
 	cv::Point detectWindowPosition = cv::Point(0, 0);
-	int threshold = 55;
+	int threshold = 70;
 	cv::Point currentPos[4][6]; // first entry is the index of image, second entry is the index of marker
 	cv::Point previousPos[4][6];
 	cv::Point predictPos; // the predicted position of marker in current frame
