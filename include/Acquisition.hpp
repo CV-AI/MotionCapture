@@ -93,7 +93,7 @@ int DisableHeartbeat(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDev
 #endif
 cv::Mat ConvertToCVmat(ImagePtr spinImage);
 cv::Mat AcquireImages(CameraPtr  pCam);
-int ConfigCamera(CameraPtr pCam);
+bool ConfigCamera(CameraPtr pCam);
 int ConfigExposure(CameraPtr pCam);
 int ConfigImageFormat(CameraPtr pCam);
 int ConfigTrigger(CameraPtr pCam);
@@ -177,9 +177,10 @@ cv::Mat AcquireImages(CameraPtr  pCam)
     return cvImage;
 }
 // This function config the camera settings
-int ConfigCamera(CameraPtr pCam)
+bool ConfigCamera(CameraPtr pCam)
 {
-    bool status = true ;
+	bool status = true;
+	CameraPtr copy = pCam;
     
     std::cout << "\n" << "\n" << "*** IMAGE ACQUISITION ***" << "\n" << endl;
     
@@ -189,7 +190,88 @@ int ConfigCamera(CameraPtr pCam)
 
         // Retrieve GenICam nodemap
         INodeMap & nodeMap = pCam->GetNodeMap();
+		
+		// Set acquisition mode to continuous
+		if (!IsReadable(pCam->AcquisitionMode) || !IsWritable(pCam->AcquisitionMode))
+		{
+			cout << "Unable to set acquisition mode to continuous. Aborting..." << "\n" << endl;
+			status = false;
+		}
 
+		pCam->AcquisitionMode.SetValue(AcquisitionMode_Continuous);
+		cout << "Acquisition mode set to continuous..." << endl;
+		
+		if (pCam->PixelFormat != NULL && pCam->PixelFormat.GetAccessMode() == RW)
+		{
+			pCam->PixelFormat.SetValue(PixelFormat_RGB8);
+
+			cout << "Pixel format set to " << pCam->PixelFormat.GetCurrentEntry()->GetSymbolic() << "..." << endl;
+		}
+		else
+		{
+			cout << "Pixel format not available..." << endl;
+			status = false;
+		}
+
+		// Set maximum width
+		//
+		// *** NOTES ***
+		// Other nodes, such as those corresponding to image width and height, 
+		// might have an increment other than 1. In these cases, it can be
+		// important to check that the desired value is a multiple of the
+		// increment. 
+		//
+		// This is often the case for width and height nodes. However, because
+		// these nodes are being set to their maximums, there is no real reason
+		// to check against the increment.
+		// The offsetX and offsetY are influenced by height and width
+		// So make sure you config height and width, then config offset
+		// 偏移量offset受到height 和 width影响，所以先设置宽和高
+		if (IsReadable(pCam->Width) && IsWritable(pCam->Width) && pCam->Width.GetInc() != 0 && pCam->Width.GetMax() != 0)
+		{
+			pCam->Width.SetValue(width); // X 方向宽度的递增量为32， 确保Width是32的整倍数
+
+			cout << "Width set to " << pCam->Width.GetValue() << "..." << endl;
+		}
+		else
+		{
+			cout << "Width not available..." << endl;
+			status = false;
+		}
+		if (IsReadable(pCam->Height) && IsWritable(pCam->Height) && pCam->Height.GetInc() != 0 && pCam->Height.GetMax() != 0)
+		{
+			pCam->Height.SetValue(height);
+
+			cout << "Height set to " << pCam->Height.GetValue() << "..." << endl;
+		}
+		else
+		{
+			cout << "Height not available..." << endl;
+			status = false;
+		}
+		if (IsReadable(pCam->OffsetX) && IsWritable(pCam->OffsetX))
+		{
+			pCam->OffsetX.SetValue(offsetX);
+
+			cout << "Offset X set to " << pCam->OffsetX.GetValue() << "..." << endl;
+		}
+		else
+		{
+			cout << "Offset X not available..." << endl;
+			status = false;
+		}
+		//
+		if (IsReadable(pCam->OffsetY) && IsWritable(pCam->OffsetY))
+		{
+			pCam->OffsetY.SetValue(offsetY);
+
+			cout << "Offset Y set to " << pCam->OffsetY.GetValue() << "..." << endl;
+		}
+		else
+		{
+			cout << "Offset Y not available..." << endl;
+			status = false;
+		}
         //process_status = process_status && PrintDeviceInfo(nodeMapTLDevice);
 #ifdef _DEBUG
         cout << "\n" << endl << "*** DEBUG ***" << "\n" << endl;
@@ -205,8 +287,7 @@ int ConfigCamera(CameraPtr pCam)
         // overwriting one another. Grabbing image IDs could also accomplish
         // this.
         //
-		status = ConfigAcquisition(pCam);
-		status = ConfigImageFormat(pCam);
+		
         gcstring deviceSerialNumber("");
         CStringPtr ptrStringSerial = nodeMapTLDevice.GetNode("DeviceSerialNumber");
         if (IsAvailable(ptrStringSerial) && IsReadable(ptrStringSerial))
@@ -215,6 +296,18 @@ int ConfigCamera(CameraPtr pCam)
 
             std::cout << "Device serial number retrieved as " << deviceSerialNumber << "..." << endl;
         }
+		//
+		// Ensure trigger mode off
+		//
+		// *** NOTES ***
+		// The trigger must be disabled in order to configure whether the source
+		// is software or hardware.
+		//
+		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
+		{
+			cout << "Unable to disable trigger mode. Aborting..." << endl;
+			return false;
+		}
 		if (chosenTrigger == SOFTWARE)
 		{
 			cout << "Software trigger chosen..." << endl;
@@ -223,8 +316,183 @@ int ConfigCamera(CameraPtr pCam)
 		{
 			cout << "Hardware trigger chosen..." << endl;
 		}
-		status = ConfigTrigger(pCam);
-		status = ConfigExposure(pCam);
+		//
+		// Ensure trigger mode off
+		//
+		// *** NOTES ***
+		// The trigger must be disabled in order to configure whether the source
+		// is software or hardware.
+		//
+		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
+		{
+			cout << "Unable to disable trigger mode. Aborting..." << endl;
+			return false;
+		}
+
+		pCam->TriggerMode.SetValue(TriggerMode_Off);
+
+		cout << "Trigger mode disabled..." << endl;
+
+		//
+		// Select trigger source
+		//
+		// *** NOTES ***
+		// The trigger source must be set to hardware or software while trigger 
+		// mode is off.
+		//
+		if (chosenTrigger == SOFTWARE)
+		{
+			// Set the trigger source to software
+			if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
+			{
+				cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
+				return false;
+			}
+
+			pCam->TriggerSource.SetValue(TriggerSource_Software);
+
+			cout << "Trigger source set to software..." << endl;
+		}
+		else
+		{
+			// Set the trigger source to hardware (using 'Line0')
+			if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
+			{
+				cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
+				return false;
+			}
+
+			pCam->TriggerSource.SetValue(TriggerSource_Line0);
+
+			cout << "Trigger source set to hardware..." << endl;
+		}
+
+		//
+		// Turn trigger mode on
+		//
+		// *** LATER ***
+		// Once the appropriate trigger source has been set, turn trigger mode 
+		// back on in order to retrieve images using the trigger.
+		//
+		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
+		{
+			cout << "Unable to disable trigger mode. Aborting..." << endl;
+			return false;
+		}
+
+		pCam->TriggerMode.SetValue(TriggerMode_On);
+
+		cout << "Trigger mode turned back on..." << "\n" << endl;
+		}
+
+		pCam->TriggerMode.SetValue(TriggerMode_Off);
+
+		cout << "Trigger mode disabled..." << endl;
+
+		//
+		// Select trigger source
+		//
+		// *** NOTES ***
+		// The trigger source must be set to hardware or software while trigger 
+		// mode is off.
+		//
+		if (chosenTrigger == SOFTWARE)
+		{
+			// Set the trigger source to software
+			if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
+			{
+				cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
+				return false;
+			}
+
+			pCam->TriggerSource.SetValue(TriggerSource_Software);
+
+			cout << "Trigger source set to software..." << endl;
+		}
+		else
+		{
+			// Set the trigger source to hardware (using 'Line0')
+			if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
+			{
+				cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
+				return false;
+			}
+
+			pCam->TriggerSource.SetValue(TriggerSource_Line0);
+
+			cout << "Trigger source set to hardware..." << endl;
+		}
+
+		//
+		// Turn trigger mode on
+		//
+		// *** LATER ***
+		// Once the appropriate trigger source has been set, turn trigger mode 
+		// back on in order to retrieve images using the trigger.
+		//
+		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
+		{
+			cout << "Unable to disable trigger mode. Aborting..." << endl;
+			return false;
+		}
+
+		pCam->TriggerMode.SetValue(TriggerMode_On);
+
+		cout << "Trigger mode turned back on..." << "\n" << endl;
+		cout << "\n" << endl << "*** CONFIGURING EXPOSURE ***" << "\n" << endl;
+
+		// Turn off automatic exposure mode
+		//
+		// *** NOTES ***
+		// Automatic exposure prevents the manual configuration of exposure 
+		// times and needs to be turned off for this example. 
+		// *** LATER ***
+		// Exposure time can be set automatically or manually as needed. This
+		// example turns automatic exposure off to set it manually and back
+		// on to return the camera to its default state.
+		//
+		if (!IsReadable(pCam->ExposureAuto) || !IsWritable(pCam->ExposureAuto))
+		{
+			cout << "Unable to disable automatic exposure. Aborting..." << "\n" << endl;
+			return false;
+		}
+
+		pCam->ExposureAuto.SetValue(ExposureAuto_Off);
+
+		cout << "Automatic exposure disabled..." << endl;
+
+		//
+		// Set exposure time manually; exposure time recorded in microseconds
+		//
+		// *** NOTES ***
+		// Notice that the node is checked for availability and writability
+		// prior to the setting of the node. In QuickSpin, availability is
+		// ensured by checking for null while writability is ensured by checking
+		// the access mode. 
+		//
+		// Further, it is ensured that the desired exposure time does not exceed 
+		// the maximum. Exposure time is counted in microseconds - this can be 
+		// found out either by retrieving the unit with the GetUnit() method or 
+		// by checking SpinView.
+		// 
+		if (!IsReadable(pCam->ExposureTime) || !IsWritable(pCam->ExposureTime))
+		{
+			cout << "Unable to set exposure time. Aborting..." << "\n" << endl;
+			return false;
+		}
+
+		// Ensure desired exposure time does not exceed the maximum
+		const double exposureTimeMax = pCam->ExposureTime.GetMax();
+		double exposureTimeToSet = 17000.0;
+
+		if (exposureTimeToSet > exposureTimeMax)
+		{
+			exposureTimeToSet = exposureTimeMax;
+		}
+
+		pCam->ExposureTime.SetValue(exposureTimeToSet);
+
+		cout << std::fixed << "Shutter time set to " << exposureTimeToSet << " us..." << "\n" << endl;
     }
     catch (Spinnaker::Exception &e)
     {
@@ -310,289 +578,5 @@ int ResetExposure(CameraPtr pCam)
 		result = -1;
 	}
 
-	return result;
-}
-
-
-
-
-int ConfigAcquisition(CameraPtr pCam)
-{
-	int result = 0;
-
-	try
-	{
-		// Set acquisition mode to continuous
-		if (!IsReadable(pCam->AcquisitionMode) || !IsWritable(pCam->AcquisitionMode))
-		{
-			cout << "Unable to set acquisition mode to continuous. Aborting..." << "\n" << endl;
-			return -1;
-		}
-
-		pCam->AcquisitionMode.SetValue(AcquisitionMode_Continuous);
-		cout << "Acquisition mode set to continuous..." << endl;
-	}
-	catch (Spinnaker::Exception& e)
-	{
-		cout << "Error: " << e.what() << endl;
-		result = -1;
-	}
-	catch (cv::Exception& e)
-	{
-		cout << "Error: " << e.what() << endl;
-		result = -1;
-	}
-	return result;
-}
-
-int ConfigImageFormat(CameraPtr pCam)
-{
-	int result = 0;
-
-	try
-	{
-		if (pCam->PixelFormat != NULL && pCam->PixelFormat.GetAccessMode() == RW)
-		{
-			pCam->PixelFormat.SetValue(PixelFormat_RGB8);
-
-			cout << "Pixel format set to " << pCam->PixelFormat.GetCurrentEntry()->GetSymbolic() << "..." << endl;
-		}
-		else
-		{
-			cout << "Pixel format not available..." << endl;
-			result = -1;
-		}
-
-		// Set maximum width
-		//
-		// *** NOTES ***
-		// Other nodes, such as those corresponding to image width and height, 
-		// might have an increment other than 1. In these cases, it can be
-		// important to check that the desired value is a multiple of the
-		// increment. 
-		//
-		// This is often the case for width and height nodes. However, because
-		// these nodes are being set to their maximums, there is no real reason
-		// to check against the increment.
-		// The offsetX and offsetY are influenced by height and width
-		// So make sure you config height and width, then config offset
-		// 偏移量offset受到height 和 width影响，所以先设置宽和高
-		if (IsReadable(pCam->Width) && IsWritable(pCam->Width) && pCam->Width.GetInc() != 0 && pCam->Width.GetMax() != 0)
-		{
-			pCam->Width.SetValue(width); // X 方向宽度的递增量为32， 确保Width是32的整倍数
-
-			cout << "Width set to " << pCam->Width.GetValue() << "..." << endl;
-		}
-		else
-		{
-			cout << "Width not available..." << endl;
-			result = -1;
-		}
-		if (IsReadable(pCam->Height) && IsWritable(pCam->Height) && pCam->Height.GetInc() != 0 && pCam->Height.GetMax() != 0)
-		{
-			pCam->Height.SetValue(height);
-
-			cout << "Height set to " << pCam->Height.GetValue() << "..." << endl;
-		}
-		else
-		{
-			cout << "Height not available..." << endl;
-			result = -1;
-		}
-		if (IsReadable(pCam->OffsetX) && IsWritable(pCam->OffsetX))
-		{
-			pCam->OffsetX.SetValue(offsetX);
-
-			cout << "Offset X set to " << pCam->OffsetX.GetValue() << "..." << endl;
-		}
-		else
-		{
-			cout << "Offset X not available..." << endl;
-			result = -1;
-		}
-		//
-		if (IsReadable(pCam->OffsetY) && IsWritable(pCam->OffsetY))
-		{
-			pCam->OffsetY.SetValue(offsetY);
-
-			cout << "Offset Y set to " << pCam->OffsetY.GetValue() << "..." << endl;
-		}
-		else
-		{
-			cout << "Offset Y not available..." << endl;
-			result = -1;
-		}
-	}
-	catch (Spinnaker::Exception& e)
-	{
-		cout << "Error: " << e.what() << endl;
-		result = -1;
-	}
-	catch (cv::Exception& e)
-	{
-		cout << "Error: " << e.what() << endl;
-		result = -1;
-	}
-	return result;
-}
-
-int ConfigTrigger(CameraPtr pCam)
-{
-	int result = 0;
-
-	try
-	{
-		//
-		// Ensure trigger mode off
-		//
-		// *** NOTES ***
-		// The trigger must be disabled in order to configure whether the source
-		// is software or hardware.
-		//
-		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
-		{
-			cout << "Unable to disable trigger mode. Aborting..." << endl;
-			return -1;
-		}
-
-		pCam->TriggerMode.SetValue(TriggerMode_Off);
-
-		cout << "Trigger mode disabled..." << endl;
-
-		//
-		// Select trigger source
-		//
-		// *** NOTES ***
-		// The trigger source must be set to hardware or software while trigger 
-		// mode is off.
-		//
-		if (chosenTrigger == SOFTWARE)
-		{
-			// Set the trigger source to software
-			if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
-			{
-				cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
-				return -1;
-			}
-
-			pCam->TriggerSource.SetValue(TriggerSource_Software);
-
-			cout << "Trigger source set to software..." << endl;
-		}
-		else
-		{
-			// Set the trigger source to hardware (using 'Line0')
-			if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
-			{
-				cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
-				return -1;
-			}
-
-			pCam->TriggerSource.SetValue(TriggerSource_Line0);
-
-			cout << "Trigger source set to hardware..." << endl;
-		}
-
-		//
-		// Turn trigger mode on
-		//
-		// *** LATER ***
-		// Once the appropriate trigger source has been set, turn trigger mode 
-		// back on in order to retrieve images using the trigger.
-		//
-		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
-		{
-			cout << "Unable to disable trigger mode. Aborting..." << endl;
-			return -1;
-		}
-
-		pCam->TriggerMode.SetValue(TriggerMode_On);
-
-		cout << "Trigger mode turned back on..." << "\n" << endl;
-	}
-	catch (Spinnaker::Exception& e)
-	{
-		cout << "Error: " << e.what() << endl;
-		result = -1;
-	}
-	catch (cv::Exception& e)
-	{
-		cout << "Error: " << e.what() << endl;
-		result = -1;
-	}
-	return result;
-}
-
-int ConfigExposure(CameraPtr pCam)
-{
-	int result = 0;
-
-	try
-	{
-		cout << "\n" << endl << "*** CONFIGURING EXPOSURE ***" << "\n" << endl;
-
-		// Turn off automatic exposure mode
-		//
-		// *** NOTES ***
-		// Automatic exposure prevents the manual configuration of exposure 
-		// times and needs to be turned off for this example. 
-		// *** LATER ***
-		// Exposure time can be set automatically or manually as needed. This
-		// example turns automatic exposure off to set it manually and back
-		// on to return the camera to its default state.
-		//
-		if (!IsReadable(pCam->ExposureAuto) || !IsWritable(pCam->ExposureAuto))
-		{
-			cout << "Unable to disable automatic exposure. Aborting..." << "\n" << endl;
-			return -1;
-		}
-
-		pCam->ExposureAuto.SetValue(ExposureAuto_Off);
-
-		cout << "Automatic exposure disabled..." << endl;
-
-		//
-		// Set exposure time manually; exposure time recorded in microseconds
-		//
-		// *** NOTES ***
-		// Notice that the node is checked for availability and writability
-		// prior to the setting of the node. In QuickSpin, availability is
-		// ensured by checking for null while writability is ensured by checking
-		// the access mode. 
-		//
-		// Further, it is ensured that the desired exposure time does not exceed 
-		// the maximum. Exposure time is counted in microseconds - this can be 
-		// found out either by retrieving the unit with the GetUnit() method or 
-		// by checking SpinView.
-		// 
-		if (!IsReadable(pCam->ExposureTime) || !IsWritable(pCam->ExposureTime))
-		{
-			cout << "Unable to set exposure time. Aborting..." << "\n" << endl;
-			return -1;
-		}
-
-		// Ensure desired exposure time does not exceed the maximum
-		const double exposureTimeMax = pCam->ExposureTime.GetMax();
-		double exposureTimeToSet = 17000.0;
-
-		if (exposureTimeToSet > exposureTimeMax)
-		{
-			exposureTimeToSet = exposureTimeMax;
-		}
-
-		pCam->ExposureTime.SetValue(exposureTimeToSet);
-
-		cout << std::fixed << "Shutter time set to " << exposureTimeToSet << " us..." << "\n" << endl;
-	}
-	catch (Spinnaker::Exception& e)
-	{
-		cout << "Error: " << e.what() << endl;
-		result = -1;
-	}
-	catch (cv::Exception& e)
-	{
-		cout << "Error: " << e.what() << endl;
-		result = -1;
-	}
 	return result;
 }

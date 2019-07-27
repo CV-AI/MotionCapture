@@ -22,7 +22,7 @@ int main(int /*argc*/, char** /*argv*/)
     // initialize
     Tracker tracker;
 	DataProcess dataProcess;
-    bool status = true;
+	bool status = true;
     // let the program know which camera to acquire image from
     int CameraIndex[4];
     cv::Mat image_LU, image_RU, image_RL, image_LL; // Left_Upper, Right_Upper, Right_Lower, Left_Lower
@@ -97,25 +97,13 @@ int main(int /*argc*/, char** /*argv*/)
             }
             std::cout << endl << "Configuring Camera " << i << "..." << endl;
             pCam->Init();  
-            // if not IsInitialized, close system 
-            // if(!pCam->IsInitialized())
-            // {
-            //     // Clear camera list before releasing system
-            //     camList.Clear();
-            //     // Release system
-            //     system->ReleaseInstance();
-            //     std::cout << "Error: can't initialize camera" << endl;
-            //     std::cout << "Press Enter to exit..." << endl;
-            //     getchar();
-            //     return -1;
-            // }
             if(pCam->IsInitialized())
             {
                 std::cout <<"Camera " << i <<" initialized successly"<<endl;
             }
-            // Run example
+            // Config camera
             status = status && ConfigCamera(pCam);
-            
+			pCam->BeginAcquisition();
             if(status)
             {
                 std::cout << "Camera " << i << " config complete..." << "\n" << endl;
@@ -137,33 +125,32 @@ int main(int /*argc*/, char** /*argv*/)
         // main part of this program
         bool first_time = true;
         cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0);
-		for (unsigned int i = 0; i < numCameras; i++)
-		{
-			pCam = camList.GetByIndex(i);
-			pCam->BeginAcquisition();
-		}
+		
         while(status)
         {
             // acquire images
             for (unsigned int i = 0; i < numCameras; i++)
             {
-                // 注意目前pCam指向的其实是CameraIndex[i]所指的相机，也就是在Config阶段确定的相机
-                // note which camera pCam is pointed into is determined by CameraIndex[i]
+                // 注意目前pCam指向的是哪个相机
                 pCam = camList.GetByIndex(i);
 				auto start = std::chrono::high_resolution_clock::now();
                 switch(CameraIndex[i])
                 {
-					case 0: tracker.ReceivedImages[0] = AcquireImages(pCam);
+					case 0: 
+						tracker.ReceivedImages[0] = AcquireImages(pCam);
 						cv::resize(tracker.ReceivedImages[0], image_LU, cv::Size(512, 512));
 						tracker.image = image_LU.clone(); // tracker.image is used for select color
 						cv::imshow("Left_Upper", image_LU); break; // show resized images to save time
-					case 1: tracker.ReceivedImages[1] = AcquireImages(pCam); 
+					case 1: 
+						tracker.ReceivedImages[1] = AcquireImages(pCam); 
 						cv::resize(tracker.ReceivedImages[1], image_LL, cv::Size(512, 512));
 						cv::imshow("Left_Lower", image_LL); break;
-					case 2: tracker.ReceivedImages[2] = AcquireImages(pCam);
+					case 2: 
+						tracker.ReceivedImages[2] = AcquireImages(pCam);
 						cv::resize(tracker.ReceivedImages[2], image_RU, cv::Size(512, 512)); 
 						cv::imshow("Right_Upper", image_RU); break;
-					case 3: tracker.ReceivedImages[3] = AcquireImages(pCam);
+					case 3: 
+						tracker.ReceivedImages[3] = AcquireImages(pCam);
 						cv::resize(tracker.ReceivedImages[3], image_RL, cv::Size(512, 512)); 
 						cv::imshow("Right_Lower", image_RL); break;
                 }
@@ -206,6 +193,7 @@ int main(int /*argc*/, char** /*argv*/)
         // Select camera
         pCam = camList.GetByIndex(i);
         pCam->EndAcquisition();
+		ResetExposure(pCam);
         pCam->DeInit();
     }
     //pCam = NULL;

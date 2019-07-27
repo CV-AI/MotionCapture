@@ -30,7 +30,7 @@ public:
 	
 	static cv::Mat image;
 	static bool getColors;
-    cv::Mat ReceivedImages[4]; // Left_Upper, Right_Upper, Right_Lower, Left_Lower
+    cv::Mat ReceivedImages[4]; // Left_Upper, qRight_Upper, Right_Lower, Left_Lower
 	cv::Mat detectWindow;
 	cv::Point momentpoints[6];
 	cv::Point detectWindowPosition = cv::Point(0, 0);
