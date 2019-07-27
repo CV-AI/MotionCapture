@@ -383,62 +383,8 @@ bool ConfigCamera(CameraPtr pCam)
 		pCam->TriggerMode.SetValue(TriggerMode_On);
 
 		cout << "Trigger mode turned back on..." << "\n" << endl;
-		}
 
-		pCam->TriggerMode.SetValue(TriggerMode_Off);
 
-		cout << "Trigger mode disabled..." << endl;
-
-		//
-		// Select trigger source
-		//
-		// *** NOTES ***
-		// The trigger source must be set to hardware or software while trigger 
-		// mode is off.
-		//
-		if (chosenTrigger == SOFTWARE)
-		{
-			// Set the trigger source to software
-			if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
-			{
-				cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
-				return false;
-			}
-
-			pCam->TriggerSource.SetValue(TriggerSource_Software);
-
-			cout << "Trigger source set to software..." << endl;
-		}
-		else
-		{
-			// Set the trigger source to hardware (using 'Line0')
-			if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
-			{
-				cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
-				return false;
-			}
-
-			pCam->TriggerSource.SetValue(TriggerSource_Line0);
-
-			cout << "Trigger source set to hardware..." << endl;
-		}
-
-		//
-		// Turn trigger mode on
-		//
-		// *** LATER ***
-		// Once the appropriate trigger source has been set, turn trigger mode 
-		// back on in order to retrieve images using the trigger.
-		//
-		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
-		{
-			cout << "Unable to disable trigger mode. Aborting..." << endl;
-			return false;
-		}
-
-		pCam->TriggerMode.SetValue(TriggerMode_On);
-
-		cout << "Trigger mode turned back on..." << "\n" << endl;
 		cout << "\n" << endl << "*** CONFIGURING EXPOSURE ***" << "\n" << endl;
 
 		// Turn off automatic exposure mode
