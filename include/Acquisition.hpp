@@ -163,7 +163,7 @@ cv::Mat AcquireImages(CameraPtr  pCam)
             pResultImage->Release();
             //needs to be converted into BGR(OpenCV uses RGB)
             //cv::cvtColor(cvImage, cvImage, CV_BayerGB2BGR);
-			cv::cvtColor(cvImage, cvImage, CV_RGB2BGR);
+			cv::cvtColor(cvImage, cvImage, CV_RGB2HSV);
         }
     }
     catch (Spinnaker::Exception &e)

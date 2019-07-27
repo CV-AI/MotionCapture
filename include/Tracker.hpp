@@ -8,8 +8,8 @@
 
 #include<cmath>
 
-constexpr auto MAX_H_RED = 240;
-constexpr auto MIN_H_RED = 300;
+constexpr auto MAX_H_RED = 50;
+constexpr auto MIN_H_RED = 0;
 class Tracker
 {
 	void ColorTheresholding();

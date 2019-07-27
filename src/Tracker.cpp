@@ -47,12 +47,11 @@ void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
 void Tracker::ColorTheresholding()
 {
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
-	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED / 2, 100, 80),
-	cv::Scalar(MAX_H_RED / 2, 255, 255), rangeRes);
-	// <<<<< Color Thresholding
-	cv::erode(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 2);
-	cv::dilate(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 2);
+	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED, 100, 80), cv::Scalar(MAX_H_RED, 255, 255), rangeRes);
 	detectWindow = rangeRes;
+	cv::namedWindow("rangeRes", 0);
+	cv::imshow("rangeRes", rangeRes);
+	cv::waitKey(0);
 	/*for (int j = 0; j < detectWindow.rows; j++)
 	{
 		uchar*data = detectWindow.ptr<uchar>(j);
@@ -75,15 +74,14 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 {	
 	ColorTheresholding();
 	cv::Mat detectCopy = detectWindow.clone();
-	cv::cvtColor(detectWindow, detectWindow, CV_BGRA2GRAY);
-	std::cout << detectWindow.size << std::endl;
+	//cv::cvtColor(detectWindow, detectWindow, CV_BGRA2GRAY);
 	cv::Mat mask(3, 3, CV_8U, cv::Scalar(1));
 	cv::morphologyEx(detectWindow, detectWindow, cv::MORPH_CLOSE, mask);
 
 	std::vector<std::vector<cv::Point>>contours;
 	cv::findContours(detectWindow, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
 	
-	int cmin = 120;
+	int cmin = 100;
 	int cmax = 280;
 	std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
 	// remove contours that are too small or large
@@ -134,7 +132,8 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 	switch(tracker_type)
 	{
 		case ByDetection: 
-		{for (int i = 0; i < numCameras; i++)
+		{
+			for (int i = 0; i < numCameras; i++)
 			{
 				// i is the index of camera
 				detectWindow = ReceivedImages[i].clone();

@@ -162,17 +162,18 @@ int main(int /*argc*/, char** /*argv*/)
                 {status = false;}
                 // pCam = NULL;
             }
-            if(first_time && tracker.getColors)
-            {
-                tracker.InitTracker(tracker.ByDetection);
-                dataProcess.exportGaitData();
-            }
+			// 这两者顺序不要弄反，否则初始化后会立即开始跟踪，这时图片还未更新，如果使用
             if(tracker.TrackerIntialized)
             {
                 memcpy(tracker.previousPos, tracker.currentPos, sizeof(tracker.currentPos));
                 tracker.UpdateTracker(tracker.ByDetection);
                 dataProcess.exportGaitData();
             }
+			if (first_time && tracker.getColors)
+			{
+				tracker.InitTracker(tracker.ByDetection);
+				dataProcess.exportGaitData();
+			}
         }
         cv::destroyAllWindows();
 		pCam = NULL;
