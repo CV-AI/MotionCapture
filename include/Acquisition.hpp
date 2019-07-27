@@ -44,7 +44,7 @@ const int64_t width = 1440;
 // Disables heartbeat on GEV cameras(GigE Vison) so debugging does not incur timeout errors
 int DisableHeartbeat(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice)
 {
-    cout << "Checking device type to see if we need to disable the camera's heartbeat..." << endl << endl;
+    cout << "Checking device type to see if we need to disable the camera's heartbeat..." << "\n" << endl;
     //
     // Write to boolean node controlling the camera's heartbeat
     // 
@@ -65,27 +65,27 @@ int DisableHeartbeat(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDev
     CEnumerationPtr ptrDeviceType = nodeMapTLDevice.GetNode("DeviceType");
     if (!IsAvailable(ptrDeviceType) && !IsReadable(ptrDeviceType))
     {
-        cout << "Error with reading the device's type. Aborting..." << endl << endl;
+        cout << "Error with reading the device's type. Aborting..." << "\n" << endl;
         return -1;
     }
     else
     {
         if (ptrDeviceType->GetIntValue() == DeviceType_GEV)
         {
-            cout << "Working with a GigE camera. Attempting to disable heartbeat before continuing..." << endl << endl;
+            cout << "Working with a GigE camera. Attempting to disable heartbeat before continuing..." << "\n" << endl;
             CBooleanPtr ptrDeviceHeartbeat = nodeMap.GetNode("GevGVCPHeartbeatDisable");
             if ( !IsAvailable(ptrDeviceHeartbeat) || !IsWritable(ptrDeviceHeartbeat) )
             {
-                cout << "Unable to disable heartbeat on camera. Aborting..." << endl << endl;
+                cout << "Unable to disable heartbeat on camera. Aborting..." << "\n" << endl;
                 return -1;
             }
             ptrDeviceHeartbeat->SetValue(true);
             cout << "WARNING: Heartbeat on GigE camera disabled for the rest of Debug Mode." << endl;
-            cout << "         Power cycle camera when done debugging to re-enable the heartbeat..." << endl << endl;
+            cout << "         Power cycle camera when done debugging to re-enable the heartbeat..." << "\n" << endl;
         }
         else
         {
-            cout << "Camera does not use GigE interface. Resuming normal execution..." << endl << endl;
+            cout << "Camera does not use GigE interface. Resuming normal execution..." << "\n" << endl;
         }
     }
     return 0;
@@ -94,6 +94,11 @@ int DisableHeartbeat(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDev
 cv::Mat ConvertToCVmat(ImagePtr spinImage);
 cv::Mat AcquireImages(CameraPtr  pCam);
 int ConfigCamera(CameraPtr pCam);
+int ConfigExposure(CameraPtr pCam);
+int ConfigImageFormat(CameraPtr pCam);
+int ConfigTrigger(CameraPtr pCam);
+int ConfigAcquisition(CameraPtr pCam);
+int ResetExposure(CameraPtr pCam);
 int PrintDeviceInfo(INodeMap & nodeMap);
 /*
  * This function shows how to convert between Spinnaker ImagePtr container to CVmat container used in OpenCV.
@@ -119,15 +124,7 @@ cv::Mat AcquireImages(CameraPtr  pCam)
 		// Use trigger to capture image
 		//
 		// *** NOTES ***
-		// The software trigger only feigns being executed by the Enter key;
-		// what might not be immediately apparent is that there is no 
-		// continuous stream of images being captured; in other examples that 
-		// acquire images, the camera captures a continuous stream of images. 
-		// When an image is then retrieved, it is plucked from the stream; 
-		// there are many more images captured than retrieved. However, while 
-		// trigger mode is activated, there is only a single image captured at 
-		// the time that the trigger is activated. 
-		//
+		
 		if (chosenTrigger == SOFTWARE)
 		{
 			// Execute software trigger
@@ -162,14 +159,14 @@ cv::Mat AcquireImages(CameraPtr  pCam)
             // Retreive and print the image status description
             std::cout << "Image incomplete: "
                     << Image::GetImageStatusDescription(pResultImage->GetImageStatus())
-                    << "..." << endl << endl;
+                    << "..." << "\n" << endl;
         }
         else
         {
             cvImage = ConvertToCVmat(pResultImage);
             pResultImage->Release();
             //needs to be converted into BGR(OpenCV uses RGB)
-            cv::cvtColor(cvImage, cvImage, CV_BayerGB2BGR);
+            //cv::cvtColor(cvImage, cvImage, CV_BayerGB2BGR);
 			//cv::cvtColor(cvImage, cvImage, CV_RGB2HSV);
         }
     }
@@ -182,7 +179,7 @@ cv::Mat AcquireImages(CameraPtr  pCam)
 // This function config the camera settings
 int ConfigCamera(CameraPtr pCam)
 {
-    bool process_status = true;
+    bool status = true ;
     
     std::cout << "\n" << "\n" << "*** IMAGE ACQUISITION ***" << "\n" << endl;
     
@@ -193,34 +190,179 @@ int ConfigCamera(CameraPtr pCam)
         // Retrieve GenICam nodemap
         INodeMap & nodeMap = pCam->GetNodeMap();
 
+        //process_status = process_status && PrintDeviceInfo(nodeMapTLDevice);
+#ifdef _DEBUG
+        cout << "\n" << endl << "*** DEBUG ***" << "\n" << endl;
+        // If using a GEV camera and debugging, should disable heartbeat first to prevent further issues
+        if (DisableHeartbeat(pCam, nodeMap, nodeMapTLDevice) != 0)
+        {
+            return -1;
+        }
+        cout << "\n" << endl << "*** END OF DEBUG ***" << "\n" << endl;
+#endif
+		
+        // The device serial number is retrieved in order to keep cameras from 
+        // overwriting one another. Grabbing image IDs could also accomplish
+        // this.
+        //
+		status = ConfigAcquisition(pCam);
+		status = ConfigImageFormat(pCam);
+        gcstring deviceSerialNumber("");
+        CStringPtr ptrStringSerial = nodeMapTLDevice.GetNode("DeviceSerialNumber");
+        if (IsAvailable(ptrStringSerial) && IsReadable(ptrStringSerial))
+        {
+            deviceSerialNumber = ptrStringSerial->GetValue();
+
+            std::cout << "Device serial number retrieved as " << deviceSerialNumber << "..." << endl;
+        }
+		if (chosenTrigger == SOFTWARE)
+		{
+			cout << "Software trigger chosen..." << endl;
+		}
+		else
+		{
+			cout << "Hardware trigger chosen..." << endl;
+		}
+		status = ConfigTrigger(pCam);
+		status = ConfigExposure(pCam);
+    }
+    catch (Spinnaker::Exception &e)
+    {
+        std::cout << "Spinnaker Error during config Camera: " << e.what() << endl;
+        status = false;
+    }
+    catch (cv::Exception &e)
+    {
+        std::cout << "CV Error during config Camera: " << e.what() << endl;
+        status = false;
+    }
+    return status;
+}
+// This function prints the device information of the camera from the transport
+// layer; please see NodeMapInfo example for more in-depth comments on printing
+// device information from the nodemap.
+int PrintDeviceInfo(INodeMap & nodeMap)
+{
+    bool process_status = true;
+    
+    std::cout << "\n" << "*** DEVICE INFORMATION ***" << "\n" << endl;
+
+    try
+    {
+        FeatureList_t features;
+        CCategoryPtr category = nodeMap.GetNode("DeviceInformation");
+        if (IsAvailable(category) && IsReadable(category))
+        {
+            category->GetFeatures(features);
+
+            FeatureList_t::const_iterator it;
+            for (it = features.begin(); it != features.end(); ++it)
+            {
+                CNodePtr pfeatureNode = *it;
+                std::cout << pfeatureNode->GetName() << " : ";
+                CValuePtr pValue = (CValuePtr)pfeatureNode;
+                std::cout << (IsReadable(pValue) ? pValue->ToString() : "Node not readable");
+                std::cout << endl;
+            }
+        }
+        else
+        {
+            std::cout << "Device control information not available." << endl;
+        }
+    }
+    catch (Spinnaker::Exception &e)
+    {
+        std::cout << "Error: during print Device information" << e.what() << endl;
+        process_status = false;
+    }
+    
+    return process_status;
+}
+
+// This function returns the camera to a normal state by re-enabling automatic
+// exposure.
+int ResetExposure(CameraPtr pCam)
+{
+	int result = 0;
+
+	try
+	{
+		// 
+		// Turn automatic exposure back on
+		//
+		// *** NOTES ***
+		// Automatic exposure is turned on in order to return the camera to its 
+		// default state.
+		//
+		if (!IsReadable(pCam->ExposureAuto) || !IsWritable(pCam->ExposureAuto))
+		{
+			cout << "Unable to enable automatic exposure (node retrieval). Non-fatal error..." << endl << endl;
+			return -1;
+		}
+
+		pCam->ExposureAuto.SetValue(ExposureAuto_Continuous);
+
+		cout << "Automatic exposure enabled..." << endl << endl;
+	}
+	catch (Spinnaker::Exception& e)
+	{
+		cout << "Error: " << e.what() << endl;
+		result = -1;
+	}
+
+	return result;
+}
+
+
+
+
+int ConfigAcquisition(CameraPtr pCam)
+{
+	int result = 0;
+
+	try
+	{
 		// Set acquisition mode to continuous
 		if (!IsReadable(pCam->AcquisitionMode) || !IsWritable(pCam->AcquisitionMode))
 		{
-			cout << "Unable to set acquisition mode to continuous. Aborting..." << endl << endl;
+			cout << "Unable to set acquisition mode to continuous. Aborting..." << "\n" << endl;
 			return -1;
 		}
 
 		pCam->AcquisitionMode.SetValue(AcquisitionMode_Continuous);
 		cout << "Acquisition mode set to continuous..." << endl;
+	}
+	catch (Spinnaker::Exception& e)
+	{
+		cout << "Error: " << e.what() << endl;
+		result = -1;
+	}
+	catch (cv::Exception& e)
+	{
+		cout << "Error: " << e.what() << endl;
+		result = -1;
+	}
+	return result;
+}
 
-		//// Turn off auto exposure
-		//pCam->ExposureAuto.SetValue(Spinnaker::ExposureAutoEnums::ExposureAuto_Off);
-		////Set exposure mode to "Timed"
-		//pCam->ExposureMode.SetValue(Spinnaker::ExposureModeEnums::ExposureMode_Timed);
-		////Set absolute value of shutter exposure time to microseconds
-		//pCam->ExposureTime.SetValue(10000);
-		
-        if (pCam->PixelFormat != NULL && pCam->PixelFormat.GetAccessMode() == RW)
+int ConfigImageFormat(CameraPtr pCam)
+{
+	int result = 0;
+
+	try
+	{
+		if (pCam->PixelFormat != NULL && pCam->PixelFormat.GetAccessMode() == RW)
 		{
-			pCam->PixelFormat.SetValue(PixelFormat_BayerGB8);
-		
+			pCam->PixelFormat.SetValue(PixelFormat_RGB8);
+
 			cout << "Pixel format set to " << pCam->PixelFormat.GetCurrentEntry()->GetSymbolic() << "..." << endl;
 		}
 		else
-		{               
+		{
 			cout << "Pixel format not available..." << endl;
-			process_status = false;
+			result = -1;
 		}
+
 		// Set maximum width
 		//
 		// *** NOTES ***
@@ -244,16 +386,8 @@ int ConfigCamera(CameraPtr pCam)
 		else
 		{
 			cout << "Width not available..." << endl;
-			process_status = false;
+			result = -1;
 		}
-
-		//
-		// Set maximum height
-		//
-		// *** NOTES ***
-		// A maximum is retrieved with the method GetMax(). A node's minimum and
-		// maximum should always be a multiple of its increment.
-		//
 		if (IsReadable(pCam->Height) && IsWritable(pCam->Height) && pCam->Height.GetInc() != 0 && pCam->Height.GetMax() != 0)
 		{
 			pCam->Height.SetValue(height);
@@ -263,15 +397,8 @@ int ConfigCamera(CameraPtr pCam)
 		else
 		{
 			cout << "Height not available..." << endl;
-			process_status = false;
+			result = -1;
 		}
-		// Apply minimum to offset X
-		//
-		// *** NOTES ***
-		// Numeric nodes have both a minimum and maximum. A minimum is retrieved
-		// with the method GetMin(). Sometimes it can be important to check 
-		// minimums to ensure that your desired value is within range.
-		//
 		if (IsReadable(pCam->OffsetX) && IsWritable(pCam->OffsetX))
 		{
 			pCam->OffsetX.SetValue(offsetX);
@@ -281,18 +408,8 @@ int ConfigCamera(CameraPtr pCam)
 		else
 		{
 			cout << "Offset X not available..." << endl;
-			process_status = false;
+			result = -1;
 		}
-
-		//
-		// Apply minimum to offset Y
-		// 
-		// *** NOTES ***
-		// It is often desirable to check the increment as well. The increment
-		// is a number of which a desired value must be a multiple. Certain
-		// nodes, such as those corresponding to offsets X and Y, have an
-		// increment of 1, which basically means that any value within range
-		// is appropriate. The increment is retrieved with the method GetInc().
 		//
 		if (IsReadable(pCam->OffsetY) && IsWritable(pCam->OffsetY))
 		{
@@ -303,42 +420,28 @@ int ConfigCamera(CameraPtr pCam)
 		else
 		{
 			cout << "Offset Y not available..." << endl;
-			process_status = false;
+			result = -1;
 		}
+	}
+	catch (Spinnaker::Exception& e)
+	{
+		cout << "Error: " << e.what() << endl;
+		result = -1;
+	}
+	catch (cv::Exception& e)
+	{
+		cout << "Error: " << e.what() << endl;
+		result = -1;
+	}
+	return result;
+}
 
-		//
-		
-        //process_status = process_status && PrintDeviceInfo(nodeMapTLDevice);
-#ifdef _DEBUG
-        cout << endl << endl << "*** DEBUG ***" << endl << endl;
-        // If using a GEV camera and debugging, should disable heartbeat first to prevent further issues
-        if (DisableHeartbeat(pCam, nodeMap, nodeMapTLDevice) != 0)
-        {
-            return -1;
-        }
-        cout << endl << endl << "*** END OF DEBUG ***" << endl << endl;
-#endif
-        // The device serial number is retrieved in order to keep cameras from 
-        // overwriting one another. Grabbing image IDs could also accomplish
-        // this.
-        //
-        gcstring deviceSerialNumber("");
-        CStringPtr ptrStringSerial = nodeMapTLDevice.GetNode("DeviceSerialNumber");
-        if (IsAvailable(ptrStringSerial) && IsReadable(ptrStringSerial))
-        {
-            deviceSerialNumber = ptrStringSerial->GetValue();
+int ConfigTrigger(CameraPtr pCam)
+{
+	int result = 0;
 
-            std::cout << "Device serial number retrieved as " << deviceSerialNumber << "..." << endl;
-        }
-		if (chosenTrigger == SOFTWARE)
-		{
-			cout << "Software trigger chosen..." << endl;
-		}
-		else
-		{
-			cout << "Hardware trigger chosen..." << endl;
-		}
-
+	try
+	{
 		//
 		// Ensure trigger mode off
 		//
@@ -405,57 +508,91 @@ int ConfigCamera(CameraPtr pCam)
 
 		pCam->TriggerMode.SetValue(TriggerMode_On);
 
-		cout << "Trigger mode turned back on..." << endl << endl;
-    }
-    catch (Spinnaker::Exception &e)
-    {
-        std::cout << "Spinnaker Error during config Camera: " << e.what() << endl;
-        process_status = false;
-    }
-    catch (cv::Exception &e)
-    {
-        std::cout << "CV Error during config Camera: " << e.what() << endl;
-        process_status = false;
-    }
-    return process_status;
+		cout << "Trigger mode turned back on..." << "\n" << endl;
+	}
+	catch (Spinnaker::Exception& e)
+	{
+		cout << "Error: " << e.what() << endl;
+		result = -1;
+	}
+	catch (cv::Exception& e)
+	{
+		cout << "Error: " << e.what() << endl;
+		result = -1;
+	}
+	return result;
 }
-// This function prints the device information of the camera from the transport
-// layer; please see NodeMapInfo example for more in-depth comments on printing
-// device information from the nodemap.
-int PrintDeviceInfo(INodeMap & nodeMap)
+
+int ConfigExposure(CameraPtr pCam)
 {
-    bool process_status = true;
-    
-    std::cout << "\n" << "*** DEVICE INFORMATION ***" << "\n" << endl;
+	int result = 0;
 
-    try
-    {
-        FeatureList_t features;
-        CCategoryPtr category = nodeMap.GetNode("DeviceInformation");
-        if (IsAvailable(category) && IsReadable(category))
-        {
-            category->GetFeatures(features);
+	try
+	{
+		cout << "\n" << endl << "*** CONFIGURING EXPOSURE ***" << "\n" << endl;
 
-            FeatureList_t::const_iterator it;
-            for (it = features.begin(); it != features.end(); ++it)
-            {
-                CNodePtr pfeatureNode = *it;
-                std::cout << pfeatureNode->GetName() << " : ";
-                CValuePtr pValue = (CValuePtr)pfeatureNode;
-                std::cout << (IsReadable(pValue) ? pValue->ToString() : "Node not readable");
-                std::cout << endl;
-            }
-        }
-        else
-        {
-            std::cout << "Device control information not available." << endl;
-        }
-    }
-    catch (Spinnaker::Exception &e)
-    {
-        std::cout << "Error: during print Device information" << e.what() << endl;
-        process_status = false;
-    }
-    
-    return process_status;
+		// Turn off automatic exposure mode
+		//
+		// *** NOTES ***
+		// Automatic exposure prevents the manual configuration of exposure 
+		// times and needs to be turned off for this example. 
+		// *** LATER ***
+		// Exposure time can be set automatically or manually as needed. This
+		// example turns automatic exposure off to set it manually and back
+		// on to return the camera to its default state.
+		//
+		if (!IsReadable(pCam->ExposureAuto) || !IsWritable(pCam->ExposureAuto))
+		{
+			cout << "Unable to disable automatic exposure. Aborting..." << "\n" << endl;
+			return -1;
+		}
+
+		pCam->ExposureAuto.SetValue(ExposureAuto_Off);
+
+		cout << "Automatic exposure disabled..." << endl;
+
+		//
+		// Set exposure time manually; exposure time recorded in microseconds
+		//
+		// *** NOTES ***
+		// Notice that the node is checked for availability and writability
+		// prior to the setting of the node. In QuickSpin, availability is
+		// ensured by checking for null while writability is ensured by checking
+		// the access mode. 
+		//
+		// Further, it is ensured that the desired exposure time does not exceed 
+		// the maximum. Exposure time is counted in microseconds - this can be 
+		// found out either by retrieving the unit with the GetUnit() method or 
+		// by checking SpinView.
+		// 
+		if (!IsReadable(pCam->ExposureTime) || !IsWritable(pCam->ExposureTime))
+		{
+			cout << "Unable to set exposure time. Aborting..." << "\n" << endl;
+			return -1;
+		}
+
+		// Ensure desired exposure time does not exceed the maximum
+		const double exposureTimeMax = pCam->ExposureTime.GetMax();
+		double exposureTimeToSet = 17000.0;
+
+		if (exposureTimeToSet > exposureTimeMax)
+		{
+			exposureTimeToSet = exposureTimeMax;
+		}
+
+		pCam->ExposureTime.SetValue(exposureTimeToSet);
+
+		cout << std::fixed << "Shutter time set to " << exposureTimeToSet << " us..." << "\n" << endl;
+	}
+	catch (Spinnaker::Exception& e)
+	{
+		cout << "Error: " << e.what() << endl;
+		result = -1;
+	}
+	catch (cv::Exception& e)
+	{
+		cout << "Error: " << e.what() << endl;
+		result = -1;
+	}
+	return result;
 }
