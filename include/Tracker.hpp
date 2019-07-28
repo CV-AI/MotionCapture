@@ -3,7 +3,7 @@
 #include <opencv2/opencv.hpp>
 // #include <opencv2/gpu/gpu.hpp>
 #include<iostream>
-
+#include<string>
 #include<vector>
 
 #include<cmath>
@@ -26,6 +26,7 @@ public:
 	enum TrackerType{ByDetection, CV_KCF};
 	static void Mouse_getColor(int event, int x, int y, int, void*);
 	bool getContoursAndMoment(int camera_index);
+	bool getContoursAndMoment(int camera_index, int marker_index);
 	//void patternMatch();
 	
 	static cv::Mat image;
@@ -38,9 +39,11 @@ public:
 	cv::Point currentPos[4][6]; // first entry is the index of image, second entry is the index of marker
 	cv::Point previousPos[4][6];
 	cv::Point predictPos; // the predicted position of marker in current frame
-	int detectWindowDimX = 50; // the dimension of detectWindow
-	int detectWindowDimY = 50; 
+	int detectWindowDimX = 150; // the dimension of detectWindow
+	int detectWindowDimY = 160; 
 	int numCameras = 0;
+	int cmin = 140; // minimum and maximum value for contours
+	int cmax = 280;
 	bool InitTracker(TrackerType);
 	bool TrackerIntialized = false;
 	bool UpdateTracker(TrackerType);

@@ -274,7 +274,7 @@ bool ConfigCamera(CameraPtr pCam)
         // If using a GEV camera and debugging, should disable heartbeat first to prevent further issues
         if (DisableHeartbeat(pCam, nodeMap, nodeMapTLDevice) != 0)
         {
-            return -1;
+            return false;
         }
         cout << "\n" << endl << "*** END OF DEBUG ***" << "\n" << endl;
 #endif

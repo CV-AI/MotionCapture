@@ -123,9 +123,8 @@ int main(int /*argc*/, char** /*argv*/)
         }
         // acquire images and do something
         // main part of this program
-        bool first_time = true;
         cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0);
-		
+		bool first_time = true;
         while(status)
         {
             // acquire images
@@ -162,16 +161,16 @@ int main(int /*argc*/, char** /*argv*/)
                 {status = false;}
                 // pCam = NULL;
             }
-			if (first_time && tracker.getColors)
-			{
-				tracker.InitTracker(tracker.ByDetection);
-				dataProcess.exportGaitData();
-			}
-			if (tracker.TrackerIntialized && !first_time)
+			if (tracker.TrackerIntialized)
 			{
 				memcpy(tracker.previousPos, tracker.currentPos, sizeof(tracker.currentPos));
 				tracker.UpdateTracker(tracker.ByDetection);
+				memcpy(dataProcess.points, tracker.currentPos, sizeof(tracker.currentPos));
 				dataProcess.exportGaitData();
+			}
+			if (/*tracker.getColors && */!tracker.TrackerIntialized)
+			{
+				tracker.InitTracker(tracker.ByDetection);
 			}
         }
         cv::destroyAllWindows();
@@ -203,7 +202,6 @@ int main(int /*argc*/, char** /*argv*/)
 
     // Release system
     system->ReleaseInstance();
-    std::cout<< "Done! Press Enter to exit..." << endl;
     getchar();
     return status;
 }
