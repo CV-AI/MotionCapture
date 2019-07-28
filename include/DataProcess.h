@@ -11,12 +11,12 @@ class DataProcess
 public:
 	DataProcess();
 	~DataProcess();
-
+	int numCameras;
 	//void getTime();
 	void mapTo3D();
 	void getJointAngle();
-	cv::Point points[2][6];
-	cv::Point3d MarkerPos3D[6];
+	cv::Point points[4][6];
+	cv::Point3d MarkerPos3D[2][6];
 	bool exportGaitData();
 	cv::Mat image;
 	double time = 0;

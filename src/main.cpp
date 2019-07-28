@@ -44,7 +44,10 @@ int main(int /*argc*/, char** /*argv*/)
     CameraList camList = system->GetCameras();
   
     unsigned int numCameras = camList.GetSize();
-	tracker.numCameras = numCameras;
+	
+	dataProcess.numCameras = tracker.numCameras = numCameras;
+	assert(numCameras % 2 == 0, "Number of cameras not correct, must be multiple of 2.");
+	
     std::cout << "Number of cameras detected: " << numCameras << endl << endl;
     
     // Finish if there are no cameras
