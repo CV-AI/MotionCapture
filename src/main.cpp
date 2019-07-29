@@ -15,6 +15,7 @@ using namespace Spinnaker::GenApi;
 using namespace Spinnaker::GenICam;
 using namespace std;
 
+
 // Example entry point; please see Enumeration example for more in-depth 
 // comments on preparing and cleaning up the system.
 int main(int /*argc*/, char** /*argv*/)
@@ -24,7 +25,7 @@ int main(int /*argc*/, char** /*argv*/)
 	DataProcess dataProcess;
 	bool status = true;
     // let the program know which camera to acquire image from
-    int CameraIndex[4];
+    
     cv::Mat image_LU, image_RU, image_RL, image_LL; // Left_Upper, Right_Upper, Right_Lower, Left_Lower
     cv::namedWindow("Left_Upper",0);
     cv::namedWindow("Right_Upper",0);
@@ -44,7 +45,7 @@ int main(int /*argc*/, char** /*argv*/)
     CameraList camList = system->GetCameras();
   
     unsigned int numCameras = camList.GetSize();
-	
+	int CameraIndex[4];
 	dataProcess.numCameras = tracker.numCameras = numCameras;
 	assert(numCameras % 2 == 0, "Number of cameras not correct, must be multiple of 2.");
 	
@@ -124,46 +125,94 @@ int main(int /*argc*/, char** /*argv*/)
             }
             // pCam =NULL;
         }
+		// Create an array of CameraPtrs. This array maintenances smart pointer's reference
+		// count when CameraPtr is passed into grab thread as void pointer
+		CameraPtr* pCamList = new CameraPtr[numCameras];
+		AcquisitionParameters* paraList = new AcquisitionParameters[numCameras];
+#if defined(_WIN32)
+		HANDLE* grabThreads = new HANDLE[numCameras];
+#else
+		pthread_t* grabThreads = new pthread_t[camListSize];
+#endif
+
+		
         // acquire images and do something
         // main part of this program
-        cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0);
+        //cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0);
 		bool first_time = true;
         while(status)
         {
             // acquire images
-            for (unsigned int i = 0; i < numCameras; i++)
-            {
-                // 注意目前pCam指向的是哪个相机
-                pCam = camList.GetByIndex(i);
+			auto start = std::chrono::high_resolution_clock::now();
+			for (unsigned int i = 0; i < numCameras; i++)
+			{
+				pCamList[i] = camList.GetByIndex(i);
+				// 注意目前pCam指向的是哪个相机
+				cout << "processing: " << i << endl;
 				auto start = std::chrono::high_resolution_clock::now();
-                switch(CameraIndex[i])
-                {
-					case 0: 
-						tracker.ReceivedImages[0] = AcquireImages(pCam);
-						cv::resize(tracker.ReceivedImages[0], image_LU, cv::Size(512, 512));
-						tracker.image = image_LU.clone(); // tracker.image is used for select color
-						cv::imshow("Left_Upper", image_LU); break; // show resized images to save time
-					case 1: 
-						tracker.ReceivedImages[1] = AcquireImages(pCam); 
-						cv::resize(tracker.ReceivedImages[1], image_LL, cv::Size(512, 512));
-						cv::imshow("Left_Lower", image_LL); break;
-					case 2: 
-						tracker.ReceivedImages[2] = AcquireImages(pCam);
-						cv::resize(tracker.ReceivedImages[2], image_RU, cv::Size(512, 512)); 
-						cv::imshow("Right_Upper", image_RU); break;
-					case 3: 
-						tracker.ReceivedImages[3] = AcquireImages(pCam);
-						cv::resize(tracker.ReceivedImages[3], image_RL, cv::Size(512, 512)); 
-						cv::imshow("Right_Lower", image_RL); break;
-                }
-				auto stop = std::chrono::high_resolution_clock::now();
-				std::chrono::duration<double> elapsed_seconds = stop - start;
-				std::cout << "Acquiring time on camera " << CameraIndex[i]<<": " <<elapsed_seconds.count() <<std::endl;
-                int key = cv::waitKey(1);
-                if ( key == 27) // press "Esc" to stop
-                {status = false;}
-                // pCam = NULL;
-            }
+				paraList[i].pCam = pCamList[i];
+				paraList[i].cvImage = &tracker.ReceivedImages[CameraIndex[i]];
+				// Start grab thread
+#if defined(_WIN32)
+				grabThreads[i] = CreateThread(nullptr, 0, AcquireImages, &paraList[i], 0, nullptr);
+				assert(grabThreads[i] != nullptr);
+#else
+				int err = pthread_create(&(grabThreads[i]), nullptr, &AcquireImages, &acqPara);
+				assert(err == 0);
+#endif
+			}
+#if defined(_WIN32)
+			// Wait for all threads to finish
+			WaitForMultipleObjects(numCameras,		// number of threads to wait for 
+				grabThreads,				// handles for threads to wait for
+				TRUE,					// wait for all of the threads
+				INFINITE				// wait forever
+			);
+			// Check thread return code for each camera
+			for (unsigned int i = 0; i < numCameras; i++)
+			{
+				DWORD exitcode;
+
+				BOOL rc = GetExitCodeThread(grabThreads[i], &exitcode);
+				if (!rc)
+				{
+					cout << "Handle error from GetExitCodeThread() returned for camera at index " << i << endl;
+				}
+				else if (!exitcode)
+				{
+					cout << "Grab thread for camera at index " << i << " exited with errors."
+						"Please check onscreen print outs for error details" << endl;
+				}
+			}
+
+#else
+			for (unsigned int i = 0; i < camListSize; i++)
+			{
+				// Wait for all threads to finish
+				void* exitcode;
+				int rc = pthread_join(grabThreads[i], &exitcode);
+				if (rc != 0)
+				{
+					cout << "Handle error from pthread_join returned for camera at index " << i << endl;
+				}
+				else if ((int)(intptr_t)exitcode == 0)// check thread return code for each camera
+				{
+					cout << "Grab thread for camera at index " << i << " exited with errors."
+						"Please check onscreen print outs for error details" << endl;
+				}
+			}
+#endif
+			auto stop = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> elapsed_seconds = stop - start;
+			cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
+			cv::waitKey(1);
+			int key = cv::waitKey(1);
+			if (key == 27)
+			{
+				status = false;
+			}
+			std::cout << "Acquiring time on camera " <<": " <<elapsed_seconds.count() <<std::endl;
+            // pCam = NULL;
 			if (tracker.TrackerIntialized)
 			{
 				memcpy(tracker.previousPos, tracker.currentPos, sizeof(tracker.currentPos));
@@ -176,6 +225,17 @@ int main(int /*argc*/, char** /*argv*/)
 				tracker.InitTracker(tracker.ByDetection);
 			}
         }
+		// Clear CameraPtr array and close all handles
+		for (unsigned int i = 0; i < numCameras; i++)
+		{
+			pCamList[i] = 0;
+#if defined(_WIN32)            
+			CloseHandle(grabThreads[i]);
+#endif
+		}
+		// Delete array pointer
+		delete[] pCamList;
+		delete[] grabThreads;
         cv::destroyAllWindows();
 		pCam = NULL;
     }
@@ -206,5 +266,5 @@ int main(int /*argc*/, char** /*argv*/)
     // Release system
     system->ReleaseInstance();
     getchar();
-    return status;
+    return true;
 }

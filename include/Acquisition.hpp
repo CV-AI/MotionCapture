@@ -25,6 +25,10 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+#ifndef _WIN32
+#include <pthread.h>
+#endif
+
 using namespace Spinnaker;
 using namespace Spinnaker::GenApi;
 using namespace Spinnaker::GenICam;
@@ -38,8 +42,19 @@ enum triggerType
 const triggerType chosenTrigger = SOFTWARE;
 const int64_t offsetX = 220;
 const int64_t offsetY = 220;
-const int64_t height = 1440;
-const int64_t width = 1440;
+int64_t height = 1440;
+int64_t width = 1440;
+class AcquisitionParameters
+{
+public:
+	AcquisitionParameters()
+	{
+		pCam = NULL;
+		cvImage = &cv::Mat(height, width, CV_8UC3);
+	}
+	CameraPtr pCam = NULL;
+	cv::Mat* cvImage;
+};
 #ifdef _DEBUG
 // Disables heartbeat on GEV cameras(GigE Vison) so debugging does not incur timeout errors
 int DisableHeartbeat(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice)
@@ -109,11 +124,17 @@ cv::Mat ConvertToCVmat(ImagePtr spinImage)
     return cv::Mat(colsize + YPadding, rowsize + XPadding, CV_MAKETYPE(CV_8U, spinImage->GetNumChannels()), spinImage->GetData(), spinImage->GetStride());
 }
 // This function acquires images from a device.
-cv::Mat AcquireImages(CameraPtr  pCam)
+#if defined (_WIN32)
+DWORD WINAPI AcquireImages(LPVOID lpParam)
 {
-    
-    cv::Mat cvImage;
-    // Retrieve, convert, and show images
+	AcquisitionParameters acqPara = *((AcquisitionParameters*) lpParam);
+	CameraPtr pCam = acqPara.pCam;
+	cv::Mat* cvImage = acqPara.cvImage;
+#else
+void* AcquireImages(void* arg)
+{
+	CameraPtr pCam = *((CameraPtr*)arg);
+#endif
 
     try
     {
@@ -159,18 +180,19 @@ cv::Mat AcquireImages(CameraPtr  pCam)
         }
         else
         {
-            cvImage = ConvertToCVmat(pResultImage);
+            *cvImage = ConvertToCVmat(pResultImage);
             pResultImage->Release();
             //needs to be converted into BGR(OpenCV uses RGB)
             //cv::cvtColor(cvImage, cvImage, CV_BayerGB2BGR);
-			cv::cvtColor(cvImage, cvImage, CV_RGB2HSV);
+			// 使用指针参数，直接对形参赋值
+			cv::cvtColor(*cvImage, *cvImage, CV_RGB2HSV);
+			return true;
         }
     }
     catch (Spinnaker::Exception &e)
     {
         std::cout << "Error during acquiring images: " << e.what() << endl;
     }
-    return cvImage;
 }
 // This function config the camera settings
 bool ConfigCamera(CameraPtr pCam)
