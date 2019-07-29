@@ -107,7 +107,6 @@ int DisableHeartbeat(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDev
 }
 #endif
 cv::Mat ConvertToCVmat(ImagePtr spinImage);
-cv::Mat AcquireImages(CameraPtr  pCam);
 bool ConfigCamera(CameraPtr pCam);
 int ResetExposure(CameraPtr pCam);
 int PrintDeviceInfo(INodeMap & nodeMap);
@@ -133,7 +132,9 @@ DWORD WINAPI AcquireImages(LPVOID lpParam)
 #else
 void* AcquireImages(void* arg)
 {
-	CameraPtr pCam = *((CameraPtr*)arg);
+	AcquisitionParameters acqPara = *((AcquisitionParameters*)lpParam);
+	CameraPtr pCam = acqPara.pCam;
+	cv::Mat* cvImage = acqPara.cvImage;
 #endif
 
     try
@@ -208,7 +209,19 @@ bool ConfigCamera(CameraPtr pCam)
 
         // Retrieve GenICam nodemap
         INodeMap & nodeMap = pCam->GetNodeMap();
-		
+		// The device serial number is retrieved in order to keep cameras from 
+		// overwriting one another. Grabbing image IDs could also accomplish
+		// this.
+		//
+
+		gcstring deviceSerialNumber("");
+		CStringPtr ptrStringSerial = nodeMapTLDevice.GetNode("DeviceSerialNumber");
+		if (IsAvailable(ptrStringSerial) && IsReadable(ptrStringSerial))
+		{
+			deviceSerialNumber = ptrStringSerial->GetValue();
+
+			std::cout << "Device serial number retrieved as " << deviceSerialNumber << "..." << endl;
+		}
 		// Set acquisition mode to continuous
 		if (!IsReadable(pCam->AcquisitionMode) || !IsWritable(pCam->AcquisitionMode))
 		{
@@ -300,20 +313,26 @@ bool ConfigCamera(CameraPtr pCam)
         }
         cout << "\n" << endl << "*** END OF DEBUG ***" << "\n" << endl;
 #endif
-		
-        // The device serial number is retrieved in order to keep cameras from 
-        // overwriting one another. Grabbing image IDs could also accomplish
-        // this.
-        //
-		
-        gcstring deviceSerialNumber("");
-        CStringPtr ptrStringSerial = nodeMapTLDevice.GetNode("DeviceSerialNumber");
-        if (IsAvailable(ptrStringSerial) && IsReadable(ptrStringSerial))
-        {
-            deviceSerialNumber = ptrStringSerial->GetValue();
+		// Set FrameRate
+		// Frame rate setting
+		// Turn on frame rate control 
+		//CBooleanPtr ptrFrameRateEnable = pCam->GetNodeMap().GetNode("AcquisitionFrameRateEnable");
+		//if (!IsAvailable(ptrFrameRateEnable) || !IsWritable(ptrFrameRateEnable))
+		//{
+		//	cout << " Unable to enable Acquisition Frame Rate (node retrieval). Aborting..." << endl;
+		//}
 
-            std::cout << "Device serial number retrieved as " << deviceSerialNumber << "..." << endl;
-        }
+		//// Enable  Acquisition Frame Rate Enable
+		//ptrFrameRateEnable->SetValue(true);
+
+		//CFloatPtr ptrFrameRate = pCam->GetNodeMap().GetNode("AcquisitionFrameRate");
+		//if (!IsAvailable(ptrFrameRate) || !IsWritable(ptrFrameRate))
+		//{
+		//	cout << " Unable to set Acquisition Frame Rate (node retrieval). Aborting..." << endl;
+		//}
+		//const float frameRate = 30.0f;
+		//ptrFrameRate->SetValue(frameRate);
+		//cout << "Camera Frame rate is set to " << frameRate << endl;
 		//
 		// Ensure trigger mode off
 		//
@@ -441,11 +460,12 @@ bool ConfigCamera(CameraPtr pCam)
 
 		// Ensure desired exposure time does not exceed the maximum
 		const double exposureTimeMax = pCam->ExposureTime.GetMax();
+		const double exposureTimeMin = pCam->ExposureTime.GetMin();
 		double exposureTimeToSet = 17000.0;
 
-		if (exposureTimeToSet > exposureTimeMax)
+		if (exposureTimeToSet > exposureTimeMax || exposureTimeToSet < exposureTimeMin)
 		{
-			exposureTimeToSet = exposureTimeMax;
+			exposureTimeToSet = exposureTimeMin;
 		}
 
 		pCam->ExposureTime.SetValue(exposureTimeToSet);

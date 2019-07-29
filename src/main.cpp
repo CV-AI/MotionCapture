@@ -95,7 +95,7 @@ int main(int /*argc*/, char** /*argv*/)
             {
                 CameraIndex[i] = 2; // image_RU                
             }
-            else if (deviceSerialNumber == "18308391")
+            else if (deviceSerialNumber == "18308399")
             {
                 CameraIndex[i] = 3; // image_RL
             }
@@ -127,12 +127,11 @@ int main(int /*argc*/, char** /*argv*/)
         }
 		// Create an array of CameraPtrs. This array maintenances smart pointer's reference
 		// count when CameraPtr is passed into grab thread as void pointer
-		CameraPtr* pCamList = new CameraPtr[numCameras];
 		AcquisitionParameters* paraList = new AcquisitionParameters[numCameras];
 #if defined(_WIN32)
 		HANDLE* grabThreads = new HANDLE[numCameras];
 #else
-		pthread_t* grabThreads = new pthread_t[camListSize];
+		pthread_t* grabThreads = new pthread_t[numCameras];
 #endif
 
 		
@@ -146,18 +145,15 @@ int main(int /*argc*/, char** /*argv*/)
 			auto start = std::chrono::high_resolution_clock::now();
 			for (unsigned int i = 0; i < numCameras; i++)
 			{
-				pCamList[i] = camList.GetByIndex(i);
-				// 注意目前pCam指向的是哪个相机
-				cout << "processing: " << i << endl;
-				auto start = std::chrono::high_resolution_clock::now();
-				paraList[i].pCam = pCamList[i];
+				paraList[i].pCam = camList.GetByIndex(i);
 				paraList[i].cvImage = &tracker.ReceivedImages[CameraIndex[i]];
 				// Start grab thread
 #if defined(_WIN32)
+				cout << "processing" << i << endl;
 				grabThreads[i] = CreateThread(nullptr, 0, AcquireImages, &paraList[i], 0, nullptr);
 				assert(grabThreads[i] != nullptr);
 #else
-				int err = pthread_create(&(grabThreads[i]), nullptr, &AcquireImages, &acqPara);
+				int err = pthread_create(&(grabThreads[i]), nullptr, &AcquireImages, &paraList[i]);
 				assert(err == 0);
 #endif
 			}
@@ -228,13 +224,12 @@ int main(int /*argc*/, char** /*argv*/)
 		// Clear CameraPtr array and close all handles
 		for (unsigned int i = 0; i < numCameras; i++)
 		{
-			pCamList[i] = 0;
 #if defined(_WIN32)            
 			CloseHandle(grabThreads[i]);
 #endif
 		}
 		// Delete array pointer
-		delete[] pCamList;
+		delete[] paraList;
 		delete[] grabThreads;
         cv::destroyAllWindows();
 		pCam = NULL;
