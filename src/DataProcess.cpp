@@ -44,18 +44,18 @@ void DataProcess::mapTo3D()
 	const double fy = 1002.1;
 	const int T = 200;
 	// i 是相机组的序号（每一对相机）
-	for (int i = 0; i <numCameras; i++)
+	for (int i = 0; i < numCameras; i++)
 	{
 		// j 是marker 的序号
 		for (int j = 0; j < 6; j++)
 		{
-			MarkerPos3D[i][j].x = (2 * double(points[2*i][j].x) - cx) * T /(2 * (double(points[2 * i][j].x) - double(points[2 * i+1][j].x)));
+			MarkerPos3D[i][j].x = (2 * double(points[2 * i][j].x) - cx) * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][j].x)));
 			MarkerPos3D[i][j].y = -(2 * double(points[2 * i][j].y) - cy) * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][j].x)));
 			MarkerPos3D[i][j].z = fx * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][i].x)));
 			std::cout << "Camera Set " << i << " Marker " << j << MarkerPos3D[i][j] << std::endl;
 		}
 	}
-	
+
 }
 
 
@@ -73,7 +73,7 @@ void DataProcess::getJointAngle()
 		ankle = ((acos((foot.x * shank.x + foot.y * shank.y) / (sqrt(foot.x * foot.x + foot.y * foot.y) * sqrt(shank.x * shank.x + shank.y * shank.y)))) / pi) * 180 - 90;
 		std::cout << "hip:   " << hip << "   " << "knee:   " << knee << "   " << "ankle:   " << ankle << std::endl;
 	}
-	
+
 }
 
 bool DataProcess::exportGaitData()
