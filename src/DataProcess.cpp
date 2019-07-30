@@ -49,10 +49,10 @@ void DataProcess::mapTo3D()
 		// j 是marker 的序号
 		for (int j = 0; j < 6; j++)
 		{
-			/*MarkerPos3D[i][j].x = (2 * double(points[2 * i][j].x) - cx) * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][j].x)));
+			MarkerPos3D[i][j].x = (2 * double(points[2 * i][j].x) - cx) * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][j].x)));
 			MarkerPos3D[i][j].y = -(2 * double(points[2 * i][j].y) - cy) * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][j].x)));
 			MarkerPos3D[i][j].z = fx * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][i].x)));
-			std::cout << "Camera Set " << i << " Marker " << j << MarkerPos3D[i][j] << std::endl;*/
+			std::cout << "Camera Set " << i << " Marker " << j << MarkerPos3D[i][j] << std::endl;
 		}
 	}
 

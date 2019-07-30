@@ -42,6 +42,8 @@ enum triggerType
 const triggerType chosenTrigger = SOFTWARE;
 const int64_t offsetX = 220;
 const int64_t offsetY = 220;
+const int64_t numBuffers = 1;
+const float frameRate = 30.0f;
 int64_t height = 1440;
 int64_t width = 1440;
 class AcquisitionParameters
@@ -206,7 +208,7 @@ bool ConfigCamera(CameraPtr pCam)
     try
     {
         INodeMap & nodeMapTLDevice = pCam->GetTLDeviceNodeMap();
-
+		INodeMap& sNodeMap = pCam->GetTLStreamNodeMap();
         // Retrieve GenICam nodemap
         INodeMap & nodeMap = pCam->GetNodeMap();
 		// The device serial number is retrieved in order to keep cameras from 
@@ -243,7 +245,111 @@ bool ConfigCamera(CameraPtr pCam)
 			cout << "Pixel format not available..." << endl;
 			status = false;
 		}
+		// Retrieve Buffer Handling Mode Information
+		try
+		{
+			CEnumerationPtr ptrHandlingMode = sNodeMap.GetNode("StreamBufferHandlingMode");
+			if (!IsAvailable(ptrHandlingMode) || !IsWritable(ptrHandlingMode))
+			{
+				cout << "Unable to set Buffer Handling mode (node retrieval). Aborting..." << endl << endl;
+				return -1;
+			}
 
+			CEnumEntryPtr ptrHandlingModeEntry = ptrHandlingMode->GetCurrentEntry();
+			if (!IsAvailable(ptrHandlingModeEntry) || !IsReadable(ptrHandlingModeEntry))
+			{
+				cout << "Unable to set Buffer Handling mode (Entry retrieval). Aborting..." << endl << endl;
+				return -1;
+			}
+
+			// Set stream buffer Count Mode to manual
+			CEnumerationPtr ptrStreamBufferCountMode = sNodeMap.GetNode("StreamBufferCountMode");
+			if (!IsAvailable(ptrStreamBufferCountMode) || !IsWritable(ptrStreamBufferCountMode))
+			{
+				cout << "Unable to set Buffer Count Mode (node retrieval). Aborting..." << endl << endl;
+				return -1;
+			}
+
+			CEnumEntryPtr ptrStreamBufferCountModeManual = ptrStreamBufferCountMode->GetEntryByName("Manual");
+			if (!IsAvailable(ptrStreamBufferCountModeManual) || !IsReadable(ptrStreamBufferCountModeManual))
+			{
+				cout << "Unable to set Buffer Count Mode entry (Entry retrieval). Aborting..." << endl << endl;
+				return -1;
+			}
+
+			ptrStreamBufferCountMode->SetIntValue(ptrStreamBufferCountModeManual->GetValue());
+
+			cout << "Stream Buffer Count Mode set to manual..." << endl;
+
+			// Retrieve and modify Stream Buffer Count
+			CIntegerPtr ptrBufferCount = sNodeMap.GetNode("StreamBufferCountManual");
+			if (!IsAvailable(ptrBufferCount) || !IsWritable(ptrBufferCount))
+			{
+				cout << "Unable to set Buffer Count (Integer node retrieval). Aborting..." << endl << endl;
+				return -1;
+			}
+
+			// Display Buffer Info
+			cout << endl << "Default Buffer Handling Mode: " << ptrHandlingModeEntry->GetDisplayName() << endl;
+			cout << "Default Buffer Count: " << ptrBufferCount->GetValue() << endl;
+			cout << "Maximum Buffer Count: " << ptrBufferCount->GetMax() << endl;
+
+			ptrBufferCount->SetValue(numBuffers);
+
+			cout << "Buffer count now set to: " << ptrBufferCount->GetValue() << endl;
+			ptrHandlingModeEntry = ptrHandlingMode->GetEntryByName("NewestOnly");
+			ptrHandlingMode->SetIntValue(ptrHandlingModeEntry->GetValue());
+			cout << endl << endl << "Buffer Handling Mode has been set to " << ptrHandlingModeEntry->GetDisplayName() << endl;
+		}
+		catch (Spinnaker::Exception& e)
+		{
+			cout << "Error during setting Buffers: " << e.what() << endl;
+		}
+		//Set FrameRate
+		//	Frame rate setting
+		//	Turn on frame rate control 
+		try
+		{
+			
+			// Trigger Mode needs to be turned off to set frame rate
+			if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
+			{
+				cout << "Unable to disable trigger mode. Aborting..." << endl;
+				return -1;
+			}
+
+			pCam->TriggerMode.SetValue(TriggerMode_Off);
+			// enable frame rate setting
+			cout << "Trigger mode disabled..." << endl;
+			if (!IsReadable(pCam->AcquisitionFrameRateEnable) || !IsWritable(pCam->AcquisitionFrameRateEnable))
+			{
+				cout << " Unable to enable Acquisition Frame Rate (node retrieval)" << endl;
+				cout << "IsReadble: " << IsReadable(pCam->AcquisitionFrameRateEnable) <<
+						", IsWritable: " << IsWritable(pCam->AcquisitionFrameRateEnable) << endl;
+			}
+			pCam->AcquisitionFrameRateEnable.SetValue(true);
+			cout << "AcquisitionFrameRate Enabled..." << endl;
+			// read current frame rate
+			if (!IsReadable(pCam->AcquisitionFrameRate))
+			{
+				cout << " Unable to read Acquisition Frame Rate (node retrieval)" << endl;
+			}
+			cout << "Current Frame Rate: " << pCam->AcquisitionFrameRate.GetValue() << endl;
+			// set frame rate
+			if (!IsReadable(pCam->AcquisitionFrameRate) || !IsWritable(pCam->AcquisitionFrameRate))
+			{
+				cout << " Unable to set Acquisition Frame Rate (node retrieval)" << endl;
+				cout << "IsReadble: " << IsReadable(pCam->AcquisitionFrameRate) <<
+					", IsWritable: " << IsWritable(pCam->AcquisitionFrameRate) << endl;
+			}
+			pCam->AcquisitionFrameRate.SetValue(frameRate);
+			cout << "Camera Frame rate is set to " << frameRate << endl;
+		}
+		catch (Spinnaker::Exception& e)
+		{
+			cout << "Error during setting Acquisition rate: " << e.what() << endl;
+		}
+		
 		// Set maximum width
 		//
 		// *** NOTES ***
@@ -313,110 +419,93 @@ bool ConfigCamera(CameraPtr pCam)
         }
         cout << "\n" << endl << "*** END OF DEBUG ***" << "\n" << endl;
 #endif
-		// Set FrameRate
-		// Frame rate setting
-		// Turn on frame rate control 
-		//CBooleanPtr ptrFrameRateEnable = pCam->GetNodeMap().GetNode("AcquisitionFrameRateEnable");
-		//if (!IsAvailable(ptrFrameRateEnable) || !IsWritable(ptrFrameRateEnable))
-		//{
-		//	cout << " Unable to enable Acquisition Frame Rate (node retrieval). Aborting..." << endl;
-		//}
-
-		//// Enable  Acquisition Frame Rate Enable
-		//ptrFrameRateEnable->SetValue(true);
-
-		//CFloatPtr ptrFrameRate = pCam->GetNodeMap().GetNode("AcquisitionFrameRate");
-		//if (!IsAvailable(ptrFrameRate) || !IsWritable(ptrFrameRate))
-		//{
-		//	cout << " Unable to set Acquisition Frame Rate (node retrieval). Aborting..." << endl;
-		//}
-		//const float frameRate = 30.0f;
-		//ptrFrameRate->SetValue(frameRate);
-		//cout << "Camera Frame rate is set to " << frameRate << endl;
-		//
-		// Ensure trigger mode off
-		//
-		// *** NOTES ***
-		// The trigger must be disabled in order to configure whether the source
-		// is software or hardware.
-		//
-		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
+		
+		try
 		{
-			cout << "Unable to disable trigger mode. Aborting..." << endl;
-			return false;
-		}
-		if (chosenTrigger == SOFTWARE)
-		{
-			cout << "Software trigger chosen..." << endl;
-		}
-		else
-		{
-			cout << "Hardware trigger chosen..." << endl;
-		}
-		//
-		// Ensure trigger mode off
-		//
-		// *** NOTES ***
-		// The trigger must be disabled in order to configure whether the source
-		// is software or hardware.
-		//
-		pCam->TriggerMode.SetValue(TriggerMode_Off);
-
-		cout << "Trigger mode disabled..." << endl;
-
-		//
-		// Select trigger source
-		//
-		// *** NOTES ***
-		// The trigger source must be set to hardware or software while trigger 
-		// mode is off.
-		//
-		if (chosenTrigger == SOFTWARE)
-		{
-			// Set the trigger source to software
-			if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
+			if (chosenTrigger == SOFTWARE)
 			{
-				cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
-				return false;
+				cout << "Software trigger chosen..." << endl;
+			}
+			else
+			{
+				cout << "Hardware trigger chosen..." << endl;
 			}
 
-			pCam->TriggerSource.SetValue(TriggerSource_Software);
-
-			cout << "Trigger source set to software..." << endl;
-		}
-		else
-		{
-			// Set the trigger source to hardware (using 'Line0')
-			if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
+			//
+			// Ensure trigger mode off
+			//
+			// *** NOTES ***
+			// The trigger must be disabled in order to configure whether the source
+			// is software or hardware.
+			//
+			if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
 			{
-				cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
-				return false;
+				cout << "Unable to disable trigger mode. Aborting..." << endl;
+				return -1;
 			}
 
-			pCam->TriggerSource.SetValue(TriggerSource_Line0);
+			pCam->TriggerMode.SetValue(TriggerMode_Off);
 
-			cout << "Trigger source set to hardware..." << endl;
+			cout << "Trigger mode disabled..." << endl;
+
+			//
+			// Select trigger source
+			//
+			// *** NOTES ***
+			// The trigger source must be set to hardware or software while trigger 
+			// mode is off.
+			//
+			if (chosenTrigger == SOFTWARE)
+			{
+				// Set the trigger source to software
+				if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
+				{
+					cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
+					return -1;
+				}
+
+				pCam->TriggerSource.SetValue(TriggerSource_Software);
+
+				cout << "Trigger source set to software..." << endl;
+			}
+			else
+			{
+				// Set the trigger source to hardware (using 'Line0')
+				if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
+				{
+					cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
+					return -1;
+				}
+
+				pCam->TriggerSource.SetValue(TriggerSource_Line0);
+
+				cout << "Trigger source set to hardware..." << endl;
+			}
+
+			//
+			// Turn trigger mode on
+			//
+			// *** LATER ***
+			// Once the appropriate trigger source has been set, turn trigger mode 
+			// back on in order to retrieve images using the trigger.
+			//
+			if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
+			{
+				cout << "Unable to disable trigger mode. Aborting..." << endl;
+				return -1;
+			}
+
+			pCam->TriggerMode.SetValue(TriggerMode_On);
+
+			cout << "Trigger mode turned back on..." << endl << endl;
 		}
-
-		//
-		// Turn trigger mode on
-		//
-		// *** LATER ***
-		// Once the appropriate trigger source has been set, turn trigger mode 
-		// back on in order to retrieve images using the trigger.
-		//
-		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
+		catch (Spinnaker::Exception& e)
 		{
-			cout << "Unable to disable trigger mode. Aborting..." << endl;
-			return false;
+			cout << "Error during config trigger: " << e.what() << endl;
+			status = false;
 		}
-
-		pCam->TriggerMode.SetValue(TriggerMode_On);
-
-		cout << "Trigger mode turned back on..." << "\n" << endl;
-
-
-		cout << "\n" << endl << "*** CONFIGURING EXPOSURE ***" << "\n" << endl;
+		
+		cout << "\n" << "\n" << "*** CONFIGURING EXPOSURE ***" << "\n" << endl;
 
 		// Turn off automatic exposure mode
 		//
@@ -459,9 +548,10 @@ bool ConfigCamera(CameraPtr pCam)
 		}
 
 		// Ensure desired exposure time does not exceed the maximum
-		const double exposureTimeMax = pCam->ExposureTime.GetMax();
-		const double exposureTimeMin = pCam->ExposureTime.GetMin();
-		double exposureTimeToSet = 17000.0;
+		const float exposureTimeMax = pCam->ExposureTime.GetMax();
+		const float exposureTimeMin = pCam->ExposureTime.GetMin();
+		cout << "Max exposure time: " << exposureTimeMax << ", min exposure time: " << exposureTimeMin << endl;
+		float exposureTimeToSet = 17000.0f;
 
 		if (exposureTimeToSet > exposureTimeMax || exposureTimeToSet < exposureTimeMin)
 		{
@@ -557,4 +647,25 @@ int ResetExposure(CameraPtr pCam)
 	}
 
 	return result;
+}
+
+bool ResetTrigger(CameraPtr pCam)
+{
+	bool status = true;
+	try
+	{
+		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
+		{
+			cout << "Unable to disable trigger mode. Aborting..." << endl;
+			return false;
+		}
+		pCam->TriggerMode.SetValue(TriggerMode_Off);
+
+		cout << "Trigger mode disabled..." << endl;
+	}
+	catch (Spinnaker::Exception& e)
+	{
+		cout << "Error: " << e.what() << endl;
+		status = false;
+	}
 }

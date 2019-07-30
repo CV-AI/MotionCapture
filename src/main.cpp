@@ -137,7 +137,7 @@ int main(int /*argc*/, char** /*argv*/)
 		
         // acquire images and do something
         // main part of this program
-        //cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0);
+        cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0);
 		bool first_time = true;
         while(status)
         {
@@ -201,6 +201,7 @@ int main(int /*argc*/, char** /*argv*/)
 			auto stop = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> elapsed_seconds = stop - start;
 			cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
+			cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
 			cv::waitKey(1);
 			int key = cv::waitKey(1);
 			if (key == 27)
@@ -251,6 +252,7 @@ int main(int /*argc*/, char** /*argv*/)
         pCam = camList.GetByIndex(i);
         pCam->EndAcquisition();
 		ResetExposure(pCam);
+		ResetTrigger(pCam);
         pCam->DeInit();
     }
     //pCam = NULL;
