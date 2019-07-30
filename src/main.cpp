@@ -200,6 +200,7 @@ int main(int /*argc*/, char** /*argv*/)
 #endif
 			auto stop = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> elapsed_seconds = stop - start;
+			std::cout << "Acquiring time on camera " << ": " << elapsed_seconds.count() << std::endl;
 			cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
 			cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
 			cv::waitKey(1);
@@ -208,10 +209,11 @@ int main(int /*argc*/, char** /*argv*/)
 			{
 				status = false;
 			}
-			std::cout << "Acquiring time on camera " <<": " <<elapsed_seconds.count() <<std::endl;
+			
             // pCam = NULL;
+			auto start_ = std::chrono::high_resolution_clock::now();
 			if (tracker.TrackerIntialized)
-			{
+			{	
 				memcpy(tracker.previousPos, tracker.currentPos, sizeof(tracker.currentPos));
 				tracker.UpdateTracker(tracker.ByDetection);
 				memcpy(dataProcess.points, tracker.currentPos, sizeof(tracker.currentPos));
@@ -221,6 +223,9 @@ int main(int /*argc*/, char** /*argv*/)
 			{
 				tracker.InitTracker(tracker.ByDetection);
 			}
+			auto stop_ = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> elapsed_seconds_ = stop_ - start_;
+			std::cout << "Time on data process " << ": " << elapsed_seconds_.count() << std::endl;
         }
 		// Clear CameraPtr array and close all handles
 		for (unsigned int i = 0; i < numCameras; i++)

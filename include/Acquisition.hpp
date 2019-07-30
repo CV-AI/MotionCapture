@@ -39,7 +39,7 @@ enum triggerType
 	SOFTWARE,
 	HARDWARE
 };
-const triggerType chosenTrigger = SOFTWARE;
+const triggerType chosenTrigger = HARDWARE;
 const int64_t offsetX = 220;
 const int64_t offsetY = 220;
 const int64_t numBuffers = 1;
@@ -188,7 +188,7 @@ void* AcquireImages(void* arg)
             //needs to be converted into BGR(OpenCV uses RGB)
             //cv::cvtColor(cvImage, cvImage, CV_BayerGB2BGR);
 			// 使用指针参数，直接对形参赋值
-			cv::cvtColor(*cvImage, *cvImage, CV_RGB2HSV);
+			//cv::cvtColor(*cvImage, *cvImage, CV_RGB2HSV);
 			return true;
         }
     }
