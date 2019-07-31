@@ -40,19 +40,20 @@ enum triggerType
 	HARDWARE
 };
 const triggerType chosenTrigger = HARDWARE;
-const int64_t offsetX = 220;
-const int64_t offsetY = 220;
-const int64_t numBuffers = 1;
+int64_t offsetX[4] = { 500, 500, 700, 700 };
+int64_t offsetY[4] = { 500, 300, 500, 300 };
+const int64_t numBuffers = 3;
 const float frameRate = 30.0f;
-int64_t height = 1440;
-int64_t width = 1440;
+int64_t height[4] = { 1280, 1280, 1280, 1280 };
+int64_t width[4] = { 800, 800, 640, 640 };
+bool SetExposureManual = false;
 class AcquisitionParameters
 {
 public:
 	AcquisitionParameters()
 	{
 		pCam = NULL;
-		cvImage = &cv::Mat(height, width, CV_8UC3);
+		cvImage = & cv::Mat(1280, 800, CV_8UC3);
 	}
 	CameraPtr pCam = NULL;
 	cv::Mat* cvImage;
@@ -188,7 +189,8 @@ void* AcquireImages(void* arg)
             //needs to be converted into BGR(OpenCV uses RGB)
             //cv::cvtColor(cvImage, cvImage, CV_BayerGB2BGR);
 			// 使用指针参数，直接对形参赋值
-			//cv::cvtColor(*cvImage, *cvImage, CV_RGB2HSV);
+			//cv::cvtColor(*cvImage, *cvImage, CV_RGB2BGR);
+			//cout << "Acquiring image finished" << endl;
 			return true;
         }
     }
@@ -198,10 +200,9 @@ void* AcquireImages(void* arg)
     }
 }
 // This function config the camera settings
-bool ConfigCamera(CameraPtr pCam)
+bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 {
 	bool status = true;
-	CameraPtr copy = pCam;
     
     std::cout << "\n" << "\n" << "*** IMAGE ACQUISITION ***" << "\n" << endl;
     
@@ -366,7 +367,7 @@ bool ConfigCamera(CameraPtr pCam)
 		// 偏移量offset受到height 和 width影响，所以先设置宽和高
 		if (IsReadable(pCam->Width) && IsWritable(pCam->Width) && pCam->Width.GetInc() != 0 && pCam->Width.GetMax() != 0)
 		{
-			pCam->Width.SetValue(width); // X 方向宽度的递增量为32， 确保Width是32的整倍数
+			pCam->Width.SetValue(width[cameraIndex]); // X 方向宽度的递增量为32， 确保Width是32的整倍数
 
 			cout << "Width set to " << pCam->Width.GetValue() << "..." << endl;
 		}
@@ -377,7 +378,7 @@ bool ConfigCamera(CameraPtr pCam)
 		}
 		if (IsReadable(pCam->Height) && IsWritable(pCam->Height) && pCam->Height.GetInc() != 0 && pCam->Height.GetMax() != 0)
 		{
-			pCam->Height.SetValue(height);
+			pCam->Height.SetValue(height[cameraIndex]);
 
 			cout << "Height set to " << pCam->Height.GetValue() << "..." << endl;
 		}
@@ -388,7 +389,7 @@ bool ConfigCamera(CameraPtr pCam)
 		}
 		if (IsReadable(pCam->OffsetX) && IsWritable(pCam->OffsetX))
 		{
-			pCam->OffsetX.SetValue(offsetX);
+			pCam->OffsetX.SetValue(offsetX[cameraIndex]);
 
 			cout << "Offset X set to " << pCam->OffsetX.GetValue() << "..." << endl;
 		}
@@ -400,7 +401,7 @@ bool ConfigCamera(CameraPtr pCam)
 		//
 		if (IsReadable(pCam->OffsetY) && IsWritable(pCam->OffsetY))
 		{
-			pCam->OffsetY.SetValue(offsetY);
+			pCam->OffsetY.SetValue(offsetY[cameraIndex]);
 
 			cout << "Offset Y set to " << pCam->OffsetY.GetValue() << "..." << endl;
 		}
@@ -517,50 +518,75 @@ bool ConfigCamera(CameraPtr pCam)
 		// example turns automatic exposure off to set it manually and back
 		// on to return the camera to its default state.
 		//
-		if (!IsReadable(pCam->ExposureAuto) || !IsWritable(pCam->ExposureAuto))
+		try
 		{
-			cout << "Unable to disable automatic exposure. Aborting..." << "\n" << endl;
-			return false;
+			
+			if (SetExposureManual)
+			{
+				if (!IsReadable(pCam->ExposureAuto) || !IsWritable(pCam->ExposureAuto))
+				{
+					cout << "Unable to disable automatic exposure. Aborting..." << "\n" << endl;
+					return false;
+				}
+
+				pCam->ExposureAuto.SetValue(ExposureAuto_Off);
+
+				cout << "Automatic exposure disabled..." << endl;
+				//
+				// Set exposure time manually; exposure time recorded in microseconds
+				//
+				// *** NOTES ***
+				// Notice that the node is checked for availability and writability
+				// prior to the setting of the node. In QuickSpin, availability is
+				// ensured by checking for null while writability is ensured by checking
+				// the access mode. 
+				//
+				// Further, it is ensured that the desired exposure time does not exceed 
+				// the maximum. Exposure time is counted in microseconds - this can be 
+				// found out either by retrieving the unit with the GetUnit() method or 
+				// by checking SpinView.
+				// 
+				if (!IsReadable(pCam->ExposureTime) || !IsWritable(pCam->ExposureTime))
+				{
+					cout << "Unable to set exposure time. Aborting..." << "\n" << endl;
+					return false;
+				}
+
+				// Ensure desired exposure time does not exceed the maximum
+				const float exposureTimeMax = pCam->ExposureTime.GetMax();
+				const float exposureTimeMin = pCam->ExposureTime.GetMin();
+				cout << "Max exposure time: " << exposureTimeMax << ", min exposure time: " << exposureTimeMin << endl;
+				float exposureTimeToSet = 17000.0f;
+
+				if (exposureTimeToSet > exposureTimeMax || exposureTimeToSet < exposureTimeMin)
+				{
+					exposureTimeToSet = exposureTimeMin;
+				}
+
+				pCam->ExposureTime.SetValue(exposureTimeToSet);
+
+				cout << std::fixed << "Shutter time set to " << exposureTimeToSet << " us..." << "\n" << endl;
+			}
+			else
+			{
+				if (!IsReadable(pCam->ExposureAuto) || !IsWritable(pCam->ExposureAuto))
+				{
+					cout << "Unable to enable automatic exposure. Aborting..." << "\n" << endl;
+					return false;
+				}
+
+				pCam->ExposureAuto.SetValue(ExposureAuto_Continuous);
+
+				cout << "Automatic exposure disabled..." << endl;
+			}
+			
 		}
-
-		pCam->ExposureAuto.SetValue(ExposureAuto_Off);
-
-		cout << "Automatic exposure disabled..." << endl;
-
-		//
-		// Set exposure time manually; exposure time recorded in microseconds
-		//
-		// *** NOTES ***
-		// Notice that the node is checked for availability and writability
-		// prior to the setting of the node. In QuickSpin, availability is
-		// ensured by checking for null while writability is ensured by checking
-		// the access mode. 
-		//
-		// Further, it is ensured that the desired exposure time does not exceed 
-		// the maximum. Exposure time is counted in microseconds - this can be 
-		// found out either by retrieving the unit with the GetUnit() method or 
-		// by checking SpinView.
-		// 
-		if (!IsReadable(pCam->ExposureTime) || !IsWritable(pCam->ExposureTime))
+		catch (Spinnaker::Exception& e)
 		{
-			cout << "Unable to set exposure time. Aborting..." << "\n" << endl;
-			return false;
+			cout << "Error during config Exposure: " << e.what() << endl;
+			status = false;
 		}
-
-		// Ensure desired exposure time does not exceed the maximum
-		const float exposureTimeMax = pCam->ExposureTime.GetMax();
-		const float exposureTimeMin = pCam->ExposureTime.GetMin();
-		cout << "Max exposure time: " << exposureTimeMax << ", min exposure time: " << exposureTimeMin << endl;
-		float exposureTimeToSet = 17000.0f;
-
-		if (exposureTimeToSet > exposureTimeMax || exposureTimeToSet < exposureTimeMin)
-		{
-			exposureTimeToSet = exposureTimeMin;
-		}
-
-		pCam->ExposureTime.SetValue(exposureTimeToSet);
-
-		cout << std::fixed << "Shutter time set to " << exposureTimeToSet << " us..." << "\n" << endl;
+		
     }
     catch (Spinnaker::Exception &e)
     {
