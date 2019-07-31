@@ -29,7 +29,7 @@ int main(int /*argc*/, char** /*argv*/)
     cv::Mat image_LU, image_RU, image_RL, image_LL; // Left_Upper, Right_Upper, Right_Lower, Left_Lower
     cv::namedWindow("Left_Upper",0);
     cv::namedWindow("Right_Upper",0);
-    cv::namedWindow("Right_Lower:", 0);
+    cv::namedWindow("Right_Lower", 0);
     cv::namedWindow("Left_Lower", 0);
     // Retrieve singleton reference to system object
     SystemPtr system = System::GetInstance();
@@ -69,7 +69,7 @@ int main(int /*argc*/, char** /*argv*/)
     CameraPtr pCam = NULL;
     try 
     {
-        // Config each camera
+        // Give each camera index
         for (unsigned int i = 0; i < numCameras; i++)
         {
             // Select camera
@@ -85,46 +85,50 @@ int main(int /*argc*/, char** /*argv*/)
             }
             if (deviceSerialNumber=="18308395")
             {
-                CameraIndex[i] = 0; // image_LU
+                CameraIndex[i] = 0; // Left Upper
             }
             else if (deviceSerialNumber=="18308397")
             {
-                CameraIndex[i] = 1; // image_LL
-            }
-            else if (deviceSerialNumber == "18308393")
-            {
-                CameraIndex[i] = 2; // image_RU                
+                CameraIndex[i] = 1; // Left Lower
             }
             else if (deviceSerialNumber == "18308399")
             {
-                CameraIndex[i] = 3; // image_RL
+                CameraIndex[i] = 2; // Right Upper               
             }
-            std::cout << endl << "Configuring Camera " << i << "..." << endl;
-            pCam->Init();  
-            if(pCam->IsInitialized())
+            else if (deviceSerialNumber == "18308393")
             {
-                std::cout <<"Camera " << i <<" initialized successly"<<endl;
+                CameraIndex[i] = 3; // Right Lower
             }
-            // Config camera
-            status = status && ConfigCamera(pCam);
-			pCam->BeginAcquisition();
-            if(status)
-            {
-                std::cout << "Camera " << i << " config complete..." << "\n" << endl;
-            }
-            else
-            {
-                std::cout << "Camera " << i << " config failed..." << "\n" << endl;
-                // Clear camera list before releasing system
-                camList.Clear();
-                // Release system
-                system->ReleaseInstance();
-                std::cout << "Press Any Key to exit..." << endl;
-                getchar();
-                return -1;
-            }
-            // pCam =NULL;
+			cout << "Camera Index on " << i << " is " << CameraIndex[i] << endl;
         }
+		for (int i = 0; i < numCameras; i++)
+		{
+			pCam = camList.GetByIndex(i);
+			std::cout << endl << "Configuring Camera " << i << "..." << endl;
+			pCam->Init();
+			if (pCam->IsInitialized())
+			{
+				std::cout << "Camera " << i << " initialized successly" << endl;
+			}
+			// Config camera
+			status = status && ConfigCamera(pCam, CameraIndex[i]);
+			pCam->BeginAcquisition();
+			if (status)
+			{
+				std::cout << "Camera " << i << " config complete..." << "\n" << endl;
+			}
+			else
+			{
+				std::cout << "Camera " << i << " config failed..." << "\n" << endl;
+				// Clear camera list before releasing system
+				camList.Clear();
+				// Release system
+				system->ReleaseInstance();
+				std::cout << "Press Any Key to exit..." << endl;
+				getchar();
+				return -1;
+			}
+		}
 		// Create an array of CameraPtrs. This array maintenances smart pointer's reference
 		// count when CameraPtr is passed into grab thread as void pointer
 		AcquisitionParameters* paraList = new AcquisitionParameters[numCameras];
@@ -149,7 +153,7 @@ int main(int /*argc*/, char** /*argv*/)
 				paraList[i].cvImage = &tracker.ReceivedImages[CameraIndex[i]];
 				// Start grab thread
 #if defined(_WIN32)
-				cout << "processing" << i << endl;
+				/*cout << "processing" << i << endl;*/
 				grabThreads[i] = CreateThread(nullptr, 0, AcquireImages, &paraList[i], 0, nullptr);
 				assert(grabThreads[i] != nullptr);
 #else
@@ -201,17 +205,10 @@ int main(int /*argc*/, char** /*argv*/)
 			auto stop = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> elapsed_seconds = stop - start;
 			std::cout << "Acquiring time on camera " << ": " << elapsed_seconds.count() << std::endl;
-			cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
-			cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
-			cv::waitKey(1);
-			int key = cv::waitKey(1);
-			if (key == 27)
-			{
-				status = false;
-			}
+			
 			
             // pCam = NULL;
-			auto start_ = std::chrono::high_resolution_clock::now();
+			auto start_processing = std::chrono::high_resolution_clock::now();
 			if (tracker.TrackerIntialized)
 			{	
 				memcpy(tracker.previousPos, tracker.currentPos, sizeof(tracker.currentPos));
@@ -223,9 +220,19 @@ int main(int /*argc*/, char** /*argv*/)
 			{
 				tracker.InitTracker(tracker.ByDetection);
 			}
-			auto stop_ = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double> elapsed_seconds_ = stop_ - start_;
-			std::cout << "Time on data process " << ": " << elapsed_seconds_.count() << std::endl;
+			auto stop_processing = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> elapsed_seconds_processing = stop_processing - start_processing;
+			std::cout << "Time on data process " << ": " << elapsed_seconds_processing.count() << std::endl;
+			cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
+			cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
+			cv::imshow("Right_Upper", tracker.ReceivedImages[2]);
+			cv::imshow("Right_Lower", tracker.ReceivedImages[3]);
+			cv::waitKey(1);
+			int key = cv::waitKey(1);
+			if (key == 27)
+			{
+				status = false;
+			}
         }
 		// Clear CameraPtr array and close all handles
 		for (unsigned int i = 0; i < numCameras; i++)
@@ -244,11 +251,11 @@ int main(int /*argc*/, char** /*argv*/)
     // using try catch makes sure we EndAcquisition for each camera
     catch(Spinnaker::Exception &e)
     {
-        std::cout << "Spinnaker Error: during Running Camera" << e.what() << endl;
+        std::cout << "Spinnaker Error: during Running Camera\n" << e.what() << endl;
     }
     catch (cv::Exception& e)  
     {      
-        std::cout << "CVError: during Running Camera" << e.what() << endl;
+        std::cout << "OpenCV Error: during Running Camera: \n" << e.what() << endl;
     }  
     // EndAcquisition
     for (unsigned int i = 0; i < numCameras; i++)

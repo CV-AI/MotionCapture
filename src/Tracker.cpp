@@ -12,8 +12,14 @@ Tracker::~Tracker()
 {
 }
 cv::Mat Tracker:: image;
-int Tracker::CorlorsChosen[4];
+int Tracker::CorlorsChosen[3];
 bool Tracker::getColors = false;
+bool compareContourAreas(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2) {
+	double i = fabs(cv::contourArea(cv::Mat(contour1)));
+	double j = fabs(cv::contourArea(cv::Mat(contour2)));
+	return (i < j);
+}
+
 // initialize with whole image, so detectWindowPosition is (0, 0)
 // This function get the color of the marker
 void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
@@ -46,6 +52,7 @@ void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
 
 void Tracker::ColorTheresholding()
 {
+	cv::cvtColor(detectWindow, detectWindow, CV_RGB2HSV);
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
 	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED, 100, 80), cv::Scalar(MAX_H_RED, 255, 255), rangeRes);
 	detectWindow = rangeRes;
@@ -70,13 +77,16 @@ void Tracker::ColorTheresholding()
 bool Tracker:: getContoursAndMoment(int camera_index)
 {	
 	ColorTheresholding();
+	
+	//cv::fastNlMeansDenoising(detectWindow, detectWindow);
 	//cv::Mat detectCopy = detectWindow.clone();
 	//cv::cvtColor(detectWindow, detectWindow, CV_BGRA2GRAY);
-	cv::Mat mask(5, 5, CV_8U, cv::Scalar(1));
+	cv::Mat mask(9, 9, CV_8U, cv::Scalar(1));
 	cv::morphologyEx(detectWindow, detectWindow, cv::MORPH_CLOSE, mask);
 	std::vector<std::vector<cv::Point>>contours;
 	cv::findContours(detectWindow, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
 	std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
+	cv::drawContours(ReceivedImages[camera_index], contours, -1, cv::Scalar(150, 100, 0), 2);//-1 means draw all contours
 	// remove contours that are too small or large
 	while (itc != contours.end())
 	{
@@ -88,8 +98,17 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 		}
 		else itc++;
 	}
+	if (camera_index == 3)
+	{
+		std::cout << "hi" << std::endl;
+		cv::namedWindow("detectwindow", 0);
+		cv::imshow("detectwindow", detectWindow);
+		cv::waitKey(1);
+	}
+	/*std::sort(contours.begin(), contours.end(), compareContourAreas);
+	std::vector<std::vector<cv::Point>>sliced_contours = std::vector<std::vector<cv::Point>>(contours.begin(), contours.begin() + 6);*/
 	/*cv::namedWindow("detectwindow", 0);
-	cv::imshow("detectwindow", detectCopy);
+	cv::imshow("detectwindow", detectWindow);
 	cv::waitKey(1);*/
 	if (contours.size()==6)
 	{
@@ -98,11 +117,13 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 		int i = 0;
 		while (it != contours.end())
 		{
+
 			cv::Moments mom = cv::moments(cv::Mat(*it++));
 			// 因为检测窗口不是全部画面，所以要加上检测窗口在全部画面的位置
 			currentPos[camera_index][i] = cv::Point(mom.m10 / mom.m00+detectWindowPosition.x, mom.m01 / mom.m00+ detectWindowPosition.y);
 			i++;
 		}
+		cv::drawContours(ReceivedImages[camera_index], contours,-1, cv::Scalar(0, 255, 0), 5);//-1 means draw all contours
 		return true;
 	}
 	else
@@ -168,9 +189,10 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 			{
 				// i is the index of camera
 				detectWindow = ReceivedImages[i].clone();
-				success = success && getContoursAndMoment(i);
-				success = success && RectifyMarkerPos(i);
-				for (int j = 0; j < 6; j++)
+				// 如果把success放在前面，则success为false时，函数不会执行
+				success =  getContoursAndMoment(i) && success;
+				success =  RectifyMarkerPos(i) && success;
+				for (int j = 0; j < numMarkers; j++)
 				{
 					std::cout <<"Inital position: "<< i << j << currentPos[i][j] << std::endl;
 				}
@@ -191,15 +213,13 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 
 bool Tracker::UpdateTracker(TrackerType tracker_type)
 {
-	bool success = true;
-	cv::namedWindow("0", 0);
-	cv::namedWindow("1", 0);                                                                                 
+	bool success = true;                                                                           
 	// using contours to update tracker 
 	for(int i=0; i<numCameras; i++)
 	{
 		
 		// j is the index of marker
-		for(int j=0; j<6; j++)
+		for(int j=0; j<numMarkers; j++)
 		{
 			// use previous position of marker as the center of detectWindowPosition
 			// and move detectWindowPosition to left_upper corner
@@ -209,7 +229,7 @@ bool Tracker::UpdateTracker(TrackerType tracker_type)
 			success = success && getContoursAndMoment(i, j);
 		}		
 		success = success && RectifyMarkerPos(i);
-		for (int j = 0; j < 6; j++)
+		for (int j = 0; j < numMarkers; j++)
 		{
 			std::cout <<i<<j<< currentPos[i][j] << std::endl;
 			cv::circle(ReceivedImages[i], currentPos[i][j], 5, cv::Scalar(255, 0, 0));
@@ -217,9 +237,6 @@ bool Tracker::UpdateTracker(TrackerType tracker_type)
 				currentPos[i][j].y- detectWindowDimY / 2, detectWindowDimX, detectWindowDimY), cv::Scalar(255, 0, 0));
 		}
 	}
-	cv::imshow("0", ReceivedImages[0]);
-	cv::imshow("1", ReceivedImages[1]);
-	cv::waitKey(10);
 	return success;
 }
 
@@ -228,7 +245,7 @@ bool Tracker::UpdateTracker(TrackerType tracker_type)
 bool Tracker::RectifyMarkerPos(int camera_index)
 {
 	int i, j, change=1;
-    int len = 6; // length of list to be bubble_sorted
+    int len = numMarkers; // length of list to be bubble_sorted
 	for (i = 0; i < len - 1 && change!=0; i++)
     {
         change=0;
@@ -244,3 +261,8 @@ bool Tracker::RectifyMarkerPos(int camera_index)
 	return true;
 }
 
+bool Tracker::FilterInitalImage()
+{
+	//
+	return true;
+}
