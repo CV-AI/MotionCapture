@@ -138,11 +138,6 @@ int main(int /*argc*/, char** /*argv*/)
 		pthread_t* grabThreads = new pthread_t[numBuffers];
 #endif
 
-#if defined(_WIN32)
-		HANDLE* grabThreads_tracker = new HANDLE[numCameras];
-#else
-		pthread_t* grabThreads_tracker = new pthread_t[numBuffers];
-#endif
 		
         // acquire images and do something
         // main part of this program
@@ -215,35 +210,18 @@ int main(int /*argc*/, char** /*argv*/)
 			
             // pCam = NULL;
 			auto start_processing = std::chrono::high_resolution_clock::now();
-			if (tracker.TrackerIntialized)
+			if (tracker.TrackerAutoIntialized)
 			{	
 				memcpy(tracker.previousPos, tracker.currentPos, sizeof(tracker.currentPos));
 
-				for (int j = 0; j < NUM_MARKERS; j++)
-				{
-					paraList[i].pCam = camList.GetByIndex(i);
-					paraList[i].cvImage = &tracker.ReceivedImages[CameraIndex[i]];
-					// Start grab thread
-#if defined(_WIN32)
-				/*cout << "processing" << i << endl;*/
-					grabThreads[i] = CreateThread(nullptr, 0, AcquireImages, &paraList[i], 0, nullptr);
-					assert(grabThreads[i] != nullptr);
-#else
-					int err = pthread_create(&(grabThreads[i]), nullptr, &AcquireImages, &paraList[i]);
-					assert(err == 0);
-#endif
-				}
-				
-				for (int i = 0; i < numCameras; i++)
-				{
-					tracker.RectifyMarkerPos(i);
-				}
+				tracker.UpdateTracker(tracker.ByDetection);				
 				memcpy(dataProcess.points, tracker.currentPos, sizeof(tracker.currentPos));
 				dataProcess.exportGaitData();
 			}
-			if (/*tracker.getColors && */!tracker.TrackerIntialized && num_Acquisition>15)
+			if (/*tracker.getColors && */!tracker.TrackerAutoIntialized && num_Acquisition>15)
 			{
 				tracker.InitTracker(tracker.ByDetection);
+				//getchar();
 			}
 			auto stop_processing = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> elapsed_seconds_processing = stop_processing - start_processing;

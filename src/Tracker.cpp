@@ -20,7 +20,7 @@ cv::Rect Tracker::calibration_region;
 bool compareContourAreas(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2) {
 	double i = fabs(cv::contourArea(cv::Mat(contour1)));
 	double j = fabs(cv::contourArea(cv::Mat(contour2)));
-	return (i < j);
+	return (i > j); // 从大到小排序
 }
 
 // initialize with whole image, so detectWindowPosition is (0, 0)
@@ -124,39 +124,40 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 	//	}
 	//	else itc++;
 	//}
-	/*if (camera_index == 3)
-	{
-		std::cout << "hi" << std::endl;
-		cv::namedWindow("detectwindow", 0);
-		cv::imshow("detectwindow", detectWindow);
-		cv::waitKey(1);
-	}*/
+	
 	std::sort(contours.begin(), contours.end(), compareContourAreas);
-	contours = std::vector<std::vector<cv::Point>>(contours.begin(), contours.begin() + 6);
-	/*cv::namedWindow("detectwindow", 0);
-	cv::imshow("detectwindow", detectWindow);
-	cv::waitKey(1);*/
-	if (contours.size()==6)
+	//contours = std::vector<std::vector<cv::Point>>(contours.begin(), contours.begin() + 6);
+	
+	if (contours.size() >= 6)
 	{
-		std::vector<std::vector<cv::Point>>::const_iterator it = contours.begin();
-
-		int i = 0;
-		while (it != contours.end())
+		//std::vector<std::vector<cv::Point>>::const_iterator it = contours.begin();
+	// 找到contour的boundingRect的中心
+		for (int i = 0; i < 6; i++)
 		{
-
-			cv::Moments mom = cv::moments(cv::Mat(*it++));
-			// 因为检测窗口不是全部画面，所以要加上检测窗口在全部画面的位置
-			currentPos[camera_index][i] = cv::Point(mom.m10 / mom.m00+detectWindowPosition.x, mom.m01 / mom.m00+ detectWindowPosition.y);
-			i++;
+			std::cout << "contour size" << contours[i].size() << std::endl;
+			cv::Rect br = cv::boundingRect(contours[i]);
+			int cx = br.x + br.width / 2; int cy = br.y + br.height / 2;
+			currentPos[camera_index][i] = cv::Point(cx + detectWindowPosition.x, cy + detectWindowPosition.y);
 		}
-		cv::drawContours(ReceivedImages[camera_index], contours,-1, cv::Scalar(0, 255, 0), 5);//-1 means draw all contours
+		//int i = 0;
+		//while (it != contours.end())
+		//{
+
+		//	cv::Moments mom = cv::moments(cv::Mat(*it++));
+		//	// 因为检测窗口不是全部画面，所以要加上检测窗口在全部画面的位置
+		//	currentPos[camera_index][i] = cv::Point(mom.m10 / mom.m00+detectWindowPosition.x, mom.m01 / mom.m00+ detectWindowPosition.y);
+		//	i++;
+		//}
+		cv::drawContours(ReceivedImages[camera_index], contours, -1, cv::Scalar(0, 255, 0), 5);//-1 means draw all contours
+		cv::namedWindow("detectwindow", 0);
+		cv::imshow("detectwindow", masked_window);
+		cv::waitKey(0);
 		return true;
+
 	}
 	else
 	{
-		// TODO: 如果使用颜色跟踪失败则需要使用其他跟踪方法
-		std::cout << "Contours numbers are wrong:  "<< contours.size()<<std::endl;
-		return false;
+		std::cout << "No enough contours: " << contours.size() << std::endl;
 	}
 }
 
@@ -172,21 +173,27 @@ bool Tracker::getContoursAndMoment(int camera_index, int marker_index)
 	cv::findContours(detectWindow, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
 	std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
 	// remove contours that are too small or large
-	while (itc != contours.end())
-	{
-		std::cout << itc->size() << std::endl;
-		//std::cout << "size: " << itc->size() << std::endl;
-		if (itc->size() < cmin || itc->size() > cmax)
-		{
-			itc = contours.erase(itc);
-		}
-		else itc++;
-	}
+	//while (itc != contours.end())
+	//{
+	//	std::cout << itc->size() << std::endl;
+	//	//std::cout << "size: " << itc->size() << std::endl;
+	//	if (itc->size() < cmin || itc->size() > cmax)
+	//	{
+	//		itc = contours.erase(itc);
+	//	}
+	//	else itc++;
+	//}
 	/*cv::namedWindow("detectwindow", 0);
 	cv::imshow("detectwindow", detectCopy);
 	cv::waitKey(1);*/
+	std::sort(contours.begin(), contours.end(), compareContourAreas);
+	//contours = std::vector<std::vector<cv::Point>>(contours.begin(), contours.begin() + 1);
 	if (contours.size() == 1)
 	{
+		cv::Rect br = cv::boundingRect(contours[0]);
+		int cx = br.x + br.width / 2; int cy = br.y + br.height / 2;
+		currentPos[camera_index][marker_index] = cv::Point(cx + detectWindowPosition.x, cy + detectWindowPosition.y);
+		
 		std::vector<std::vector<cv::Point>>::const_iterator it = contours.begin();
 
 		cv::Moments mom = cv::moments(cv::Mat(*it++));
@@ -227,38 +234,85 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 			{
 				std::cout << "Using Contours to InitTracker succeed" << std::endl;
 
-				TrackerIntialized = true;
+				TrackerAutoIntialized = true;
 			}
 		}
 		break;
 		default:break;
 	}
+	// see if data were correct
+	for (int i = 0; i < NUM_CAMERAS; i++)
+	{
+		for (int j = 0; j < NUM_MARKERS; j++)
+		{
+			cv::Point point = currentPos[i][j];
+			if (point.x <= 0 || point.y <= 0 || point.x>=2048 || point.y>=2048)
+			{
+				TrackerAutoIntialized = false;
+				success = false;
+			}
+		}
+	}
 	
 	return success;
 }
 
-bool Tracker::UpdateTracker(TrackerType tracker_type, int marker_index)
+bool Tracker::UpdateTracker(TrackerType tracker_type)
 {
-	bool success = true;                                                                           
-	// using contours to update tracker 
-	for(int i=0; i<NUM_CAMERAS; i++)
+	bool success = true;     
+	switch (tracker_type)
 	{
-		
-		
-		// use previous position of marker as the center of detectWindowPosition
-		// and move detectWindowPosition to left_upper corner
-		detectWindowPosition = previousPos[i][marker_index] - cv::Point(int(detectWindowDimX/2), int(detectWindowDimY/2));
-		cv::Rect detectRect(detectWindowPosition.x, detectWindowPosition.y, detectWindowDimX, detectWindowDimY);
-		detectWindow = ReceivedImages[i](detectRect);
-		success = getContoursAndMoment(i, marker_index) && success;
-		success = RectifyMarkerPos(i) && success;
-		
-		std::cout <<i<<marker_index<< currentPos[i][marker_index] << std::endl;
-		cv::circle(ReceivedImages[i], currentPos[i][marker_index], 5, cv::Scalar(255, 0, 0));
-		cv::rectangle(ReceivedImages[i], cv::Rect(currentPos[i][marker_index].x - detectWindowDimX/2,
-		currentPos[i][marker_index].y- detectWindowDimY / 2, detectWindowDimX, detectWindowDimY), cv::Scalar(255, 0, 0));
+	case Tracker::ByDetection:
+		// using contours to update tracker 
+		for (int i = 0; i < NUM_CAMERAS; i++)
+		{
 
+			for (int marker_index = 0; marker_index < NUM_MARKERS; marker_index++)
+			{
+				// use previous position of marker as the center of detectWindowPosition
+			// and move detectWindowPosition to left_upper corner
+				detectWindowPosition = previousPos[i][marker_index] - cv::Point(int(detectWindowDimX / 2), int(detectWindowDimY / 2));
+				cv::Rect detectRect(detectWindowPosition.x, detectWindowPosition.y, detectWindowDimX, detectWindowDimY);
+				detectWindow = ReceivedImages[i](detectRect).clone(); // 
+				success = getContoursAndMoment(i, marker_index) && success;
+				std::cout << i << marker_index << currentPos[i][marker_index] << std::endl;
+				cv::circle(ReceivedImages[i], currentPos[i][marker_index], 5, cv::Scalar(255, 0, 0));
+				/*cv::rectangle(ReceivedImages[i], cv::Rect(currentPos[i][marker_index].x - detectWindowDimX / 2,
+					currentPos[i][marker_index].y - detectWindowDimY / 2, detectWindowDimX, detectWindowDimY), cv::Scalar(255, 0, 0));*/
+			}
+			success = RectifyMarkerPos(i) && success;
+		}
+		break;
+	case Tracker::CV_KCF:
+		break;
+	case Tracker::ByColor:
+		// using contours to update tracker 
+		for (int i = 0; i < NUM_CAMERAS; i++)
+		{
+
+			for (int marker_index = 0; marker_index < NUM_MARKERS; marker_index++)
+			{
+				// use previous position of marker as the center of detectWindowPosition
+			// and move detectWindowPosition to left_upper corner
+				detectWindowPosition = previousPos[i][marker_index] - cv::Point(int(detectWindowDimX / 2), int(detectWindowDimY / 2));
+				cv::Rect detectRect(detectWindowPosition.x, detectWindowPosition.y, detectWindowDimX, detectWindowDimY);
+				detectWindow = ReceivedImages[i](detectRect).clone(); // 
+				ColorTheresholding();
+				//for(int j)
+				
+				std::cout << i << marker_index << currentPos[i][marker_index] << std::endl;
+				cv::circle(ReceivedImages[i], currentPos[i][marker_index], 5, cv::Scalar(255, 0, 0));
+				cv::rectangle(ReceivedImages[i], cv::Rect(currentPos[i][marker_index].x - detectWindowDimX / 2,
+					currentPos[i][marker_index].y - detectWindowDimY / 2, 
+					detectWindowDimX, detectWindowDimY), cv::Scalar(255, 0, 0));
+			}
+			success = RectifyMarkerPos(i) && success;
+		}
+		break;
+	default:
+		break;
 	}
+	
 	return success;
 }
 

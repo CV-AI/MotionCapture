@@ -12,14 +12,6 @@ constexpr auto MAX_H_RED = 40;
 constexpr auto MIN_H_RED = 0;
 const int NUM_CAMERAS = 4;
 const int NUM_MARKERS = 6;
-class TrackerParameters
-{
-public:
-	TrackerParameters()
-	{
-
-	}
-}
 class Tracker
 {
 	void ColorTheresholding();
@@ -33,7 +25,7 @@ public:
 	Tracker();
 	~Tracker();
 	// enable different tracker 
-	enum TrackerType{ByDetection, CV_KCF, };
+	enum TrackerType{ByDetection, CV_KCF, ByColor};
 	static void Mouse_getColor(int event, int x, int y, int, void*);
 	static void Mouse_getRegion(int event, int x, int y, int, void*);
 	static cv::Rect calibration_region;
@@ -58,7 +50,7 @@ public:
 	int cmax = 140;
 	bool InitTracker(TrackerType);
 	bool FilterInitalImage();
-	bool TrackerIntialized = false;
-	bool UpdateTracker(TrackerType, int);
+	bool TrackerAutoIntialized = false;
+	bool UpdateTracker(TrackerType);
 	bool RectifyMarkerPos(int);
 };
