@@ -36,17 +36,16 @@ public:
 	
 	static cv::Mat image;
 	static bool getColors;
-    cv::Mat ReceivedImages[NUM_CAMERAS]; // Left_Upper, qRight_Upper, Right_Lower, Left_Lower
-	cv::Mat detectWindowList[NUM_MARKERS];
+    static cv::Mat ReceivedImages[NUM_CAMERAS]; // Left_Upper, Right_Upper, Right_Lower, Left_Lower
 	cv::Mat detectWindow;
-	cv::Point momentpoints[NUM_MARKERS];
-	cv::Point detectPositionList[NUM_MARKERS];
-	cv::Point detectWindowPosition;
+	cv::Mat detectWindow_Initial;
+	cv::Point detectPosition;
+	cv::Point detectPosition_Initial;
 	int threshold = 100;
-	cv::Point currentPos[NUM_CAMERAS][NUM_MARKERS]; // first entry is the index of image, second entry is the index of marker
-	cv::Point previousPos[NUM_CAMERAS][NUM_MARKERS];
+	static cv::Point currentPos[NUM_CAMERAS][NUM_MARKERS]; // first entry is the index of image, second entry is the index of marker
+	static cv::Point previousPos[NUM_CAMERAS][NUM_MARKERS];// make it static to share between multiple tracker object
 	cv::Point predictPos; // the predicted position of marker in current frame
-	int detectWindowDimX = 80; // the dimension of detectWindow
+	int detectWindowDimX = 80; // the dimension of detectWindow_Initial
 	int detectWindowDimY = 150; 
 	int numCameras = 0;
 	int cmin = 80; // minimum and maximum value for contours
@@ -54,7 +53,6 @@ public:
 	bool InitTracker(TrackerType);
 	bool FilterInitialImage();
 	bool TrackerAutoIntialized = false;
-	bool UpdateTracker(TrackerType);
 	bool RectifyMarkerPos(int);
 };
 class TrackerParameters

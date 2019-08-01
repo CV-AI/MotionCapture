@@ -133,9 +133,10 @@ int main(int /*argc*/, char** /*argv*/)
 		// count when CameraPtr is passed into grab thread as void pointer
 		AcquisitionParameters* paraList = new AcquisitionParameters[numCameras];
 		TrackerParameters* trackerParaList = new TrackerParameters[NUM_MARKERS];
+		Tracker* trackerList = new Tracker[NUM_CAMERAS];
 		for (int j = 0; j < NUM_MARKERS; j++)
 		{
-			trackerParaList[j].trackerPtr = &tracker;
+			trackerParaList[j].trackerPtr = &trackerList[j];
 			trackerParaList[j].marker_index = j;
 			trackerParaList[j].tracker_type = ByDetection;
 		}
@@ -250,7 +251,7 @@ int main(int /*argc*/, char** /*argv*/)
 					{
 						cout << "Grab thread for camera at index " << j << " exited with errors."
 							"Please check onscreen print outs for error details" << endl;
-					}
+					}					
 				}
 				memcpy(dataProcess.points, tracker.currentPos, sizeof(tracker.currentPos));
 				dataProcess.exportGaitData();
