@@ -5,6 +5,10 @@
 
 Tracker::Tracker()
 {
+	for (int j = 0; j < NUM_MARKERS; j++)
+	{
+		detectPositionList[j] = cv::Point(0, 0);
+	}
 }
 
 
@@ -68,17 +72,17 @@ void Tracker::Mouse_getRegion(int event, int x, int y, int, void*)
 	}
 }
 
-void Tracker::ColorTheresholding()
+void Tracker::ColorThresholding(int marker_index)
 {
-	cv::cvtColor(detectWindow, detectWindow, CV_RGB2HSV);
-	cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
-	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED, 100, 80), cv::Scalar(MAX_H_RED, 255, 255), rangeRes);
-	detectWindow = rangeRes;
-	/*for (int j = 0; j < detectWindow.rows; j++)
+	cv::cvtColor(detectWindowList[marker_index], detectWindowList[marker_index], CV_RGB2HSV);
+	cv::Mat rangeRes = cv::Mat::zeros(detectWindowList[marker_index].size(), CV_8UC1);
+	cv::inRange(detectWindowList[marker_index], cv::Scalar(MIN_H_RED, 100, 80), cv::Scalar(MAX_H_RED, 255, 255), rangeRes);
+	detectWindowList[marker_index] = rangeRes;
+	/*for (int j = 0; j < detectWindowList.rows; j++)
 	{
-		uchar*data = detectWindow.ptr<uchar>(j);
+		uchar*data = detectWindowList.ptr<uchar>(j);
 		
-		for (int i = 0; i< detectWindow.cols; i++)
+		for (int i = 0; i< detectWindowList.cols; i++)
 		{
 			
 			if ((abs(data[3 * i] - CorlorsChosen[0]) + abs(data[3 * i + 1] - CorlorsChosen[1]) +
@@ -91,10 +95,18 @@ void Tracker::ColorTheresholding()
 	}*/
 }
 
+void Tracker::ColorThresholding()
+{
+	cv::cvtColor(detectWindow, detectWindow, CV_RGB2HSV);
+	cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
+	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED, 100, 80), cv::Scalar(MAX_H_RED, 255, 255), rangeRes);
+	detectWindow = rangeRes;
+}
+
 // This function using contours to get all of six marker positions for one camera
 bool Tracker:: getContoursAndMoment(int camera_index)
 {	
-	ColorTheresholding();
+	ColorThresholding();
 	
 	//cv::fastNlMeansDenoising(detectWindow, detectWindow);
 	//cv::Mat detectCopy = detectWindow.clone();
@@ -164,13 +176,13 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 // This function get the marker point for specific marker in a specific camera
 bool Tracker::getContoursAndMoment(int camera_index, int marker_index)
 {
-	ColorTheresholding();
+	ColorThresholding(marker_index);
 	//cv::Mat detectCopy = detectWindow.clone();
 	//cv::cvtColor(detectWindow, detectWindow, CV_BGRA2GRAY);
 	cv::Mat mask(5, 5, CV_8U, cv::Scalar(1));
-	cv::morphologyEx(detectWindow, detectWindow, cv::MORPH_CLOSE, mask);
+	cv::morphologyEx(detectWindowList[marker_index], detectWindowList[marker_index], cv::MORPH_CLOSE, mask);
 	std::vector<std::vector<cv::Point>>contours;
-	cv::findContours(detectWindow, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+	cv::findContours(detectWindowList[marker_index], contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
 	std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
 	// remove contours that are too small or large
 	//while (itc != contours.end())
@@ -183,22 +195,22 @@ bool Tracker::getContoursAndMoment(int camera_index, int marker_index)
 	//	}
 	//	else itc++;
 	//}
-	/*cv::namedWindow("detectwindow", 0);
-	cv::imshow("detectwindow", detectCopy);
+	/*cv::namedWindow("detectWindowList", 0);
+	cv::imshow("detectWindowList", detectCopy);
 	cv::waitKey(1);*/
 	std::sort(contours.begin(), contours.end(), compareContourAreas);
 	//contours = std::vector<std::vector<cv::Point>>(contours.begin(), contours.begin() + 1);
-	if (contours.size() == 1)
+	if (contours.size() >0)
 	{
 		cv::Rect br = cv::boundingRect(contours[0]);
 		int cx = br.x + br.width / 2; int cy = br.y + br.height / 2;
 		currentPos[camera_index][marker_index] = cv::Point(cx + detectWindowPosition.x, cy + detectWindowPosition.y);
 		
-		std::vector<std::vector<cv::Point>>::const_iterator it = contours.begin();
+		//std::vector<std::vector<cv::Point>>::const_iterator it = contours.begin();
 
-		cv::Moments mom = cv::moments(cv::Mat(*it++));
-		// 因为检测窗口不是全部画面，所以要加上检测窗口在全部画面的位置
-		currentPos[camera_index][marker_index] = cv::Point(mom.m10 / mom.m00 + detectWindowPosition.x, mom.m01 / mom.m00 + detectWindowPosition.y);
+		//cv::Moments mom = cv::moments(cv::Mat(*it++));
+		//// 因为检测窗口不是全部画面，所以要加上检测窗口在全部画面的位置
+		//currentPos[camera_index][marker_index] = cv::Point(mom.m10 / mom.m00 + detectWindowPosition.x, mom.m01 / mom.m00 + detectWindowPosition.y);
 
 		return true;
 	}
@@ -257,65 +269,6 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 	return success;
 }
 
-bool Tracker::UpdateTracker(TrackerType tracker_type)
-{
-	bool success = true;     
-	switch (tracker_type)
-	{
-	case Tracker::ByDetection:
-		// using contours to update tracker 
-		for (int i = 0; i < NUM_CAMERAS; i++)
-		{
-
-			for (int marker_index = 0; marker_index < NUM_MARKERS; marker_index++)
-			{
-				// use previous position of marker as the center of detectWindowPosition
-			// and move detectWindowPosition to left_upper corner
-				detectWindowPosition = previousPos[i][marker_index] - cv::Point(int(detectWindowDimX / 2), int(detectWindowDimY / 2));
-				cv::Rect detectRect(detectWindowPosition.x, detectWindowPosition.y, detectWindowDimX, detectWindowDimY);
-				detectWindow = ReceivedImages[i](detectRect).clone(); // 
-				success = getContoursAndMoment(i, marker_index) && success;
-				std::cout << i << marker_index << currentPos[i][marker_index] << std::endl;
-				cv::circle(ReceivedImages[i], currentPos[i][marker_index], 5, cv::Scalar(255, 0, 0));
-				/*cv::rectangle(ReceivedImages[i], cv::Rect(currentPos[i][marker_index].x - detectWindowDimX / 2,
-					currentPos[i][marker_index].y - detectWindowDimY / 2, detectWindowDimX, detectWindowDimY), cv::Scalar(255, 0, 0));*/
-			}
-			success = RectifyMarkerPos(i) && success;
-		}
-		break;
-	case Tracker::CV_KCF:
-		break;
-	case Tracker::ByColor:
-		// using contours to update tracker 
-		for (int i = 0; i < NUM_CAMERAS; i++)
-		{
-
-			for (int marker_index = 0; marker_index < NUM_MARKERS; marker_index++)
-			{
-				// use previous position of marker as the center of detectWindowPosition
-			// and move detectWindowPosition to left_upper corner
-				detectWindowPosition = previousPos[i][marker_index] - cv::Point(int(detectWindowDimX / 2), int(detectWindowDimY / 2));
-				cv::Rect detectRect(detectWindowPosition.x, detectWindowPosition.y, detectWindowDimX, detectWindowDimY);
-				detectWindow = ReceivedImages[i](detectRect).clone(); // 
-				ColorTheresholding();
-				//for(int j)
-				
-				std::cout << i << marker_index << currentPos[i][marker_index] << std::endl;
-				cv::circle(ReceivedImages[i], currentPos[i][marker_index], 5, cv::Scalar(255, 0, 0));
-				cv::rectangle(ReceivedImages[i], cv::Rect(currentPos[i][marker_index].x - detectWindowDimX / 2,
-					currentPos[i][marker_index].y - detectWindowDimY / 2, 
-					detectWindowDimX, detectWindowDimY), cv::Scalar(255, 0, 0));
-			}
-			success = RectifyMarkerPos(i) && success;
-		}
-		break;
-	default:
-		break;
-	}
-	
-	return success;
-}
-
 // use bubble_sort to rectify Marker Position, from small to big
 // from top of image to bottom of image
 bool Tracker::RectifyMarkerPos(int camera_index)
@@ -337,8 +290,68 @@ bool Tracker::RectifyMarkerPos(int camera_index)
 	return true;
 }
 
-bool Tracker::FilterInitalImage()
+bool Tracker::FilterInitialImage()
 {
-	//
+	//TODO: clearify images for tracker initialization
 	return true;
+}
+
+#if defined (_WIN32)
+DWORD WINAPI UpdateTracker(LPVOID lpParam)
+{
+#endif
+	TrackerParameters para = *((TrackerParameters*)lpParam);
+	int marker_index = para.marker_index;
+	Tracker* trackerPtr = para.trackerPtr;
+	TrackerType tracker_type = para.tracker_type;
+	bool success = true;
+	cv::Point detectRegionPosition;
+
+	switch (tracker_type)
+	{
+	case ByDetection:
+		// using contours to update tracker 
+		for (int i = 0; i < NUM_CAMERAS; i++)
+		{
+			// use previous position of marker as the center of detectWindowPosition
+			// and move detectWindowPosition to left_upper corner
+			(*trackerPtr).detectPositionList[marker_index] = (*trackerPtr).previousPos[i][marker_index] - cv::Point(int((*trackerPtr).detectWindowDimX / 2), int((*trackerPtr).detectWindowDimY / 2));
+			cv::Rect detectRect((*trackerPtr).detectPositionList[marker_index].x, (*trackerPtr).detectPositionList[marker_index].y, (*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY);
+			(*trackerPtr).detectWindowList[marker_index] = (*trackerPtr).ReceivedImages[i](detectRect).clone(); // 
+			success = (*trackerPtr).getContoursAndMoment(i, marker_index) && success;
+			std::cout << i << marker_index << (*trackerPtr).currentPos[i][marker_index] << std::endl;
+			cv::circle((*trackerPtr).ReceivedImages[i], (*trackerPtr).currentPos[i][marker_index], 5, cv::Scalar(255, 0, 0));
+			/*cv::rectangle(ReceivedImages[i], cv::Rect(currentPos[i][marker_index].x - detectWindowDimX / 2,
+				currentPos[i][marker_index].y - detectWindowDimY / 2, detectWindowDimX, detectWindowDimY), cv::Scalar(255, 0, 0));*/
+			success = (*trackerPtr).RectifyMarkerPos(i) && success;
+		}
+		break;
+	case CV_KCF:
+		break;
+	case ByColor:
+		// using contours to update tracker 
+		for (int i = 0; i < NUM_CAMERAS; i++)
+		{
+
+			// use previous position of marker as the center of detectWindowPosition
+			// and move detectWindowPosition to left_upper corner
+			(*trackerPtr).detectPositionList[marker_index] = (*trackerPtr).previousPos[i][marker_index] - cv::Point(int((*trackerPtr).detectWindowDimX / 2), int((*trackerPtr).detectWindowDimY / 2));
+			cv::Rect detectRect((*trackerPtr).detectPositionList[marker_index].x, (*trackerPtr).detectPositionList[marker_index].y, (*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY);
+			(*trackerPtr).detectWindowList[marker_index] = (*trackerPtr).ReceivedImages[i](detectRect).clone(); // 
+			//tracker.ColorTheresholding();
+			//for(int j)
+
+			std::cout << i << marker_index << (*trackerPtr).currentPos[i][marker_index] << std::endl;
+			cv::circle((*trackerPtr).ReceivedImages[i], (*trackerPtr).currentPos[i][marker_index], 5, cv::Scalar(255, 0, 0));
+			cv::rectangle((*trackerPtr).ReceivedImages[i], cv::Rect((*trackerPtr).currentPos[i][marker_index].x - (*trackerPtr).detectWindowDimX / 2,
+				(*trackerPtr).currentPos[i][marker_index].y - (*trackerPtr).detectWindowDimY / 2,
+				(*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY), cv::Scalar(255, 0, 0));
+			success = (*trackerPtr).RectifyMarkerPos(i) && success;
+		}
+		break;
+	default:
+		break;
+	}
+
+	return success;
 }
