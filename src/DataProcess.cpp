@@ -44,7 +44,7 @@ void DataProcess::mapTo3D()
 	const double fy = 1002.1;
 	const int T = 200;
 	// i 是相机组的序号（每一对相机）
-	for (int i = 0; i < numCameras; i++)
+	for (int i = 0; i < numCameras/2; i++)
 	{
 		// j 是marker 的序号
 		for (int j = 0; j < 6; j++)

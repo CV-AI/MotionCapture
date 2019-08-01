@@ -135,14 +135,20 @@ int main(int /*argc*/, char** /*argv*/)
 #if defined(_WIN32)
 		HANDLE* grabThreads = new HANDLE[numCameras];
 #else
-		pthread_t* grabThreads = new pthread_t[numCameras];
+		pthread_t* grabThreads = new pthread_t[numBuffers];
 #endif
 
+#if defined(_WIN32)
+		HANDLE* grabThreads_tracker = new HANDLE[numCameras];
+#else
+		pthread_t* grabThreads_tracker = new pthread_t[numBuffers];
+#endif
 		
         // acquire images and do something
         // main part of this program
         cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0);
 		bool first_time = true;
+		int num_Acquisition = 0; // init tracker after some images to assure auto balance finished
         while(status)
         {
             // acquire images
@@ -212,11 +218,30 @@ int main(int /*argc*/, char** /*argv*/)
 			if (tracker.TrackerIntialized)
 			{	
 				memcpy(tracker.previousPos, tracker.currentPos, sizeof(tracker.currentPos));
-				tracker.UpdateTracker(tracker.ByDetection);
+
+				for (int j = 0; j < NUM_MARKERS; j++)
+				{
+					paraList[i].pCam = camList.GetByIndex(i);
+					paraList[i].cvImage = &tracker.ReceivedImages[CameraIndex[i]];
+					// Start grab thread
+#if defined(_WIN32)
+				/*cout << "processing" << i << endl;*/
+					grabThreads[i] = CreateThread(nullptr, 0, AcquireImages, &paraList[i], 0, nullptr);
+					assert(grabThreads[i] != nullptr);
+#else
+					int err = pthread_create(&(grabThreads[i]), nullptr, &AcquireImages, &paraList[i]);
+					assert(err == 0);
+#endif
+				}
+				
+				for (int i = 0; i < numCameras; i++)
+				{
+					tracker.RectifyMarkerPos(i);
+				}
 				memcpy(dataProcess.points, tracker.currentPos, sizeof(tracker.currentPos));
 				dataProcess.exportGaitData();
 			}
-			if (/*tracker.getColors && */!tracker.TrackerIntialized)
+			if (/*tracker.getColors && */!tracker.TrackerIntialized && num_Acquisition>15)
 			{
 				tracker.InitTracker(tracker.ByDetection);
 			}
@@ -233,6 +258,7 @@ int main(int /*argc*/, char** /*argv*/)
 			{
 				status = false;
 			}
+			num_Acquisition += 1;
         }
 		// Clear CameraPtr array and close all handles
 		for (unsigned int i = 0; i < numCameras; i++)
