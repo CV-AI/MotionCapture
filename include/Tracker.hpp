@@ -1,8 +1,9 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
-// #include <opencv2/gpu/gpu.hpp>
+#include <opencv2/imgproc/types_c.h>
 #include<iostream>
+#include <opencv2/highgui/highgui_c.h>
 #include<string>
 #include<vector>
 #include <Windows.h>

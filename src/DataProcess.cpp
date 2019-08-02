@@ -56,10 +56,10 @@ void DataProcess::mapTo3D()
 		// j 是marker 的序号
 		for (int j = 0; j < 6; j++)
 		{
-			MarkerPos3D[i][j].x = (2 * double(points[2 * i][j].x) - cx) * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][j].x)));
+			/*MarkerPos3D[i][j].x = (2 * double(points[2 * i][j].x) - cx) * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][j].x)));
 			MarkerPos3D[i][j].y = -(2 * double(points[2 * i][j].y) - cy) * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][j].x)));
 			MarkerPos3D[i][j].z = fx * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][i].x)));
-			std::cout << "Camera Set " << i << " Marker " << j << MarkerPos3D[i][j] << std::endl;
+			std::cout << "Camera Set " << i << " Marker " << j << MarkerPos3D[i][j] << std::endl;*/
 		}
 	}
 }
@@ -86,7 +86,6 @@ bool DataProcess::exportGaitData()
 {
 	bool success = true;
 	getJointAngle();
-	// 此处输出数据给控制系统
 	return success;
 }
 
@@ -96,13 +95,25 @@ bool DataProcess::FrameTransform()
 	return false;
 } 
 
-bool DataProcess::FindWorldFrame(const cv::Mat upper, const cv::Mat lower)
+bool DataProcess::FindWorldFrame(cv::Mat upper,cv::Mat lower)
 {
 	cv::Mat upper_bgr,lower_bgr;
 	cv::cvtColor(upper, upper_bgr, CV_RGB2BGR);
 	cv::cvtColor(lower, lower_bgr, CV_RGB2BGR);
+	cv::namedWindow("upper", 0);
+	cv::imshow("upper", upper_bgr);
+	cv::waitKey(0);
 	cv::Point3d vector_x, vector_y, vector_z;
-	cv::aruco::Dictionary dcitionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_5X5_100);
+	std::vector<int> markerIds;
+	std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
+	cv::Ptr<cv::aruco::DetectorParameters> parameters;
+	cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_5X5_1000);
+	cv::aruco::detectMarkers(upper_bgr, dictionary, markerCorners, markerIds, parameters, rejectedCandidates);
+	cv::aruco::drawDetectedMarkers(upper_bgr, markerCorners, markerIds);
+	GotWorldFrame = true;
+	cv::namedWindow("upper", 0);
+	cv::imshow("upper", upper_bgr);
+	cv::waitKey(0);
 	return true;
 }
 

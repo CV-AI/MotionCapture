@@ -275,7 +275,7 @@ int main(int /*argc*/, char** /*argv*/)
 			}
 			if (!dataProcess.GotWorldFrame && num_Acquisition > 15)
 			{
-
+				dataProcess.FindWorldFrame(tracker.ReceivedImages[0], tracker.ReceivedImages[1]);
 			}
 			auto stop_processing = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> elapsed_seconds_processing = stop_processing - start_processing;

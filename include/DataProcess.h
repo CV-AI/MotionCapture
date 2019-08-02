@@ -1,5 +1,7 @@
 #include "Tracker.hpp"
-
+#include <opencv2/aruco/charuco.hpp>
+#include <opencv2/aruco/dictionary.hpp>
+#include <opencv2/imgproc/types_c.h>
 class DataProcess
 {
 	
@@ -18,7 +20,7 @@ public:
 	void getJointAngle();
 	bool exportGaitData();
 	bool FrameTransform();
-	bool DataProcess::FindWorldFrame(const cv::Mat, const cv::Mat);
+	bool DataProcess::FindWorldFrame(cv::Mat,cv::Mat);
 	cv::Point points[4][6];
 	cv::Point3d MarkerPos3D[2][6];
 
