@@ -201,8 +201,9 @@ bool Tracker::getContoursAndMoment(int camera_index, int marker_index)
 	if (contours.size() >0)
 	{
 		cv::Rect br = cv::boundingRect(contours[0]);
-		int cx = br.x + br.width / 2; int cy = br.y + br.height / 2;
-		currentPos[camera_index][marker_index] = cv::Point(cx + detectPosition_Initial.x, cy + detectPosition_Initial.y);
+		int cx = br.x + br.width / 2; 
+		int cy = br.y + br.height / 2;
+		currentPos[camera_index][marker_index] = cv::Point(cx + detectPosition.x, cy + detectPosition.y);
 		
 		//std::vector<std::vector<cv::Point>>::const_iterator it = contours.begin();
 
@@ -317,11 +318,6 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 			cv::Rect detectRect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, (*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY);
 			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[i](detectRect).clone(); // 
 			success = (*trackerPtr).getContoursAndMoment(i, marker_index) && success;
-			std::cout << i << marker_index << (*trackerPtr).currentPos[i][marker_index] << std::endl;
-			cv::circle((*trackerPtr).ReceivedImages[i], (*trackerPtr).currentPos[i][marker_index], 5, cv::Scalar(255, 0, 0));
-			/*cv::rectangle(ReceivedImages[i], cv::Rect(currentPos[i][marker_index].x - detectWindowDimX / 2,
-				currentPos[i][marker_index].y - detectWindowDimY / 2, detectWindowDimX, detectWindowDimY), cv::Scalar(255, 0, 0));*/
-			success = (*trackerPtr).RectifyMarkerPos(i) && success;
 		}
 		break;
 	case CV_KCF:
@@ -330,21 +326,11 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 		// using contours to update tracker 
 		for (int i = 0; i < NUM_CAMERAS; i++)
 		{
-
 			// use previous position of marker as the center of detectPosition_Initial
 			// and move detectPosition_Initial to left_upper corner
 			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][marker_index] - cv::Point(int((*trackerPtr).detectWindowDimX / 2), int((*trackerPtr).detectWindowDimY / 2));
 			cv::Rect detectRect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, (*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY);
 			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[i](detectRect).clone(); // 
-			//tracker.ColorTheresholding();
-			//for(int j)
-
-			std::cout << i << marker_index << (*trackerPtr).currentPos[i][marker_index] << std::endl;
-			cv::circle((*trackerPtr).ReceivedImages[i], (*trackerPtr).currentPos[i][marker_index], 5, cv::Scalar(255, 0, 0));
-			cv::rectangle((*trackerPtr).ReceivedImages[i], cv::Rect((*trackerPtr).currentPos[i][marker_index].x - (*trackerPtr).detectWindowDimX / 2,
-				(*trackerPtr).currentPos[i][marker_index].y - (*trackerPtr).detectWindowDimY / 2,
-				(*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY), cv::Scalar(255, 0, 0));
-			success = (*trackerPtr).RectifyMarkerPos(i) && success;
 		}
 		break;
 	default:

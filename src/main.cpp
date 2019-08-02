@@ -45,7 +45,7 @@ int main(int /*argc*/, char** /*argv*/)
     CameraList camList = system->GetCameras();
   
     unsigned int numCameras = camList.GetSize();
-	int CameraIndex[4];
+	int CameraIndex[4] = { 0,1,2,3 };
 	dataProcess.numCameras = tracker.numCameras = numCameras;
 	assert(numCameras % 2 == 0, "Number of cameras not correct, must be multiple of 2.");
 	
@@ -133,7 +133,7 @@ int main(int /*argc*/, char** /*argv*/)
 		// count when CameraPtr is passed into grab thread as void pointer
 		AcquisitionParameters* paraList = new AcquisitionParameters[numCameras];
 		TrackerParameters* trackerParaList = new TrackerParameters[NUM_MARKERS];
-		Tracker* trackerList = new Tracker[NUM_CAMERAS];
+		Tracker* trackerList = new Tracker[NUM_MARKERS];
 		for (int j = 0; j < NUM_MARKERS; j++)
 		{
 			trackerParaList[j].trackerPtr = &trackerList[j];
@@ -252,6 +252,17 @@ int main(int /*argc*/, char** /*argv*/)
 						cout << "Grab thread for camera at index " << j << " exited with errors."
 							"Please check onscreen print outs for error details" << endl;
 					}					
+				}
+				for (int i = 0; i < numCameras; i++)
+				{
+					tracker.RectifyMarkerPos(i);
+					for (int marker_index = 0; marker_index < NUM_MARKERS; marker_index++)
+					{
+						std::cout << i << marker_index << tracker.currentPos[i][marker_index] << std::endl;
+						cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 5, cv::Scalar(255, 0, 0));
+						/*cv::rectangle(ReceivedImages[i], cv::Rect(currentPos[i][marker_index].x - detectWindowDimX / 2,
+							currentPos[i][marker_index].y - detectWindowDimY / 2, detectWindowDimX, detectWindowDimY), cv::Scalar(255, 0, 0));*/
+					}
 				}
 				memcpy(dataProcess.points, tracker.currentPos, sizeof(tracker.currentPos));
 				dataProcess.exportGaitData();
