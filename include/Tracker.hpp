@@ -23,7 +23,6 @@ public:
 	void ColorThresholding(int);
 	void ColorThresholding();
 	static int CorlorsChosen[3];
-	bool getmomentpointEx = false;
 	cv::Point speed;
 	// enable different tracker 
 	
@@ -41,19 +40,20 @@ public:
 	cv::Mat detectWindow_Initial;
 	cv::Point detectPosition;
 	cv::Point detectPosition_Initial;
-	int threshold = 100;
 	static cv::Point currentPos[NUM_CAMERAS][NUM_MARKERS]; // first entry is the index of image, second entry is the index of marker
 	static cv::Point previousPos[NUM_CAMERAS][NUM_MARKERS];// make it static to share between multiple tracker object
 	cv::Point predictPos; // the predicted position of marker in current frame
-	int detectWindowDimX = 80; // the dimension of detectWindow_Initial
-	int detectWindowDimY = 150; 
-	int numCameras = 0;
-	int cmin = 80; // minimum and maximum value for contours
-	int cmax = 140;
+	
+	//int cmin = 80; // minimum and maximum value for contours
+	//int cmax = 140;
 	bool InitTracker(TrackerType);
 	bool FilterInitialImage();
-	bool TrackerAutoIntialized = false;
 	bool RectifyMarkerPos(int);
+	int detectWindowDimX; // the dimension of detectWindow_Initial
+	int detectWindowDimY;
+	int numCameras;
+	int threshold;
+	bool TrackerAutoIntialized;
 };
 class TrackerParameters
 {

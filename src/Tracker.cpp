@@ -3,7 +3,7 @@
 #include <algorithm>
 
 
-Tracker::Tracker()
+Tracker::Tracker():detectWindowDimX(80), detectWindowDimY(150),numCameras(4),threshold(100),TrackerAutoIntialized(false)
 {
 }
 
@@ -168,6 +168,7 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 	else
 	{
 		std::cout << "No enough contours: " << contours.size() << std::endl;
+		return false;
 	}
 }
 

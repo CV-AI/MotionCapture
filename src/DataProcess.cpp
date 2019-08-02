@@ -3,8 +3,15 @@
 #include <iostream>
 
 
-DataProcess::DataProcess()
+DataProcess::DataProcess() :numCameras(4),GotWorldFrame(false)
 {
+	cv::Point points[4][6];
+	cv::Point3d MarkerPos3D[2][6];
+	cv::Mat image;
+	double time = 0;
+	double hip[2]; // 0 for left, 1 for right
+	double knee[2];
+	double ankle[2];
 }
 
 
@@ -55,31 +62,48 @@ void DataProcess::mapTo3D()
 			std::cout << "Camera Set " << i << " Marker " << j << MarkerPos3D[i][j] << std::endl;
 		}
 	}
-
 }
 
 
 void DataProcess::getJointAngle()
 {
 	mapTo3D();
+	/* 所有的坐标现在已经转换到自定义坐标系，矢状面是x-z平面， 额状面是y-z平面*/
 	for (int i = 0; i < 2; i++)
 	{
-		thigh.x = MarkerPos3D[i][4].x - MarkerPos3D[i][5].x; thigh.y = MarkerPos3D[i][4].y - MarkerPos3D[i][5].y;
-		shank.x = MarkerPos3D[i][2].x - MarkerPos3D[i][3].x; shank.y = MarkerPos3D[i][2].y - MarkerPos3D[i][3].y;
-		foot.x = MarkerPos3D[i][0].x - MarkerPos3D[i][1].x; foot.y = MarkerPos3D[i][0].y - MarkerPos3D[i][1].y;
+		thigh[i] = MarkerPos3D[i][1] - MarkerPos3D[i][0];
+		shank[i] = MarkerPos3D[i][3] - MarkerPos3D[i][2];
+		foot[i] = MarkerPos3D[i][5] - MarkerPos3D[i][4];
 
-		hip = -((atan(thigh.x / abs(thigh.y))) / pi) * 180;
-		knee = -((acos((thigh.x * shank.x + thigh.y * shank.y) / (sqrt(thigh.x * thigh.x + thigh.y * thigh.y) * sqrt(shank.x * shank.x + shank.y * shank.y)))) / pi) * 180;
-		ankle = ((acos((foot.x * shank.x + foot.y * shank.y) / (sqrt(foot.x * foot.x + foot.y * foot.y) * sqrt(shank.x * shank.x + shank.y * shank.y)))) / pi) * 180 - 90;
+		hip[i] = ((atan2(thigh[i].x, abs(thigh[i].z))) / pi) * 180;
+		knee[i] = ((acos((thigh[i].x * shank[i].x + thigh[i].z * shank[i].z) / (sqrt(thigh[i].x * thigh[i].x + thigh[i].z * thigh[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
+		ankle[i] = ((acos((foot[i].x * shank[i].x + foot[i].z * shank[i].z) / (sqrt(foot[i].x * foot[i].x + foot[i].z * foot[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
 		std::cout << "hip:   " << hip << "   " << "knee:   " << knee << "   " << "ankle:   " << ankle << std::endl;
 	}
-
 }
 
 bool DataProcess::exportGaitData()
 {
 	bool success = true;
 	getJointAngle();
-	// Insert your code here
+	// 此处输出数据给控制系统
 	return success;
 }
+
+bool DataProcess::FrameTransform()
+{
+
+	return false;
+} 
+
+bool DataProcess::FindWorldFrame(const cv::Mat upper, const cv::Mat lower)
+{
+	cv::Mat upper_bgr,lower_bgr;
+	cv::cvtColor(upper, upper_bgr, CV_RGB2BGR);
+	cv::cvtColor(lower, lower_bgr, CV_RGB2BGR);
+	cv::Point3d vector_x, vector_y, vector_z;
+	cv::aruco::Dictionary dcitionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_5X5_100);
+	return true;
+}
+
+

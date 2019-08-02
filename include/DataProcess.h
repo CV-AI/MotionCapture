@@ -2,24 +2,32 @@
 
 class DataProcess
 {
-	bool gettime = false;
-	double second, millisecond, deltat = 0;
-
-	cv::Point2d thigh, shank, foot;
+	
 	const double pi = 3.1415926535898;
 
 public:
 	DataProcess();
 	~DataProcess();
+	double second, millisecond, deltat = 0;
+	cv::Point3d thigh[2]; // 0 for left, 1 for right
+	cv::Point3d shank[2];
+	cv::Point3d foot[2];
 	int numCameras;
 	//void getTime();
 	void mapTo3D();
 	void getJointAngle();
+	bool exportGaitData();
+	bool FrameTransform();
+	bool DataProcess::FindWorldFrame(const cv::Mat, const cv::Mat);
 	cv::Point points[4][6];
 	cv::Point3d MarkerPos3D[2][6];
-	bool exportGaitData();
+
 	cv::Mat image;
 	double time = 0;
-	double hip, knee, ankle;
+	double hip[2]; // 0 for left, 1 for right
+	double knee[2];
+	double ankle[2];
+	bool GotWorldFrame;
+	bool gettime = false;
 };
 

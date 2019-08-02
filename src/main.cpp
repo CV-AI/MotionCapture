@@ -10,6 +10,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+
 using namespace Spinnaker;
 using namespace Spinnaker::GenApi;
 using namespace Spinnaker::GenICam;
@@ -267,14 +268,18 @@ int main(int /*argc*/, char** /*argv*/)
 				memcpy(dataProcess.points, tracker.currentPos, sizeof(tracker.currentPos));
 				dataProcess.exportGaitData();
 			}
-			if (/*tracker.getColors && */!tracker.TrackerAutoIntialized && num_Acquisition>15)
+			if (/*tracker.getColors && */!tracker.TrackerAutoIntialized && dataProcess.GotWorldFrame)
 			{
 				tracker.InitTracker(ByDetection);
 				//getchar();
 			}
+			if (!dataProcess.GotWorldFrame && num_Acquisition > 15)
+			{
+
+			}
 			auto stop_processing = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> elapsed_seconds_processing = stop_processing - start_processing;
-			std::cout << "Time on data process " << ": " << elapsed_seconds_processing.count() << std::endl;
+			std::cout << "Time on data processing " << ": " << elapsed_seconds_processing.count() << std::endl;
 			cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
 			cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
 			cv::imshow("Right_Upper", tracker.ReceivedImages[2]);
