@@ -260,14 +260,21 @@ int main(int /*argc*/, char** /*argv*/)
 					for (int marker_index = 0; marker_index < NUM_MARKERS; marker_index++)
 					{
 						std::cout << i << marker_index << tracker.currentPos[i][marker_index] << std::endl;
-						cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 5, cv::Scalar(255, 0, 0));
+						cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 3, cv::Scalar(0, 0, 255),3);
 						/*cv::rectangle(ReceivedImages[i], cv::Rect(currentPos[i][marker_index].x - detectWindowDimX / 2,
 							currentPos[i][marker_index].y - detectWindowDimY / 2, detectWindowDimX, detectWindowDimY), cv::Scalar(255, 0, 0));*/
 					}
 				}
+				auto track_processing = std::chrono::high_resolution_clock::now();
+				std::chrono::duration<double> elapsed_seconds_processing = track_processing - start_processing;
+				std::cout << "Time on tracking " << ": " << elapsed_seconds_processing.count() << std::endl;
 				memcpy(dataProcess.points, tracker.currentPos, sizeof(tracker.currentPos));
 				dataProcess.exportGaitData();
+				auto stop_export = std::chrono::high_resolution_clock::now();
+				std::chrono::duration<double> seconds_export = stop_export - track_processing;
+				std::cout << "Time on export gait data: " << seconds_export.count() << std::endl;
 			}
+			
 			if (/*tracker.getColors && */!tracker.TrackerAutoIntialized && dataProcess.GotWorldFrame)
 			{
 				tracker.InitTracker(ByDetection);
@@ -275,11 +282,27 @@ int main(int /*argc*/, char** /*argv*/)
 			}
 			if (!dataProcess.GotWorldFrame && num_Acquisition > 15)
 			{
-				dataProcess.FindWorldFrame(tracker.ReceivedImages[0], tracker.ReceivedImages[1]);
+				try
+				{
+					bool found = dataProcess.FindWorldFrame(tracker.ReceivedImages[0], tracker.ReceivedImages[1]);
+					found = dataProcess.FindWorldFrame(tracker.ReceivedImages[2], tracker.ReceivedImages[3]) && found;
+					if (found)
+					{
+						dataProcess.GotWorldFrame = true;
+						cout << "Find world coordinate system succeed!" << endl;
+					}
+					else
+					{
+						dataProcess.GotWorldFrame = false;
+						cout << "Find world coordinate system failed!\a\a\a" << endl;
+					}
+				}
+				catch (cv::Exception& e)
+				{
+					std::cout << "OpenCV Error: during finding world frame: \n" << e.what() << endl;
+				}
 			}
-			auto stop_processing = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double> elapsed_seconds_processing = stop_processing - start_processing;
-			std::cout << "Time on data processing " << ": " << elapsed_seconds_processing.count() << std::endl;
+			
 			cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
 			cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
 			cv::imshow("Right_Upper", tracker.ReceivedImages[2]);

@@ -1,7 +1,9 @@
 #include "Tracker.hpp"
-#include <opencv2/aruco/charuco.hpp>
-#include <opencv2/aruco/dictionary.hpp>
 #include <opencv2/imgproc/types_c.h>
+
+cv::Point3d crossing(cv::Point3d u, cv::Point3d v);
+cv::Point3d scale(cv::Point3d u);
+cv::Point3d operator*(cv::Mat M, cv::Point3d p);
 class DataProcess
 {
 	
@@ -31,5 +33,11 @@ public:
 	double ankle[2];
 	bool GotWorldFrame;
 	bool gettime = false;
+	const double cx = 1124.8;
+	const double cy = 1126.0;
+	const double fx = 1018.7;
+	const double fy = 1002.1;
+	const int T = 200;
+	std::vector<cv::Mat> Rotation;
+	std::vector<cv::Point3d> Transform;
 };
-
