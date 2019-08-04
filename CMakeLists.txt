@@ -4,8 +4,6 @@ project ( ${name} )
 
 add_compile_options(-std=c++11)
 
-# opencv 
-# set(OpenCV_DIR D:/software/OpenCV3/opencv/build)
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
@@ -21,7 +19,11 @@ else()
     set(PTGREY_SDK_LIBRARY_RELEASE optimized "/usr/lib/libSpinnaker.so")
 endif()
 include_directories(${PTGREY_SDK_INCLUDE_DIR})
-
+message(STATUS "OpenCV library status:")
+message(STATUS "    config: ${OpenCV_DIR}")
+message(STATUS "    version: ${OpenCV_VERSION}")
+message(STATUS "    libraries: ${OpenCV_LIBS}")
+message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 
 
 set(MY_HEADER_FILES

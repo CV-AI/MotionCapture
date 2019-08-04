@@ -253,14 +253,14 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 			if (!IsAvailable(ptrHandlingMode) || !IsWritable(ptrHandlingMode))
 			{
 				cout << "Unable to set Buffer Handling mode (node retrieval). Aborting..." << endl << endl;
-				return -1;
+				return false;
 			}
 
 			CEnumEntryPtr ptrHandlingModeEntry = ptrHandlingMode->GetCurrentEntry();
 			if (!IsAvailable(ptrHandlingModeEntry) || !IsReadable(ptrHandlingModeEntry))
 			{
 				cout << "Unable to set Buffer Handling mode (Entry retrieval). Aborting..." << endl << endl;
-				return -1;
+				return false;
 			}
 
 			// Set stream buffer Count Mode to manual
@@ -268,14 +268,14 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 			if (!IsAvailable(ptrStreamBufferCountMode) || !IsWritable(ptrStreamBufferCountMode))
 			{
 				cout << "Unable to set Buffer Count Mode (node retrieval). Aborting..." << endl << endl;
-				return -1;
+				return false;
 			}
 
 			CEnumEntryPtr ptrStreamBufferCountModeManual = ptrStreamBufferCountMode->GetEntryByName("Manual");
 			if (!IsAvailable(ptrStreamBufferCountModeManual) || !IsReadable(ptrStreamBufferCountModeManual))
 			{
 				cout << "Unable to set Buffer Count Mode entry (Entry retrieval). Aborting..." << endl << endl;
-				return -1;
+				return false;
 			}
 
 			ptrStreamBufferCountMode->SetIntValue(ptrStreamBufferCountModeManual->GetValue());
@@ -287,7 +287,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 			if (!IsAvailable(ptrBufferCount) || !IsWritable(ptrBufferCount))
 			{
 				cout << "Unable to set Buffer Count (Integer node retrieval). Aborting..." << endl << endl;
-				return -1;
+				return false;
 			}
 
 			// Display Buffer Info
