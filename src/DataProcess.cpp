@@ -61,9 +61,9 @@ void DataProcess::mapTo3D()
 			MarkerPos3D[i][j].x = (2 * double(points[2 * i][j].x) - cx) * T / (2 * (double(points[2 * i][j].y) - double(points[2 * i + 1][j].y)));
 			MarkerPos3D[i][j].y = -(2 * double(points[2 * i][j].y) - cy) * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][j].x)));
 			MarkerPos3D[i][j].z = fy * T / (2 * (double(points[2 * i][j].y) - double(points[2 * i + 1][i].y)));
-			MarkerPos3D[i][j] = MarkerPos3D[i][j] + Transform[i];
+			/*MarkerPos3D[i][j] = MarkerPos3D[i][j] + Transform[i];
 			MarkerPos3D[i][j] = Rotation[i] * MarkerPos3D[i][j];
-			std::cout << "Camera Set " << i << " Marker " << j << MarkerPos3D[i][j] << std::endl;
+			std::cout << "Camera Set " << i << " Marker " << j << MarkerPos3D[i][j] << std::endl;*/
 		}
 	}
 }

@@ -18,6 +18,7 @@ cv::Rect Tracker::calibration_region;
 cv::Mat Tracker::ReceivedImages[NUM_CAMERAS];
 cv::Point Tracker::currentPos[NUM_CAMERAS][NUM_MARKERS];
 cv::Point Tracker::previousPos[NUM_CAMERAS][NUM_MARKERS];
+cv::Point Tracker::momentum[NUM_CAMERAS] = { cv::Point(0,0), cv::Point(0,0),cv::Point(0,0), cv::Point(0,0)};
 // this function compare the areas of two contours
 bool compareContourAreas(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2) {
 	double i = fabs(cv::contourArea(cv::Mat(contour1)));
@@ -74,7 +75,7 @@ void Tracker::ColorThresholding(int marker_index)
 {
 	cv::cvtColor(detectWindow, detectWindow, CV_RGB2HSV);
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
-	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED, 100, 80), cv::Scalar(MAX_H_RED, 255, 255), rangeRes);
+	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED, 160, 80), cv::Scalar(MAX_H_RED, 255, 255), rangeRes);
 	detectWindow = rangeRes;
 	/*for (int j = 0; j < detectWindow.rows; j++)
 	{
@@ -97,7 +98,7 @@ void Tracker::ColorThresholding()
 {
 	cv::cvtColor(detectWindow_Initial, detectWindow_Initial, CV_RGB2HSV);
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow_Initial.size(), CV_8UC1);
-	cv::inRange(detectWindow_Initial, cv::Scalar(MIN_H_RED, 100, 80), cv::Scalar(MAX_H_RED, 255, 255), rangeRes);
+	cv::inRange(detectWindow_Initial, cv::Scalar(MIN_H_RED, 160, 80), cv::Scalar(MAX_H_RED, 255, 255), rangeRes);
 	detectWindow_Initial = rangeRes;
 }
 
@@ -122,7 +123,7 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 	std::vector<std::vector<cv::Point>>contours;
 	cv::findContours(masked_window, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
 	std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
-	cv::drawContours(ReceivedImages[camera_index], contours, -1, cv::Scalar(150, 100, 0), 2);//-1 means draw all contours
+	//cv::drawContours(ReceivedImages[camera_index], contours, -1, cv::Scalar(150, 100, 0), 2);//-1 means draw all contours
 	// remove contours that are too small or large
 	//while (itc != contours.end())
 	//{
@@ -315,10 +316,12 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 		{
 			// use previous position of marker as the center of detectPosition_Initial
 			// and move detectPosition_Initial to left_upper corner
-			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][marker_index] - cv::Point(int((*trackerPtr).detectWindowDimX / 2), int((*trackerPtr).detectWindowDimY / 2));
+			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][marker_index] + (*trackerPtr).momentum[i] - cv::Point(int((*trackerPtr).detectWindowDimX / 2), int((*trackerPtr).detectWindowDimY / 2));
+			
 			cv::Rect detectRect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, (*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY);
 			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[i](detectRect).clone(); // 
 			success = (*trackerPtr).getContoursAndMoment(i, marker_index) && success;
+			(*trackerPtr).momentum[i] = weight*((*trackerPtr).currentPos[i][marker_index] - (*trackerPtr).previousPos[i][marker_index]));
 		}
 		break;
 	case CV_KCF:
@@ -329,9 +332,10 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 		{
 			// use previous position of marker as the center of detectPosition_Initial
 			// and move detectPosition_Initial to left_upper corner
-			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][marker_index] - cv::Point(int((*trackerPtr).detectWindowDimX / 2), int((*trackerPtr).detectWindowDimY / 2));
+			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][marker_index]+(*trackerPtr).momentum[i] - cv::Point(int((*trackerPtr).detectWindowDimX / 2), int((*trackerPtr).detectWindowDimY / 2));
 			cv::Rect detectRect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, (*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY);
 			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[i](detectRect).clone(); // 
+			(*trackerPtr).momentum[i] = weight * ((*trackerPtr).currentPos[i][marker_index] - (*trackerPtr).previousPos[i][marker_index]);
 		}
 		break;
 	default:

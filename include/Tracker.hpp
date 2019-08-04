@@ -13,6 +13,7 @@ constexpr auto MAX_H_RED = 40;
 constexpr auto MIN_H_RED = 0;
 const int NUM_CAMERAS = 4;
 const int NUM_MARKERS = 6;
+const double weight = 0.8;
 enum TrackerType { ByDetection, CV_KCF, ByColor };
 
 class Tracker
@@ -24,7 +25,7 @@ public:
 	void ColorThresholding(int);
 	void ColorThresholding();
 	static int CorlorsChosen[3];
-	cv::Point speed;
+
 	// enable different tracker 
 	
 	static void Mouse_getColor(int event, int x, int y, int, void*);
@@ -43,7 +44,7 @@ public:
 	cv::Point detectPosition_Initial;
 	static cv::Point currentPos[NUM_CAMERAS][NUM_MARKERS]; // first entry is the index of image, second entry is the index of marker
 	static cv::Point previousPos[NUM_CAMERAS][NUM_MARKERS];// make it static to share between multiple tracker object
-	cv::Point predictPos; // the predicted position of marker in current frame
+	static cv::Point momentum[NUM_CAMERAS]; // 动量：即前两帧的位置差
 	
 	//int cmin = 80; // minimum and maximum value for contours
 	//int cmax = 140;
