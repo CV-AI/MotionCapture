@@ -22,7 +22,7 @@ public:
 	void getJointAngle();
 	bool exportGaitData();
 	bool FrameTransform();
-	bool DataProcess::FindWorldFrame(cv::Mat,cv::Mat);
+	bool DataProcess::FindWorldFrame(cv::Mat,cv::Mat, int);
 	cv::Point points[4][6];
 	cv::Point3d MarkerPos3D[2][6];
 
@@ -38,6 +38,7 @@ public:
 	const double fx = 1018.7;
 	const double fy = 1002.1;
 	const int T = 200;
+	cv::Point2i offset[4];
 	std::vector<cv::Mat> Rotation;
 	std::vector<cv::Point3d> Transform;
 };
