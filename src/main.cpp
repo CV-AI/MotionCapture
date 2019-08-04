@@ -7,6 +7,7 @@
 #include <sstream>
 #include <chrono>
 #include <cstring>
+#include <Windows.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -67,12 +68,15 @@ int main(int /*argc*/, char** /*argv*/)
         
         return -1;
     }
+	// set current process as high priority (second highest, the highest is Real time)
+	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
     CameraPtr pCam = NULL;
     try 
     {
         // Give each camera index
         for (unsigned int i = 0; i < numCameras; i++)
         {
+
             // Select camera
             pCam = camList.GetByIndex(i);
             gcstring deviceSerialNumber;
@@ -261,8 +265,8 @@ int main(int /*argc*/, char** /*argv*/)
 					{
 						std::cout << i << marker_index << tracker.currentPos[i][marker_index] << std::endl;
 						cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 3, cv::Scalar(0, 0, 255),3);
-						/*cv::rectangle(ReceivedImages[i], cv::Rect(currentPos[i][marker_index].x - detectWindowDimX / 2,
-							currentPos[i][marker_index].y - detectWindowDimY / 2, detectWindowDimX, detectWindowDimY), cv::Scalar(255, 0, 0));*/
+						cv::rectangle(tracker.ReceivedImages[i], cv::Rect(tracker.currentPos[i][marker_index].x - tracker.detectWindowDimX / 2,
+							tracker.currentPos[i][marker_index].y - tracker.detectWindowDimY / 2, tracker.detectWindowDimX, tracker.detectWindowDimY), cv::Scalar(255, 0, 0));
 					}
 				}
 				auto track_processing = std::chrono::high_resolution_clock::now();

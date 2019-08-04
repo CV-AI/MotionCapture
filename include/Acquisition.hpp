@@ -40,12 +40,11 @@ enum triggerType
 	HARDWARE
 };
 const triggerType chosenTrigger = HARDWARE;
-int64_t offsetX[4] = { 500, 500, 700, 700 };
-int64_t offsetY[4] = { 500, 300, 500, 300 };
+cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,300), cv::Point(750,500), cv::Point(800,300) };
 const int64_t numBuffers = 3;
 const float frameRate = 30.0f;
 int64_t height[4] = { 1280, 1280, 1280, 1280 };
-int64_t width[4] = { 800, 800, 640, 640 };
+int64_t width[4] = { 800, 800, 736, 736 };
 bool SetExposureManual = false;
 class AcquisitionParameters
 {
@@ -389,7 +388,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 		}
 		if (IsReadable(pCam->OffsetX) && IsWritable(pCam->OffsetX))
 		{
-			pCam->OffsetX.SetValue(offsetX[cameraIndex]);
+			pCam->OffsetX.SetValue(offset[cameraIndex].x);
 
 			cout << "Offset X set to " << pCam->OffsetX.GetValue() << "..." << endl;
 		}
@@ -401,7 +400,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 		//
 		if (IsReadable(pCam->OffsetY) && IsWritable(pCam->OffsetY))
 		{
-			pCam->OffsetY.SetValue(offsetY[cameraIndex]);
+			pCam->OffsetY.SetValue(offset[cameraIndex].y);
 
 			cout << "Offset Y set to " << pCam->OffsetY.GetValue() << "..." << endl;
 		}

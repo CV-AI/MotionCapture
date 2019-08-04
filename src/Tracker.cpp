@@ -3,8 +3,9 @@
 #include <algorithm>
 
 
-Tracker::Tracker():detectWindowDimX(80), detectWindowDimY(150),numCameras(4),threshold(100),TrackerAutoIntialized(false)
+Tracker::Tracker():detectWindowDimX(120), detectWindowDimY(100),numCameras(4),threshold(100),TrackerAutoIntialized(false)
 {
+	cv::Point momentum[NUM_CAMERAS] = { cv::Point(0,0), cv::Point(0,0),cv::Point(0,0), cv::Point(0,0) };
 }
 
 
@@ -18,7 +19,7 @@ cv::Rect Tracker::calibration_region;
 cv::Mat Tracker::ReceivedImages[NUM_CAMERAS];
 cv::Point Tracker::currentPos[NUM_CAMERAS][NUM_MARKERS];
 cv::Point Tracker::previousPos[NUM_CAMERAS][NUM_MARKERS];
-cv::Point Tracker::momentum[NUM_CAMERAS] = { cv::Point(0,0), cv::Point(0,0),cv::Point(0,0), cv::Point(0,0)};
+
 // this function compare the areas of two contours
 bool compareContourAreas(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2) {
 	double i = fabs(cv::contourArea(cv::Mat(contour1)));
@@ -183,7 +184,7 @@ bool Tracker::getContoursAndMoment(int camera_index, int marker_index)
 	cv::morphologyEx(detectWindow, detectWindow, cv::MORPH_CLOSE, mask);
 	std::vector<std::vector<cv::Point>>contours;
 	cv::findContours(detectWindow, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
-	std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
+	//std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
 	// remove contours that are too small or large
 	//while (itc != contours.end())
 	//{
@@ -203,8 +204,8 @@ bool Tracker::getContoursAndMoment(int camera_index, int marker_index)
 	if (contours.size() >0)
 	{
 		cv::Rect br = cv::boundingRect(contours[0]);
-		int cx = br.x + br.width / 2; 
-		int cy = br.y + br.height / 2;
+		int cx = br.x + br.width * 0.5; 
+		int cy = br.y + br.height * 0.5;
 		currentPos[camera_index][marker_index] = cv::Point(cx + detectPosition.x, cy + detectPosition.y);
 		
 		//std::vector<std::vector<cv::Point>>::const_iterator it = contours.begin();
@@ -275,11 +276,10 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 bool Tracker::RectifyMarkerPos(int camera_index)
 {
 	int i, j, change=1;
-    int len = NUM_MARKERS; // length of list to be bubble_sorted
-	for (i = 0; i < len - 1 && change!=0; i++)
+	for (i = 0; i < NUM_MARKERS - 1 && change!=0; i++)
     {
         change=0;
-		for (j = 0; j < len - 1 - i; j++)
+		for (j = 0; j < NUM_MARKERS - 1 - i; j++)
 		{
 			if (currentPos[camera_index][j].y > currentPos[camera_index][j + 1].y)
 			{
@@ -316,12 +316,12 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 		{
 			// use previous position of marker as the center of detectPosition_Initial
 			// and move detectPosition_Initial to left_upper corner
-			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][marker_index] + (*trackerPtr).momentum[i] - cv::Point(int((*trackerPtr).detectWindowDimX / 2), int((*trackerPtr).detectWindowDimY / 2));
+			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][marker_index] + (*trackerPtr).momentum[i] - cv::Point(int((*trackerPtr).detectWindowDimX*0.5), int((*trackerPtr).detectWindowDimY * 0.5));
 			
 			cv::Rect detectRect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, (*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY);
 			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[i](detectRect).clone(); // 
 			success = (*trackerPtr).getContoursAndMoment(i, marker_index) && success;
-			(*trackerPtr).momentum[i] = weight*((*trackerPtr).currentPos[i][marker_index] - (*trackerPtr).previousPos[i][marker_index]));
+			(*trackerPtr).momentum[i] = weight*((*trackerPtr).currentPos[i][marker_index] - (*trackerPtr).previousPos[i][marker_index]);
 		}
 		break;
 	case CV_KCF:
@@ -332,7 +332,7 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 		{
 			// use previous position of marker as the center of detectPosition_Initial
 			// and move detectPosition_Initial to left_upper corner
-			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][marker_index]+(*trackerPtr).momentum[i] - cv::Point(int((*trackerPtr).detectWindowDimX / 2), int((*trackerPtr).detectWindowDimY / 2));
+			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][marker_index]+(*trackerPtr).momentum[i] - cv::Point(int((*trackerPtr).detectWindowDimX * 0.5), int((*trackerPtr).detectWindowDimY * 0.5));
 			cv::Rect detectRect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, (*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY);
 			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[i](detectRect).clone(); // 
 			(*trackerPtr).momentum[i] = weight * ((*trackerPtr).currentPos[i][marker_index] - (*trackerPtr).previousPos[i][marker_index]);

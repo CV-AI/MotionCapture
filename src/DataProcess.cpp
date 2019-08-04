@@ -17,6 +17,7 @@ DataProcess::DataProcess() :numCameras(4),GotWorldFrame(false)
 	const double fx = 1018.7;
 	const double fy = 1002.1;
 	const int T = 200;
+	cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,300), cv::Point(750,500), cv::Point(800,300) };
 }
 
 
@@ -55,9 +56,13 @@ void DataProcess::mapTo3D()
 	//TODO: 自定义的矩阵乘法较慢，多次遍历也比较花时间，最好写成opencv自带的矩阵乘法
 	for (int i = 0; i < numCameras/2; i++)
 	{
+
 		// j 是marker 的序号
 		for (int j = 0; j < 6; j++)
 		{
+			// 因为标定相机时是全尺寸，所以需要转换回全尺寸下的图像坐标
+			points[2 * i][j] += offset[2 * i];
+			points[2 * i + 1][j] += offset[2 * i + 1];
 			MarkerPos3D[i][j].x = (2 * double(points[2 * i][j].x) - cx) * T / (2 * (double(points[2 * i][j].y) - double(points[2 * i + 1][j].y)));
 			MarkerPos3D[i][j].y = -(2 * double(points[2 * i][j].y) - cy) * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][j].x)));
 			MarkerPos3D[i][j].z = fy * T / (2 * (double(points[2 * i][j].y) - double(points[2 * i + 1][i].y)));
@@ -75,6 +80,7 @@ void DataProcess::getJointAngle()
 	/* 所有的坐标现在已经转换到自定义坐标系，矢状面是x-z平面， 额状面是y-z平面*/
 	for (int i = 0; i < 2; i++)
 	{
+
 		thigh[i] = MarkerPos3D[i][1] - MarkerPos3D[i][0];
 		shank[i] = MarkerPos3D[i][3] - MarkerPos3D[i][2];
 		foot[i] = MarkerPos3D[i][5] - MarkerPos3D[i][4];
@@ -99,7 +105,7 @@ bool DataProcess::FrameTransform()
 	return false;
 } 
 
-bool DataProcess::FindWorldFrame(cv::Mat upper,cv::Mat lower)
+bool DataProcess::FindWorldFrame(cv::Mat upper,cv::Mat lower, int camera_set)
 {
 	cv::Mat upper_bgr,lower_bgr;
 	cv::cvtColor(upper, upper_bgr, CV_RGB2BGR);
@@ -125,6 +131,15 @@ bool DataProcess::FindWorldFrame(cv::Mat upper,cv::Mat lower)
 	found  = cv::findChessboardCorners(lower_bgr, boardsize, corners_lower) && found;
 	if (found)
 	{
+		// 因为标定相机时是全尺寸，所以需要转换回全尺寸下的图像坐标
+		for (int i = 0; i < corners_upper.size(); i++)
+		{
+			corners_upper[i] += cv::Point2d(offset[camera_set*2]);
+		}
+		for (int i = 0; i < corners_lower.size(); i++)
+		{
+			corners_lower[i] += cv::Point2d(offset[camera_set * 2+1]);
+		}
 		std::cout << corners_upper << std::endl;
 		p0.x = (2 * corners_upper[0].x - cx) * T / (2 * corners_upper[0].y - corners_lower[0].y);
 		p0.y = (2 * corners_upper[0].x - cy) * T / (2 * corners_upper[0].y - corners_lower[0].y);
