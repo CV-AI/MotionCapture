@@ -269,9 +269,9 @@ int main(int /*argc*/, char** /*argv*/)
 						
 						dataProcess.points[camera_index][marker_inex] = tracker.currentPos[camera_index][marker_inex] 
 								+ dataProcess.offset[camera_index];
-						cout << "offset" << dataProcess.offset[camera_index]<<endl;
+						/*cout << "offset" << dataProcess.offset[camera_index]<<endl;
 						cout << "tracker pos" << tracker.currentPos[camera_index][marker_inex] << endl;
-						cout << "dataprocess pos" << dataProcess.points[camera_index][marker_inex] << endl;
+						cout << "dataprocess pos" << dataProcess.points[camera_index][marker_inex] << endl;*/
 					}
 				}
 				dataProcess.exportGaitData();

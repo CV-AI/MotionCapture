@@ -57,13 +57,10 @@ void DataProcess::mapTo3D()
 		// j 是marker 的序号
 		for (int j = 0; j < 6; j++)
 		{
-			/*std::cout << "points before: " << points[2*i][j] << std::endl;
-			points[2 * i][j] = cv::Point(offset[2 * i].x+ points[2 * i][j].x, offset[2 * i].y + points[2 * i][j].y);
-			points[2 * i + 1][j] = cv::Point(offset[2 * i+1] + points[2 * i+1][j]);
-			std::cout << "points after: " << points[2 * i][j] << std::endl;*/
-			MarkerPos3D[i][j].x = ( double(points[2 * i][j].x) - cx) * T / ((double(points[2 * i][j].y) - double(points[2 * i + 1][j].y))/* + delta_cy*/);
+			
+			MarkerPos3D[i][j].x = ( double(points[2 * i][j].x) - cx) * T / ((double(points[2 * i][j].y) - double(points[2 * i + 1][j].y)) /*+ delta_cy*/);
 			MarkerPos3D[i][j].y = (double(points[2 * i][j].y) - cy) * T / ((double(points[2 * i][j].y) - double(points[2 * i + 1][j].y))/* + delta_cy*/);
-			MarkerPos3D[i][j].z = fy * T / ((double(points[2 * i][j].y) - double(points[2 * i + 1][i].y))/* + delta_cy*/);
+			MarkerPos3D[i][j].z = fy * T / ((double(points[2 * i][j].y) - double(points[2 * i + 1][j].y)) /*+ delta_cy*/);
 			/*MarkerPos3D[i][j] = MarkerPos3D[i][j] + Transform[i];
 			MarkerPos3D[i][j] = Rotation[i] * MarkerPos3D[i][j];*/
 			std::cout << "Camera Set " << i << " Marker " << j << MarkerPos3D[i][j] << std::endl;
