@@ -43,6 +43,7 @@ public:
 	cv::Mat detectWindow_Initial;
 	cv::Point detectPosition;
 	cv::Point detectPosition_Initial;
+
 	static cv::Point currentPos[NUM_CAMERAS][NUM_MARKERS]; // first entry is the index of image, second entry is the index of marker
 	static cv::Point previousPos[NUM_CAMERAS][NUM_MARKERS];// make it static to share between multiple tracker objects
 	static cv::Point currentPosSet[NUM_CAMERAS][NUM_MARKER_SET]; // current position of camera set

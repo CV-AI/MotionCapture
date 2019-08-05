@@ -244,8 +244,11 @@ int main(int /*argc*/, char** /*argv*/)
 				for (int i = 0; i < NUM_CAMERAS; i++)
 				{
 					tracker.RectifyMarkerPos(i);
+					
 					for (int marker_index = 0; marker_index < NUM_MARKERS; marker_index++)
 					{
+						cv::putText(tracker.ReceivedImages[i], to_string(i), cv::Point(50, 50),2,2,cv::Scalar(0,255,0));
+						cv::putText(tracker.ReceivedImages[i], to_string(marker_index), tracker.currentPos[i][marker_index], 2, 2, cv::Scalar(0, 255, 0));
 						std::cout << i << marker_index << tracker.currentPos[i][marker_index] << std::endl;
 						cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 3, cv::Scalar(0, 0, 255),3);
 					}
@@ -258,7 +261,19 @@ int main(int /*argc*/, char** /*argv*/)
 				auto track_processing = std::chrono::high_resolution_clock::now();
 				std::chrono::duration<double> elapsed_seconds_processing = track_processing - start_processing;
 				std::cout << "Time on tracking " << ": " << elapsed_seconds_processing.count() << std::endl;
-				memcpy(dataProcess.points, tracker.currentPos, sizeof(tracker.currentPos));
+				//memcpy(dataProcess.points, tracker.currentPos, sizeof(tracker.currentPos));
+				for (int camera_index = 0; camera_index < NUM_CAMERAS; camera_index++)
+				{
+					for (int marker_inex = 0; marker_inex < NUM_MARKERS; marker_inex++)
+					{
+						
+						dataProcess.points[camera_index][marker_inex] = tracker.currentPos[camera_index][marker_inex] 
+								+ dataProcess.offset[camera_index];
+						cout << "offset" << dataProcess.offset[camera_index]<<endl;
+						cout << "tracker pos" << tracker.currentPos[camera_index][marker_inex] << endl;
+						cout << "dataprocess pos" << dataProcess.points[camera_index][marker_inex] << endl;
+					}
+				}
 				dataProcess.exportGaitData();
 				auto stop_export = std::chrono::high_resolution_clock::now();
 				std::chrono::duration<double> seconds_export = stop_export - track_processing;

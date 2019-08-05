@@ -3,9 +3,10 @@
 #include <algorithm>
 
 
-Tracker::Tracker():detectWindowDimX(120), detectWindowDimY(260),numCameras(4),threshold(100),TrackerAutoIntialized(false)
+Tracker::Tracker():detectWindowDimX(120), detectWindowDimY(180),numCameras(4),threshold(100),TrackerAutoIntialized(false)
 {
 	cv::Point momentum[NUM_CAMERAS] = { cv::Point(0,0), cv::Point(0,0),cv::Point(0,0), cv::Point(0,0) };
+	
 }
 
 
@@ -152,9 +153,10 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 			int cx = br.x + br.width / 2; int cy = br.y + br.height / 2;
 			currentPos[camera_index][i] = cv::Point(cx + detectPosition_Initial.x, cy + detectPosition_Initial.y);
 		}
+		RectifyMarkerPos(camera_index);
 		for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
 		{
-			currentPosSet[camera_index][marker_set] = 0.5*(currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
+			currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
 		}
 		//int i = 0;
 		//while (it != contours.end())
@@ -172,6 +174,7 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 		return true;
 
 	}
+	
 	else
 	{
 		std::cout << "No enough contours: " << contours.size() << std::endl;
@@ -214,15 +217,26 @@ bool Tracker::getContoursAndMoment(int camera_index, int marker_set)
 		cv::Rect br_l = cv::boundingRect(contours[1]);
 		int cx_l = br_l.x + br_l.width * 0.5;
 		int cy_l = br_l.y + br_l.height * 0.5;
-		if (br_u.y < br_l.y)
+		/*if (br_u.y < br_l.y)
 		{
-			currentPos[camera_index][2 * marker_set] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y);
-			currentPos[camera_index][2 * marker_set+1] = cv::Point(cx_l + detectPosition.x, cy_l + detectPosition.y);
+			currentPos[camera_index][2 * marker_set] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y)+offset[camera_index];
+			currentPos[camera_index][2 * marker_set+1] = cv::Point(cx_l + detectPosition.x, cy_l + detectPosition.y) + offset[camera_index];
 			
 		}
 		else
 		{
-			currentPos[camera_index][2 * marker_set+1] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y);
+			currentPos[camera_index][2 * marker_set+1] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y) + offset[camera_index];
+			currentPos[camera_index][2 * marker_set] = cv::Point(cx_l + detectPosition.x, cy_l + detectPosition.y) + offset[camera_index];
+		}*/
+		if (br_u.y < br_l.y)
+		{
+			currentPos[camera_index][2 * marker_set] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y);
+			currentPos[camera_index][2 * marker_set + 1] = cv::Point(cx_l + detectPosition.x, cy_l + detectPosition.y);
+
+		}
+		else
+		{
+			currentPos[camera_index][2 * marker_set + 1] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y);
 			currentPos[camera_index][2 * marker_set] = cv::Point(cx_l + detectPosition.x, cy_l + detectPosition.y);
 		}
 		currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
@@ -333,6 +347,11 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 			cv::Rect detectRect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, (*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY);
 			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[camera_index](detectRect).clone(); // 
 			success = (*trackerPtr).getContoursAndMoment(camera_index,j) && success;
+			// 因为标定相机时是全尺寸，所以需要转换回全尺寸下的图像坐标
+			//std::cout << "before " << (*trackerPtr).currentPos[camera_index][2 * j];
+			/*(*trackerPtr).currentPos[camera_index][2*j] = (*trackerPtr).currentPos[camera_index][2 * j]+(*trackerPtr).offset[camera_index];
+			(*trackerPtr).currentPos[camera_index][2*j+1] = (*trackerPtr).currentPos[camera_index][2 * j + 1]+(*trackerPtr).offset[camera_index];*/
+			//std::cout << "after " << (*trackerPtr).currentPos[camera_index][2 * j];
 			(*trackerPtr).momentum[j] = weight*((*trackerPtr).currentPosSet[camera_index][j] - (*trackerPtr).previousPosSet[camera_index][j]);
 		}
 		break;

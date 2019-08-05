@@ -5,24 +5,21 @@
 
 DataProcess::DataProcess() :numCameras(4),GotWorldFrame(false)
 {
-	cv::Point points[4][6];
-	cv::Point3d MarkerPos3D[2][6];
-	cv::Mat image;
-	double time = 0;
-	double hip[2] = { 0,0 }; // 0 for left, 1 for right
-	double knee[2] = { 0,0 };
-	double ankle[2] = { 0,0 };
-	const double cx = 1124.8;
-	const double cy = 1126.0;
-	const double fx = 1018.7;
-	const double fy = 1002.1;
-	const int T = 200;
-	cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,300), cv::Point(750,500), cv::Point(800,300) };
+	numCameras = 4;
+	GotWorldFrame = false;
+	time = 0;
+	knee_file.open("knee.csv");
+	hip_file.open("hip.csv");
+	ankle_file.open("ankle.csv");
+	//offset = { cv::Point(500, 500), cv::Point(500,200), cv::Point(750,500), cv::Point(800,200) };
 }
 
 
 DataProcess::~DataProcess()
 {
+	knee_file.close();
+	hip_file.close();
+	ankle_file.close();
 }
 
 // void DataProcess::getTime()
@@ -60,15 +57,16 @@ void DataProcess::mapTo3D()
 		// j 是marker 的序号
 		for (int j = 0; j < 6; j++)
 		{
-			// 因为标定相机时是全尺寸，所以需要转换回全尺寸下的图像坐标
-			points[2 * i][j] += offset[2 * i];
-			points[2 * i + 1][j] += offset[2 * i + 1];
-			MarkerPos3D[i][j].x = (2 * double(points[2 * i][j].x) - cx) * T / (2 * (double(points[2 * i][j].y) - double(points[2 * i + 1][j].y)));
-			MarkerPos3D[i][j].y = -(2 * double(points[2 * i][j].y) - cy) * T / (2 * (double(points[2 * i][j].x) - double(points[2 * i + 1][j].x)));
-			MarkerPos3D[i][j].z = fy * T / (2 * (double(points[2 * i][j].y) - double(points[2 * i + 1][i].y)));
+			/*std::cout << "points before: " << points[2*i][j] << std::endl;
+			points[2 * i][j] = cv::Point(offset[2 * i].x+ points[2 * i][j].x, offset[2 * i].y + points[2 * i][j].y);
+			points[2 * i + 1][j] = cv::Point(offset[2 * i+1] + points[2 * i+1][j]);
+			std::cout << "points after: " << points[2 * i][j] << std::endl;*/
+			MarkerPos3D[i][j].x = ( double(points[2 * i][j].x) - cx) * T / ((double(points[2 * i][j].y) - double(points[2 * i + 1][j].y))/* + delta_cy*/);
+			MarkerPos3D[i][j].y = (double(points[2 * i][j].y) - cy) * T / ((double(points[2 * i][j].y) - double(points[2 * i + 1][j].y))/* + delta_cy*/);
+			MarkerPos3D[i][j].z = fy * T / ((double(points[2 * i][j].y) - double(points[2 * i + 1][i].y))/* + delta_cy*/);
 			/*MarkerPos3D[i][j] = MarkerPos3D[i][j] + Transform[i];
-			MarkerPos3D[i][j] = Rotation[i] * MarkerPos3D[i][j];
-			std::cout << "Camera Set " << i << " Marker " << j << MarkerPos3D[i][j] << std::endl;*/
+			MarkerPos3D[i][j] = Rotation[i] * MarkerPos3D[i][j];*/
+			std::cout << "Camera Set " << i << " Marker " << j << MarkerPos3D[i][j] << std::endl;
 		}
 	}
 }
@@ -88,14 +86,18 @@ void DataProcess::getJointAngle()
 		hip[i] = ((atan2(thigh[i].x, abs(thigh[i].z))) / pi) * 180;
 		knee[i] = ((acos((thigh[i].x * shank[i].x + thigh[i].z * shank[i].z) / (sqrt(thigh[i].x * thigh[i].x + thigh[i].z * thigh[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
 		ankle[i] = ((acos((foot[i].x * shank[i].x + foot[i].z * shank[i].z) / (sqrt(foot[i].x * foot[i].x + foot[i].z * foot[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
-		std::cout << "hip:   " << hip << "   " << "knee:   " << knee << "   " << "ankle:   " << ankle << std::endl;
+		std::cout <<"Camera Set: "<<i<< " hip:   " << hip[i] << "   " << "knee:   " << knee[i] << "   " << "ankle:   " << ankle[i] << std::endl;
 	}
+	knee_file << knee[0] << "," <<knee[1]<< "\n";
+	hip_file << hip[0]<<"," << hip[1] << "\n";
+	ankle_file << ankle[0] << "," << ankle[1]<< "\n";
 }
 
 bool DataProcess::exportGaitData()
 {
 	bool success = true;
 	getJointAngle();
+
 	return success;
 }
 
@@ -131,25 +133,16 @@ bool DataProcess::FindWorldFrame(cv::Mat upper,cv::Mat lower, int camera_set)
 	found  = cv::findChessboardCorners(lower_bgr, boardsize, corners_lower) && found;
 	if (found)
 	{
-		// 因为标定相机时是全尺寸，所以需要转换回全尺寸下的图像坐标
-		for (int i = 0; i < corners_upper.size(); i++)
-		{
-			corners_upper[i] += cv::Point2d(offset[camera_set*2]);
-		}
-		for (int i = 0; i < corners_lower.size(); i++)
-		{
-			corners_lower[i] += cv::Point2d(offset[camera_set * 2+1]);
-		}
 		std::cout << corners_upper << std::endl;
-		p0.x = (2 * corners_upper[0].x - cx) * T / (2 * corners_upper[0].y - corners_lower[0].y);
-		p0.y = (2 * corners_upper[0].x - cy) * T / (2 * corners_upper[0].y - corners_lower[0].y);
-		p0.z = fy * T / (2 * (corners_upper[0].y) - corners_lower[0].y);
-		p1.x = (2 * corners_upper[2].x - cx) * T / (2 * corners_upper[2].y - corners_lower[2].y);
-		p1.y = (2 * corners_upper[2].x - cy) * T / (2 * corners_upper[2].y - corners_lower[2].y);
-		p1.z = fy * T / (2 * (corners_upper[2].y) - corners_lower[2].y);
-		p2.x = (2 * corners_upper[7].x - cx) * T / (2 * corners_upper[7].y - corners_lower[7].y);
-		p2.y = (2 * corners_upper[7].y - cy) * T / (2 * corners_upper[7].y - corners_lower[7].y);
-		p2.z = fy * T / (2 * (corners_upper[7].y) - corners_lower[7].y);
+		p0.x = (corners_upper[0].x - cx) * T / (corners_upper[0].y - corners_lower[0].y);
+		p0.y = (corners_upper[0].y - cy) * T / (corners_upper[0].y - corners_lower[0].y);
+		p0.z = fy * T / (corners_upper[0].y - corners_lower[0].y);
+		p1.x = (corners_upper[2].x - cx) * T / (corners_upper[2].y - corners_lower[2].y);
+		p1.y = (corners_upper[2].y - cy) * T / (corners_upper[2].y - corners_lower[2].y);
+		p1.z = fy * T / (corners_upper[2].y - corners_lower[2].y);
+		p2.x = (corners_upper[7].x - cx) * T / (corners_upper[7].y - corners_lower[7].y);
+		p2.y = (corners_upper[7].y - cy) * T / (corners_upper[7].y - corners_lower[7].y);
+		p2.z = fy * T / (corners_upper[7].y - corners_lower[7].y);
 		vectors[1] = p1 - p0;
 		cv::Point3d transform = -p0;
 		vectors[2] = p2 - p0;

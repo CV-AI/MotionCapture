@@ -1,6 +1,7 @@
 #include "Tracker.hpp"
+#include <fstream>
 #include <opencv2/imgproc/types_c.h>
-
+#include <sstream>
 cv::Point3d crossing(cv::Point3d u, cv::Point3d v);
 cv::Point3d scale(cv::Point3d u);
 cv::Point3d operator*(cv::Mat M, cv::Point3d p);
@@ -12,10 +13,13 @@ class DataProcess
 public:
 	DataProcess();
 	~DataProcess();
-	double second, millisecond, deltat = 0;
+	//double second, millisecond, deltat = 0;
 	cv::Point3d thigh[2]; // 0 for left, 1 for right
 	cv::Point3d shank[2];
 	cv::Point3d foot[2];
+	std::ofstream knee_file;
+	std::ofstream hip_file;
+	std::ofstream ankle_file;
 	int numCameras;
 	//void getTime();
 	void mapTo3D();
@@ -33,12 +37,14 @@ public:
 	double ankle[2];
 	bool GotWorldFrame;
 	bool gettime = false;
-	const double cx = 1124.8;
-	const double cy = 1126.0;
-	const double fx = 1018.7;
-	const double fy = 1002.1;
-	const int T = 200;
-	cv::Point2i offset[4];
+	cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,200), cv::Point(750,500), cv::Point(800,200) };
+	const double cx = 1010.13238776137;
+	const double cy = 991.338656997527;
+	const double fx = 1121.56188766987;
+	const double fy = 1120.60483176776;
+	const double cy_lower = 997.561141920296;
+	const double delta_cy = 6.222484902473; // cy_lower - cy
+	const int T = 244.628114017665;
 	std::vector<cv::Mat> Rotation;
 	std::vector<cv::Point3d> Transform;
 };
