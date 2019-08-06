@@ -26,7 +26,7 @@ public:
 	void getJointAngle();
 	bool exportGaitData();
 	bool FrameTransform();
-	bool DataProcess::FindWorldFrame(cv::Mat,cv::Mat, int);
+	bool DataProcess::FindWorldFrame(cv::Mat,cv::Mat);
 	cv::Point points[4][6];
 	cv::Point3d MarkerPos3D[2][6];
 

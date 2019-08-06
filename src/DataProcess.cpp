@@ -104,7 +104,7 @@ bool DataProcess::FrameTransform()
 	return false;
 } 
 
-bool DataProcess::FindWorldFrame(cv::Mat upper,cv::Mat lower, int camera_set)
+bool DataProcess::FindWorldFrame(cv::Mat upper,cv::Mat lower)
 {
 	cv::Mat upper_bgr,lower_bgr;
 	cv::cvtColor(upper, upper_bgr, CV_RGB2BGR);

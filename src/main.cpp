@@ -287,8 +287,8 @@ int main(int /*argc*/, char** /*argv*/)
 			}
 			if (!dataProcess.GotWorldFrame && num_Acquisition > 15)
 			{
-				dataProcess.GotWorldFrame = true;
-				/*try
+				//dataProcess.GotWorldFrame = true;
+				try
 				{
 					bool found = dataProcess.FindWorldFrame(tracker.ReceivedImages[0], tracker.ReceivedImages[1]);
 					found = dataProcess.FindWorldFrame(tracker.ReceivedImages[2], tracker.ReceivedImages[3]) && found;
@@ -306,7 +306,7 @@ int main(int /*argc*/, char** /*argv*/)
 				catch (cv::Exception& e)
 				{
 					std::cout << "OpenCV Error: during finding world frame: \n" << e.what() << endl;
-				}*/
+				}
 			}
 			
 			cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
