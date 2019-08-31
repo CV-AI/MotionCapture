@@ -2,6 +2,10 @@
 #include <fstream>
 #include <opencv2/imgproc/types_c.h>
 #include <sstream>
+//TwinCAT需要的两个头文件
+#include "TcAdsDef.h"
+#include "TcAdsAPI.h"
+
 cv::Point3d crossing(cv::Point3d u, cv::Point3d v);
 cv::Point3d scale(cv::Point3d u);
 cv::Point3d operator*(cv::Mat M, cv::Point3d p);
@@ -47,4 +51,10 @@ public:
 	const int T = 244.628114017665;
 	std::vector<cv::Mat> Rotation;
 	std::vector<cv::Point3d> Transform;
+
+	long      nErr, nPort;	//定义端口变量
+	AmsAddr   Addr;		//定义AMS地址变量
+	PAmsAddr  pAddr = &Addr;  	//定义端口地址变量
+	unsigned long lHdlVar2;   	//创建句柄
+	char szVar2[20] = { "MAIN.Array1" };
 };
