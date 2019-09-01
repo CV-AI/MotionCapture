@@ -13,6 +13,7 @@ if ( WIN32 )
     set(PTGREY_SDK_INCLUDE_DIR "D:/software/SpinnakerSDK/include")
     set(PTGREY_SDK_LIBRARY_DEBUG debug "D:/software/SpinnakerSDK/lib64/vs2015/Spinnakerd_v140.lib")
     set(PTGREY_SDK_LIBRARY_RELEASE  optimized "D:/software/SpinnakerSDK/lib64/vs2015/Spinnaker_v140.lib")
+	set(TCADS_LIBRARY "${PROJECT_SOURCE_DIR}/lib/TcAdsDll.lib")
 else()
     set(PTGREY_SDK_INCLUDE_DIR "/usr/include/spinnaker")
     set(PTGREY_SDK_LIBRARY_DEBUG debug "/usr/lib/libSpinnaker.so")
@@ -53,5 +54,6 @@ add_executable(${name}
 target_link_libraries(${name}
         ${OpenCV_LIBS}
         ${PTGREY_SDK_LIBRARY_DEBUG}
+		${TCADS_LIBRARY}
         ${PTGREY_SDK_LIBRARY_RELEASE}
         )
