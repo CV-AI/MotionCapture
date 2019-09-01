@@ -70,7 +70,7 @@ public:
 	TrackerParameters()
 	{
 		camera_index = 0;
-		trackerPtr = NULL;
+		trackerPtr = nullptr;
 		tracker_type = ByColor;
 	}
 	~TrackerParameters()

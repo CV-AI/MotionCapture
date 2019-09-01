@@ -3,7 +3,7 @@
 #include <algorithm>
 
 
-Tracker::Tracker():detectWindowDimX(120), detectWindowDimY(180),numCameras(4),threshold(100),TrackerAutoIntialized(false)
+Tracker::Tracker():detectWindowDimX(100), detectWindowDimY(100),numCameras(4),threshold(100),TrackerAutoIntialized(false)
 {
 	cv::Point momentum[NUM_CAMERAS] = { cv::Point(0,0), cv::Point(0,0),cv::Point(0,0), cv::Point(0,0) };
 	
@@ -333,7 +333,9 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 	TrackerType tracker_type = para.tracker_type;
 	bool success = true;
 	cv::Point detectRegionPosition;
-
+	cv::Rect detectRect;
+	int window_size_x = (*trackerPtr).detectWindowDimX;
+	int window_size_y = (*trackerPtr).detectWindowDimY;
 	switch (tracker_type)
 	{
 	case ByDetection:
@@ -343,9 +345,27 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 			// use previous position of marker as the center of detectPosition_Initial
 			// and move detectPosition_Initial to left_upper corner
 			(*trackerPtr).detectPosition = (*trackerPtr).previousPosSet[camera_index][j] + (*trackerPtr).momentum[j] - cv::Point(int((*trackerPtr).detectWindowDimX*0.5), int((*trackerPtr).detectWindowDimY * 0.5));
+			// make sure ROI is in the range of image
+			if ((*trackerPtr).detectPosition.x < 0)
+			{
+				(*trackerPtr).detectPosition.x = 0;
+			}
+			if ((*trackerPtr).detectPosition.y < 0)
+			{
+				(*trackerPtr).detectPosition.y = 0;
+			}
+			if ((*trackerPtr).detectPosition.x+ (*trackerPtr).detectWindowDimX > (*trackerPtr).ReceivedImages[camera_index].cols)
+			{
+				window_size_x = (*trackerPtr).ReceivedImages[camera_index].cols - (*trackerPtr).detectPosition.x;
+			}
+			if ((*trackerPtr).detectPosition.y + (*trackerPtr).detectWindowDimY > (*trackerPtr).ReceivedImages[camera_index].rows)
+			{
+				window_size_y = (*trackerPtr).ReceivedImages[camera_index].rows - (*trackerPtr).detectPosition.y;
+			}
 			
-			cv::Rect detectRect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, (*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY);
-			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[camera_index](detectRect).clone(); // 
+			detectRect = cv::Rect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, window_size_x, window_size_y);
+			
+			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[camera_index](detectRect).clone(); 
 			success = (*trackerPtr).getContoursAndMoment(camera_index,j) && success;
 			// 因为标定相机时是全尺寸，所以需要转换回全尺寸下的图像坐标
 			//std::cout << "before " << (*trackerPtr).currentPos[camera_index][2 * j];
@@ -364,7 +384,25 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 			// use previous position of marker as the center of detectPosition_Initial
 			// and move detectPosition_Initial to left_upper corner
 			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][camera_index]+(*trackerPtr).momentum[i] - cv::Point(int((*trackerPtr).detectWindowDimX * 0.5), int((*trackerPtr).detectWindowDimY * 0.5));
-			cv::Rect detectRect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, (*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY);
+			// make sure ROI is in the range of image
+			if ((*trackerPtr).detectPosition.x < 0)
+			{
+				(*trackerPtr).detectPosition.x = 0;
+			}
+			if ((*trackerPtr).detectPosition.y < 0)
+			{
+				(*trackerPtr).detectPosition.y = 0;
+			}
+			if ((*trackerPtr).detectPosition.x + (*trackerPtr).detectWindowDimX > (*trackerPtr).ReceivedImages[camera_index].cols)
+			{
+				window_size_x = (*trackerPtr).ReceivedImages[camera_index].cols - (*trackerPtr).detectPosition.x;
+			}
+			if ((*trackerPtr).detectPosition.y + (*trackerPtr).detectWindowDimY > (*trackerPtr).ReceivedImages[camera_index].rows)
+			{
+				window_size_y = (*trackerPtr).ReceivedImages[camera_index].rows - (*trackerPtr).detectPosition.y;
+			}
+
+			detectRect = cv::Rect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, window_size_x, window_size_y);
 			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[i](detectRect).clone(); // 
 			(*trackerPtr).momentum[i] = weight * ((*trackerPtr).currentPos[i][camera_index] - (*trackerPtr).previousPos[i][camera_index]);
 		}
