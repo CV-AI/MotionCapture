@@ -55,6 +55,8 @@ public:
 	float fy_list[4] = { 1121.56188766987, 1121.56188766987,1121.56188766987,1121.56188766987 };
 	cv::Mat rotationMatLeft, rotationMatRight;
 	cv::Mat translationMatLeft, translationMatRight;
+	cv::Mat mapX[4];
+	cv::Mat mapY[4];
 	const double delta_cy = 6.222484902473; // cy_lower - cy
 	const int T = 244.628114017665;
 	std::vector<cv::Mat> Rotation;
