@@ -47,6 +47,14 @@ public:
 	const double fx = 1121.56188766987;
 	const double fy = 1120.60483176776;
 	const double cy_lower = 997.561141920296;
+	cv::Mat cameraMatrix[4];
+	cv::Mat distorCoeff[4];
+	float cx_list[4] = { 1010.13238776137, 1010.13238776137 ,1010.13238776137 ,1010.13238776137 };
+	float cy_list[4] = { 991.338656997527, 991.338656997527,991.338656997527,991.338656997527 };
+	float fx_list[4] = { 1121.56188766987, 1121.56188766987,1121.56188766987,1121.56188766987 };
+	float fy_list[4] = { 1121.56188766987, 1121.56188766987,1121.56188766987,1121.56188766987 };
+	cv::Mat rotationMatLeft, rotationMatRight;
+	cv::Mat translationMatLeft, translationMatRight;
 	const double delta_cy = 6.222484902473; // cy_lower - cy
 	const int T = 244.628114017665;
 	std::vector<cv::Mat> Rotation;
