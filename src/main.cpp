@@ -52,7 +52,7 @@ int main(int /*argc*/, char** /*argv*/)
 	int CameraIndex[4] = { 0,1,2,3 };
 	dataProcess.numCameras = numCameras;
 	std::cout << "Number of cameras detected: " << numCameras << endl << endl;
-	assert(numCameras == NUM_CAMERAS, "Number of cameras not correct, check Tracker::NUM_CAMERAS");
+	assert(numCameras == NUM_CAMERAS);
 	// set current process as high priority (second highest, the highest is Real time)
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
     CameraPtr pCam = NULL;
@@ -385,9 +385,6 @@ int main(int /*argc*/, char** /*argv*/)
 
     // Clear camera list before releasing system
     camList.Clear();
-
-    // Release system
-	getchar();
     system->ReleaseInstance();
     
     return true;
