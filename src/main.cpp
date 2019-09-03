@@ -1,7 +1,7 @@
 #include "Spinnaker.h"
 #include "SpinGenApi/SpinnakerGenApi.h"
 #include "Acquisition.hpp"
-#include "DataProcess.h"
+#include "DataProcess.hpp"
 #include "Tracker.hpp"
 #include <iostream>
 #include <sstream>
@@ -11,6 +11,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+//#define TRANS_FRAME
 
 using namespace Spinnaker;
 using namespace Spinnaker::GenApi;
@@ -29,10 +30,11 @@ int main(int /*argc*/, char** /*argv*/)
     // let the program know which camera to acquire image from
     
     cv::Mat image_LU, image_RU, image_RL, image_LL; // Left_Upper, Right_Upper, Right_Lower, Left_Lower
-    cv::namedWindow("Left_Upper",0);
-    cv::namedWindow("Right_Upper",0);
-    cv::namedWindow("Right_Lower", 0);
-    cv::namedWindow("Left_Lower", 0);
+	cv::WindowFlags window_type = cv::WINDOW_NORMAL;
+    cv::namedWindow("Left_Upper", window_type);
+    cv::namedWindow("Right_Upper", window_type);
+    cv::namedWindow("Right_Lower", window_type);
+    cv::namedWindow("Left_Lower", window_type);
     // Retrieve singleton reference to system object
     SystemPtr system = System::GetInstance();
     // Print Spinnaker library version
@@ -71,11 +73,11 @@ int main(int /*argc*/, char** /*argv*/)
             {
                 cout << "Error: DeviceSerialNumber unavailable" << endl;
             }
-            if (deviceSerialNumber=="18308395")
+            if (deviceSerialNumber=="18308397")
             {
                 CameraIndex[i] = 0; // Left Upper
             }
-            else if (deviceSerialNumber=="18308397")
+            else if (deviceSerialNumber=="18308395")
             {
                 CameraIndex[i] = 1; // Left Lower
             }
@@ -201,13 +203,12 @@ int main(int /*argc*/, char** /*argv*/)
 				}
 			}
 #endif
-			auto stop = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double> elapsed_seconds = stop - start;
+			auto start_processing = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> elapsed_seconds = start_processing - start;
 			std::cout << "Acquiring time on camera " << ": " << elapsed_seconds.count() << std::endl;
 			
 			
             // pCam = NULL;
-			auto start_processing = std::chrono::high_resolution_clock::now();
 			if (tracker.TrackerAutoIntialized)
 			{	
 				memcpy(tracker.previousPosSet, tracker.currentPosSet, sizeof(tracker.currentPosSet));
@@ -249,8 +250,9 @@ int main(int /*argc*/, char** /*argv*/)
 					{
 						cv::putText(tracker.ReceivedImages[i], to_string(i), cv::Point(50, 50),2,2,cv::Scalar(0,255,0));
 						cv::putText(tracker.ReceivedImages[i], to_string(marker_index), tracker.currentPos[i][marker_index], 2, 2, cv::Scalar(0, 255, 0));
+						cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 3, cv::Scalar(0, 0, 255), 3);
 						std::cout << i << marker_index << tracker.currentPos[i][marker_index] << std::endl;
-						cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 3, cv::Scalar(0, 0, 255),3);
+						
 					}
 					for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
 					{
@@ -261,12 +263,11 @@ int main(int /*argc*/, char** /*argv*/)
 				auto track_processing = std::chrono::high_resolution_clock::now();
 				std::chrono::duration<double> elapsed_seconds_processing = track_processing - start_processing;
 				std::cout << "Time on tracking " << ": " << elapsed_seconds_processing.count() << std::endl;
-				//memcpy(dataProcess.points, tracker.currentPos, sizeof(tracker.currentPos));
 				for (int camera_index = 0; camera_index < NUM_CAMERAS; camera_index++)
 				{
 					for (int marker_inex = 0; marker_inex < NUM_MARKERS; marker_inex++)
 					{
-						
+						// 因为我们截取了一部分图像，所以计算位置之前要还原到原来的2048*2048的像素坐标系下的坐标
 						dataProcess.points[camera_index][marker_inex] = tracker.currentPos[camera_index][marker_inex] 
 								+ dataProcess.offset[camera_index];
 						/*cout << "offset" << dataProcess.offset[camera_index]<<endl;
@@ -280,11 +281,21 @@ int main(int /*argc*/, char** /*argv*/)
 				std::cout << "Time on export gait data: " << seconds_export.count() << std::endl;
 			}
 			
-			if (/*tracker.getColors && */!tracker.TrackerAutoIntialized && dataProcess.GotWorldFrame)
+			if (/*tracker.getColors && */!tracker.TrackerAutoIntialized
+#ifdef TRANS_FRAME 
+				&& dataProcess.GotWorldFrame
+#endif
+				)
 			{
+				cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
+				cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
+				cv::imshow("Right_Upper", tracker.ReceivedImages[2]);
+				cv::imshow("Right_Lower", tracker.ReceivedImages[3]);
 				tracker.InitTracker(ByDetection);
 				//getchar();
 			}
+#ifdef TRANS_FRAME
+
 			if (!dataProcess.GotWorldFrame && num_Acquisition > 15)
 			{
 				//dataProcess.GotWorldFrame = true;
@@ -300,7 +311,7 @@ int main(int /*argc*/, char** /*argv*/)
 					else
 					{
 						dataProcess.GotWorldFrame = false;
-						cout << "Find world coordinate system failed!\a\a\a" << endl;
+						cout << "Faild find world coordinate system!\a\a\a" << endl;
 					}
 				}
 				catch (cv::Exception& e)
@@ -308,7 +319,7 @@ int main(int /*argc*/, char** /*argv*/)
 					std::cout << "OpenCV Error: during finding world frame: \n" << e.what() << endl;
 				}
 			}
-			
+#endif
 			cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
 			cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
 			cv::imshow("Right_Upper", tracker.ReceivedImages[2]);

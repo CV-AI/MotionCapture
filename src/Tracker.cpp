@@ -113,7 +113,7 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 	//cv::fastNlMeansDenoising(detectWindow_Initial, detectWindow_Initial);
 	//cv::Mat detectCopy = detectWindow_Initial.clone();
 	//cv::cvtColor(detectWindow_Initial, detectWindow_Initial, CV_BGRA2GRAY);
-	cv::Mat mask(9, 9, CV_8U, cv::Scalar(1));
+	cv::Mat mask(5, 5, CV_8U, cv::Scalar(1));
 	cv::morphologyEx(detectWindow_Initial, detectWindow_Initial, cv::MORPH_CLOSE, mask);
 	cv::namedWindow("detectwindow", 0);
 	cv::setMouseCallback("detectwindow", Mouse_getRegion, 0);
@@ -151,7 +151,7 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 			std::cout << "contour size" << contours[i].size() << std::endl;
 			cv::Rect br = cv::boundingRect(contours[i]);
 			int cx = br.x + br.width / 2; int cy = br.y + br.height / 2;
-			currentPos[camera_index][i] = cv::Point(cx + detectPosition_Initial.x, cy + detectPosition_Initial.y);
+			currentPos[camera_index][i] = cv::Point(cx, cy);
 		}
 		RectifyMarkerPos(camera_index);
 		for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
@@ -314,6 +314,22 @@ bool Tracker::RectifyMarkerPos(int camera_index)
 			}
 		}
     }
+	// 对于0，1号相机来说，四号标记点在五号标记点的右边
+	if (camera_index < 2)
+	{
+		if (currentPos[camera_index][4].x < currentPos[camera_index][5].x)
+		{
+			std::swap(currentPos[camera_index][4], currentPos[camera_index][5]);
+		}
+	}
+	// 对于2，3号相机来说，四号标记点在五号标记点的左边
+	else
+	{
+		if (currentPos[camera_index][4].x > currentPos[camera_index][5].x)
+		{
+			std::swap(currentPos[camera_index][4], currentPos[camera_index][5]);
+		}
+	}
 	return true;
 }
 
