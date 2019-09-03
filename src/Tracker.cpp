@@ -3,9 +3,10 @@
 #include <algorithm>
 
 
-Tracker::Tracker():detectWindowDimX(120), detectWindowDimY(100),numCameras(4),threshold(100),TrackerAutoIntialized(false)
+Tracker::Tracker():detectWindowDimX(100), detectWindowDimY(100),numCameras(4),threshold(100),TrackerAutoIntialized(false)
 {
 	cv::Point momentum[NUM_CAMERAS] = { cv::Point(0,0), cv::Point(0,0),cv::Point(0,0), cv::Point(0,0) };
+	
 }
 
 
@@ -19,7 +20,8 @@ cv::Rect Tracker::calibration_region;
 cv::Mat Tracker::ReceivedImages[NUM_CAMERAS];
 cv::Point Tracker::currentPos[NUM_CAMERAS][NUM_MARKERS];
 cv::Point Tracker::previousPos[NUM_CAMERAS][NUM_MARKERS];
-
+cv::Point Tracker::currentPosSet[NUM_CAMERAS][NUM_MARKER_SET];
+cv::Point Tracker::previousPosSet[NUM_CAMERAS][NUM_MARKER_SET];
 // this function compare the areas of two contours
 bool compareContourAreas(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2) {
 	double i = fabs(cv::contourArea(cv::Mat(contour1)));
@@ -151,6 +153,11 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 			int cx = br.x + br.width / 2; int cy = br.y + br.height / 2;
 			currentPos[camera_index][i] = cv::Point(cx + detectPosition_Initial.x, cy + detectPosition_Initial.y);
 		}
+		RectifyMarkerPos(camera_index);
+		for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
+		{
+			currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
+		}
 		//int i = 0;
 		//while (it != contours.end())
 		//{
@@ -167,6 +174,7 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 		return true;
 
 	}
+	
 	else
 	{
 		std::cout << "No enough contours: " << contours.size() << std::endl;
@@ -175,7 +183,7 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 }
 
 // This function get the marker point for specific marker in a specific camera
-bool Tracker::getContoursAndMoment(int camera_index, int marker_index)
+bool Tracker::getContoursAndMoment(int camera_index, int marker_set)
 {
 	ColorThresholding(camera_index);
 	//cv::Mat detectCopy = detectWindow_Initial.clone();
@@ -201,19 +209,37 @@ bool Tracker::getContoursAndMoment(int camera_index, int marker_index)
 	cv::waitKey(1);*/
 	std::sort(contours.begin(), contours.end(), compareContourAreas);
 	//contours = std::vector<std::vector<cv::Point>>(contours.begin(), contours.begin() + 1);
-	if (contours.size() >0)
+	if (contours.size() >=2)
 	{
-		cv::Rect br = cv::boundingRect(contours[0]);
-		int cx = br.x + br.width * 0.5; 
-		int cy = br.y + br.height * 0.5;
-		currentPos[camera_index][marker_index] = cv::Point(cx + detectPosition.x, cy + detectPosition.y);
-		
-		//std::vector<std::vector<cv::Point>>::const_iterator it = contours.begin();
+		cv::Rect br_u = cv::boundingRect(contours[0]);
+		int cx_u = br_u.x + br_u.width * 0.5; 
+		int cy_u = br_u.y + br_u.height * 0.5;
+		cv::Rect br_l = cv::boundingRect(contours[1]);
+		int cx_l = br_l.x + br_l.width * 0.5;
+		int cy_l = br_l.y + br_l.height * 0.5;
+		/*if (br_u.y < br_l.y)
+		{
+			currentPos[camera_index][2 * marker_set] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y)+offset[camera_index];
+			currentPos[camera_index][2 * marker_set+1] = cv::Point(cx_l + detectPosition.x, cy_l + detectPosition.y) + offset[camera_index];
+			
+		}
+		else
+		{
+			currentPos[camera_index][2 * marker_set+1] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y) + offset[camera_index];
+			currentPos[camera_index][2 * marker_set] = cv::Point(cx_l + detectPosition.x, cy_l + detectPosition.y) + offset[camera_index];
+		}*/
+		if (br_u.y < br_l.y)
+		{
+			currentPos[camera_index][2 * marker_set] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y);
+			currentPos[camera_index][2 * marker_set + 1] = cv::Point(cx_l + detectPosition.x, cy_l + detectPosition.y);
 
-		//cv::Moments mom = cv::moments(cv::Mat(*it++));
-		//// 因为检测窗口不是全部画面，所以要加上检测窗口在全部画面的位置
-		//currentPos[camera_index][marker_index] = cv::Point(mom.m10 / mom.m00 + detectPosition_Initial.x, mom.m01 / mom.m00 + detectPosition_Initial.y);
-
+		}
+		else
+		{
+			currentPos[camera_index][2 * marker_set + 1] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y);
+			currentPos[camera_index][2 * marker_set] = cv::Point(cx_l + detectPosition.x, cy_l + detectPosition.y);
+		}
+		currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
 		return true;
 	}
 	else
@@ -302,26 +328,51 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 {
 #endif
 	TrackerParameters para = *((TrackerParameters*)lpParam);
-	int marker_index = para.marker_index;
+	int camera_index = para.camera_index;
 	Tracker* trackerPtr = para.trackerPtr;
 	TrackerType tracker_type = para.tracker_type;
 	bool success = true;
 	cv::Point detectRegionPosition;
-
+	cv::Rect detectRect;
+	int window_size_x = (*trackerPtr).detectWindowDimX;
+	int window_size_y = (*trackerPtr).detectWindowDimY;
 	switch (tracker_type)
 	{
 	case ByDetection:
 		// using contours to update tracker 
-		for (int i = 0; i < NUM_CAMERAS; i++)
+		for (int j = 0; j < NUM_MARKER_SET; j++)
 		{
 			// use previous position of marker as the center of detectPosition_Initial
 			// and move detectPosition_Initial to left_upper corner
-			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][marker_index] + (*trackerPtr).momentum[i] - cv::Point(int((*trackerPtr).detectWindowDimX*0.5), int((*trackerPtr).detectWindowDimY * 0.5));
+			(*trackerPtr).detectPosition = (*trackerPtr).previousPosSet[camera_index][j] + (*trackerPtr).momentum[j] - cv::Point(int((*trackerPtr).detectWindowDimX*0.5), int((*trackerPtr).detectWindowDimY * 0.5));
+			// make sure ROI is in the range of image
+			if ((*trackerPtr).detectPosition.x < 0)
+			{
+				(*trackerPtr).detectPosition.x = 0;
+			}
+			if ((*trackerPtr).detectPosition.y < 0)
+			{
+				(*trackerPtr).detectPosition.y = 0;
+			}
+			if ((*trackerPtr).detectPosition.x+ (*trackerPtr).detectWindowDimX > (*trackerPtr).ReceivedImages[camera_index].cols)
+			{
+				window_size_x = (*trackerPtr).ReceivedImages[camera_index].cols - (*trackerPtr).detectPosition.x;
+			}
+			if ((*trackerPtr).detectPosition.y + (*trackerPtr).detectWindowDimY > (*trackerPtr).ReceivedImages[camera_index].rows)
+			{
+				window_size_y = (*trackerPtr).ReceivedImages[camera_index].rows - (*trackerPtr).detectPosition.y;
+			}
 			
-			cv::Rect detectRect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, (*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY);
-			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[i](detectRect).clone(); // 
-			success = (*trackerPtr).getContoursAndMoment(i, marker_index) && success;
-			(*trackerPtr).momentum[i] = weight*((*trackerPtr).currentPos[i][marker_index] - (*trackerPtr).previousPos[i][marker_index]);
+			detectRect = cv::Rect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, window_size_x, window_size_y);
+			
+			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[camera_index](detectRect).clone(); 
+			success = (*trackerPtr).getContoursAndMoment(camera_index,j) && success;
+			// 因为标定相机时是全尺寸，所以需要转换回全尺寸下的图像坐标
+			//std::cout << "before " << (*trackerPtr).currentPos[camera_index][2 * j];
+			/*(*trackerPtr).currentPos[camera_index][2*j] = (*trackerPtr).currentPos[camera_index][2 * j]+(*trackerPtr).offset[camera_index];
+			(*trackerPtr).currentPos[camera_index][2*j+1] = (*trackerPtr).currentPos[camera_index][2 * j + 1]+(*trackerPtr).offset[camera_index];*/
+			//std::cout << "after " << (*trackerPtr).currentPos[camera_index][2 * j];
+			(*trackerPtr).momentum[j] = weight*((*trackerPtr).currentPosSet[camera_index][j] - (*trackerPtr).previousPosSet[camera_index][j]);
 		}
 		break;
 	case CV_KCF:
@@ -332,10 +383,28 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 		{
 			// use previous position of marker as the center of detectPosition_Initial
 			// and move detectPosition_Initial to left_upper corner
-			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][marker_index]+(*trackerPtr).momentum[i] - cv::Point(int((*trackerPtr).detectWindowDimX * 0.5), int((*trackerPtr).detectWindowDimY * 0.5));
-			cv::Rect detectRect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, (*trackerPtr).detectWindowDimX, (*trackerPtr).detectWindowDimY);
+			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][camera_index]+(*trackerPtr).momentum[i] - cv::Point(int((*trackerPtr).detectWindowDimX * 0.5), int((*trackerPtr).detectWindowDimY * 0.5));
+			// make sure ROI is in the range of image
+			if ((*trackerPtr).detectPosition.x < 0)
+			{
+				(*trackerPtr).detectPosition.x = 0;
+			}
+			if ((*trackerPtr).detectPosition.y < 0)
+			{
+				(*trackerPtr).detectPosition.y = 0;
+			}
+			if ((*trackerPtr).detectPosition.x + (*trackerPtr).detectWindowDimX > (*trackerPtr).ReceivedImages[camera_index].cols)
+			{
+				window_size_x = (*trackerPtr).ReceivedImages[camera_index].cols - (*trackerPtr).detectPosition.x;
+			}
+			if ((*trackerPtr).detectPosition.y + (*trackerPtr).detectWindowDimY > (*trackerPtr).ReceivedImages[camera_index].rows)
+			{
+				window_size_y = (*trackerPtr).ReceivedImages[camera_index].rows - (*trackerPtr).detectPosition.y;
+			}
+
+			detectRect = cv::Rect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, window_size_x, window_size_y);
 			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[i](detectRect).clone(); // 
-			(*trackerPtr).momentum[i] = weight * ((*trackerPtr).currentPos[i][marker_index] - (*trackerPtr).previousPos[i][marker_index]);
+			(*trackerPtr).momentum[i] = weight * ((*trackerPtr).currentPos[i][camera_index] - (*trackerPtr).previousPos[i][camera_index]);
 		}
 		break;
 	default:

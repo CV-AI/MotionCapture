@@ -48,26 +48,9 @@ int main(int /*argc*/, char** /*argv*/)
   
     unsigned int numCameras = camList.GetSize();
 	int CameraIndex[4] = { 0,1,2,3 };
-	dataProcess.numCameras = tracker.numCameras = numCameras;
-	assert(numCameras % 2 == 0, "Number of cameras not correct, must be multiple of 2.");
-	
-    std::cout << "Number of cameras detected: " << numCameras << endl << endl;
-    
-    // Finish if there are no cameras
-    if (numCameras == 0)
-    {
-        // Clear camera list before releasing system
-        camList.Clear();
-
-        // Release system
-        system->ReleaseInstance();
-
-        std::cout << "Not enough cameras!" << endl;
-        std::cout << "Done! Press Enter to exit..." << endl;
-        getchar();
-        
-        return -1;
-    }
+	dataProcess.numCameras = numCameras;
+	std::cout << "Number of cameras detected: " << numCameras << endl << endl;
+	assert(numCameras == NUM_CAMERAS, "Number of cameras not correct, check Tracker::NUM_CAMERAS");
 	// set current process as high priority (second highest, the highest is Real time)
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
     CameraPtr pCam = NULL;
@@ -136,21 +119,21 @@ int main(int /*argc*/, char** /*argv*/)
 		}
 		// Create an array of CameraPtrs. This array maintenances smart pointer's reference
 		// count when CameraPtr is passed into grab thread as void pointer
-		AcquisitionParameters* paraList = new AcquisitionParameters[numCameras];
-		TrackerParameters* trackerParaList = new TrackerParameters[NUM_MARKERS];
-		Tracker* trackerList = new Tracker[NUM_MARKERS];
-		for (int j = 0; j < NUM_MARKERS; j++)
+		AcquisitionParameters* paraList = new AcquisitionParameters[NUM_CAMERAS];
+		TrackerParameters* trackerParaList = new TrackerParameters[NUM_CAMERAS];
+		Tracker* trackerList = new Tracker[NUM_CAMERAS];
+		for (int j = 0; j < NUM_CAMERAS; j++)
 		{
 			trackerParaList[j].trackerPtr = &trackerList[j];
-			trackerParaList[j].marker_index = j;
+			trackerParaList[j].camera_index = j;
 			trackerParaList[j].tracker_type = ByDetection;
 		}
 #if defined(_WIN32)
-		HANDLE* grabThreads = new HANDLE[numCameras];
-		HANDLE* trackerThreads = new HANDLE[NUM_MARKERS];
+		HANDLE* grabThreads = new HANDLE[NUM_CAMERAS];
+		HANDLE* trackerThreads = new HANDLE[NUM_CAMERAS];
 #else
-		pthread_t* grabThreads = new pthread_t[numCameras];
-		pthread_t* trackerThreads = new pthread_t[NUM_MARKERS];
+		pthread_t* grabThreads = new pthread_t[NUM_CAMERAS];
+		pthread_t* trackerThreads = new pthread_t[NUM_CAMERAS];
 #endif
 
 		
@@ -163,7 +146,7 @@ int main(int /*argc*/, char** /*argv*/)
         {
             // acquire images
 			auto start = std::chrono::high_resolution_clock::now();
-			for (unsigned int i = 0; i < numCameras; i++)
+			for (unsigned int i = 0; i < NUM_CAMERAS; i++)
 			{
 				paraList[i].pCam = camList.GetByIndex(i);
 				paraList[i].cvImage = &tracker.ReceivedImages[CameraIndex[i]];
@@ -179,13 +162,13 @@ int main(int /*argc*/, char** /*argv*/)
 			}
 #if defined(_WIN32)
 			// Wait for all threads to finish
-			WaitForMultipleObjects(numCameras,		// number of threads to wait for 
+			WaitForMultipleObjects(NUM_CAMERAS,		// number of threads to wait for 
 				grabThreads,				// handles for threads to wait for
 				TRUE,					// wait for all of the threads
 				INFINITE				// wait forever
 			);
 			// Check thread return code for each camera
-			for (unsigned int i = 0; i < numCameras; i++)
+			for (unsigned int i = 0; i < NUM_CAMERAS; i++)
 			{
 				DWORD exitcode;
 
@@ -227,9 +210,9 @@ int main(int /*argc*/, char** /*argv*/)
 			auto start_processing = std::chrono::high_resolution_clock::now();
 			if (tracker.TrackerAutoIntialized)
 			{	
-				memcpy(tracker.previousPos, tracker.currentPos, sizeof(tracker.currentPos));
+				memcpy(tracker.previousPosSet, tracker.currentPosSet, sizeof(tracker.currentPosSet));
 
-				for (int j = 0; j < NUM_MARKERS; j++)
+				for (int j = 0; j < NUM_CAMERAS; j++)
 				{
 					// Start grab thread
 				/*cout << "processing" << i << endl;*/
@@ -237,13 +220,13 @@ int main(int /*argc*/, char** /*argv*/)
 					assert(trackerThreads[j] != nullptr);
 				}
 				// Wait for all threads to finish
-				WaitForMultipleObjects(NUM_MARKERS,		// number of threads to wait for 
+				WaitForMultipleObjects(NUM_CAMERAS,		// number of threads to wait for 
 					trackerThreads,				// handles for threads to wait for
 					TRUE,					// wait for all of the threads
 					INFINITE				// wait forever
 				);
 				// Check thread return code for each camera
-				for (int j = 0; j < NUM_MARKERS; j++)
+				for (int j = 0; j < NUM_CAMERAS; j++)
 				{
 					DWORD exitcode;
 
@@ -258,21 +241,39 @@ int main(int /*argc*/, char** /*argv*/)
 							"Please check onscreen print outs for error details" << endl;
 					}					
 				}
-				for (int i = 0; i < numCameras; i++)
+				for (int i = 0; i < NUM_CAMERAS; i++)
 				{
 					tracker.RectifyMarkerPos(i);
+					
 					for (int marker_index = 0; marker_index < NUM_MARKERS; marker_index++)
 					{
+						cv::putText(tracker.ReceivedImages[i], to_string(i), cv::Point(50, 50),2,2,cv::Scalar(0,255,0));
+						cv::putText(tracker.ReceivedImages[i], to_string(marker_index), tracker.currentPos[i][marker_index], 2, 2, cv::Scalar(0, 255, 0));
 						std::cout << i << marker_index << tracker.currentPos[i][marker_index] << std::endl;
 						cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 3, cv::Scalar(0, 0, 255),3);
-						cv::rectangle(tracker.ReceivedImages[i], cv::Rect(tracker.currentPos[i][marker_index].x - tracker.detectWindowDimX / 2,
-							tracker.currentPos[i][marker_index].y - tracker.detectWindowDimY / 2, tracker.detectWindowDimX, tracker.detectWindowDimY), cv::Scalar(255, 0, 0));
+					}
+					for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
+					{
+						cv::rectangle(tracker.ReceivedImages[i], cv::Rect(tracker.currentPosSet[i][marker_set].x - tracker.detectWindowDimX / 2,
+							tracker.currentPosSet[i][marker_set].y - tracker.detectWindowDimY / 2, tracker.detectWindowDimX, tracker.detectWindowDimY), cv::Scalar(255, 0, 0));
 					}
 				}
 				auto track_processing = std::chrono::high_resolution_clock::now();
 				std::chrono::duration<double> elapsed_seconds_processing = track_processing - start_processing;
 				std::cout << "Time on tracking " << ": " << elapsed_seconds_processing.count() << std::endl;
-				memcpy(dataProcess.points, tracker.currentPos, sizeof(tracker.currentPos));
+				//memcpy(dataProcess.points, tracker.currentPos, sizeof(tracker.currentPos));
+				for (int camera_index = 0; camera_index < NUM_CAMERAS; camera_index++)
+				{
+					for (int marker_inex = 0; marker_inex < NUM_MARKERS; marker_inex++)
+					{
+						
+						dataProcess.points[camera_index][marker_inex] = tracker.currentPos[camera_index][marker_inex] 
+								+ dataProcess.offset[camera_index];
+						/*cout << "offset" << dataProcess.offset[camera_index]<<endl;
+						cout << "tracker pos" << tracker.currentPos[camera_index][marker_inex] << endl;
+						cout << "dataprocess pos" << dataProcess.points[camera_index][marker_inex] << endl;*/
+					}
+				}
 				dataProcess.exportGaitData();
 				auto stop_export = std::chrono::high_resolution_clock::now();
 				std::chrono::duration<double> seconds_export = stop_export - track_processing;
@@ -286,8 +287,8 @@ int main(int /*argc*/, char** /*argv*/)
 			}
 			if (!dataProcess.GotWorldFrame && num_Acquisition > 15)
 			{
-				dataProcess.GotWorldFrame = true;
-				/*try
+				//dataProcess.GotWorldFrame = true;
+				try
 				{
 					bool found = dataProcess.FindWorldFrame(tracker.ReceivedImages[0], tracker.ReceivedImages[1]);
 					found = dataProcess.FindWorldFrame(tracker.ReceivedImages[2], tracker.ReceivedImages[3]) && found;
@@ -305,7 +306,7 @@ int main(int /*argc*/, char** /*argv*/)
 				catch (cv::Exception& e)
 				{
 					std::cout << "OpenCV Error: during finding world frame: \n" << e.what() << endl;
-				}*/
+				}
 			}
 			
 			cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
@@ -320,11 +321,11 @@ int main(int /*argc*/, char** /*argv*/)
 			num_Acquisition += 1;
         }
 		// Clear CameraPtr array and close all handles
-		for (unsigned int i = 0; i < numCameras; i++)
+		for (unsigned int i = 0; i < NUM_CAMERAS; i++)
 		{    
 			CloseHandle(grabThreads[i]);
 		}
-		for (int j = 0; j < NUM_MARKERS; j++)
+		for (int j = 0; j < NUM_CAMERAS; j++)
 		{
 			CloseHandle(trackerThreads[j]);
 		}
@@ -348,7 +349,7 @@ int main(int /*argc*/, char** /*argv*/)
         std::cout << "OpenCV Error: during Running Camera: \n" << e.what() << endl;
     }  
     // EndAcquisition
-    for (unsigned int i = 0; i < numCameras; i++)
+    for (unsigned int i = 0; i < NUM_CAMERAS; i++)
     {
         // Select camera
         pCam = camList.GetByIndex(i);
