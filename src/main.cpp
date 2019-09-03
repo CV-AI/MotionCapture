@@ -144,193 +144,204 @@ int main(int /*argc*/, char** /*argv*/)
         cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0);
 		bool first_time = true;
 		int num_Acquisition = 0; // init tracker after some images to assure auto balance finished
-        while(status)
-        {
-            // acquire images
-			auto start = std::chrono::high_resolution_clock::now();
-			for (unsigned int i = 0; i < NUM_CAMERAS; i++)
+		try
+		{
+			while (status)
 			{
-				paraList[i].pCam = camList.GetByIndex(i);
-				paraList[i].cvImage = &tracker.ReceivedImages[CameraIndex[i]];
-				// Start grab thread
-#if defined(_WIN32)
-				/*cout << "processing" << i << endl;*/
-				grabThreads[i] = CreateThread(nullptr, 0, AcquireImages, &paraList[i], 0, nullptr);
-				assert(grabThreads[i] != nullptr);
-#else
-				int err = pthread_create(&(grabThreads[i]), nullptr, &AcquireImages, &paraList[i]);
-				assert(err == 0);
-#endif
-			}
-#if defined(_WIN32)
-			// Wait for all threads to finish
-			WaitForMultipleObjects(NUM_CAMERAS,		// number of threads to wait for 
-				grabThreads,				// handles for threads to wait for
-				TRUE,					// wait for all of the threads
-				INFINITE				// wait forever
-			);
-			// Check thread return code for each camera
-			for (unsigned int i = 0; i < NUM_CAMERAS; i++)
-			{
-				DWORD exitcode;
-
-				BOOL rc = GetExitCodeThread(grabThreads[i], &exitcode);
-				if (!rc)
+				// acquire images
+				auto start = std::chrono::high_resolution_clock::now();
+				for (unsigned int i = 0; i < NUM_CAMERAS; i++)
 				{
-					cout << "Handle error from GetExitCodeThread() returned for camera at index " << i << endl;
-				}
-				else if (!exitcode)
-				{
-					cout << "Grab thread for camera at index " << i << " exited with errors."
-						"Please check onscreen print outs for error details" << endl;
-				}
-			}
-
-#else
-			for (unsigned int i = 0; i < camListSize; i++)
-			{
-				// Wait for all threads to finish
-				void* exitcode;
-				int rc = pthread_join(grabThreads[i], &exitcode);
-				if (rc != 0)
-				{
-					cout << "Handle error from pthread_join returned for camera at index " << i << endl;
-				}
-				else if ((int)(intptr_t)exitcode == 0)// check thread return code for each camera
-				{
-					cout << "Grab thread for camera at index " << i << " exited with errors."
-						"Please check onscreen print outs for error details" << endl;
-				}
-			}
-#endif
-			auto start_processing = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double> elapsed_seconds = start_processing - start;
-			std::cout << "Acquiring time on camera " << ": " << elapsed_seconds.count() << std::endl;
-			
-			
-            // pCam = NULL;
-			if (tracker.TrackerAutoIntialized)
-			{	
-				memcpy(tracker.previousPosSet, tracker.currentPosSet, sizeof(tracker.currentPosSet));
-
-				for (int j = 0; j < NUM_CAMERAS; j++)
-				{
+					paraList[i].pCam = camList.GetByIndex(i);
+					paraList[i].cvImage = &tracker.ReceivedImages[CameraIndex[i]];
 					// Start grab thread
+#if defined(_WIN32)
 				/*cout << "processing" << i << endl;*/
-					trackerThreads[j] = CreateThread(nullptr, 0, UpdateTracker, &trackerParaList[j], 0, nullptr);
-					assert(trackerThreads[j] != nullptr);
+					grabThreads[i] = CreateThread(nullptr, 0, AcquireImages, &paraList[i], 0, nullptr);
+					assert(grabThreads[i] != nullptr);
+#else
+					int err = pthread_create(&(grabThreads[i]), nullptr, &AcquireImages, &paraList[i]);
+					assert(err == 0);
+#endif
 				}
+#if defined(_WIN32)
 				// Wait for all threads to finish
 				WaitForMultipleObjects(NUM_CAMERAS,		// number of threads to wait for 
-					trackerThreads,				// handles for threads to wait for
+					grabThreads,				// handles for threads to wait for
 					TRUE,					// wait for all of the threads
 					INFINITE				// wait forever
 				);
 				// Check thread return code for each camera
-				for (int j = 0; j < NUM_CAMERAS; j++)
+				for (unsigned int i = 0; i < NUM_CAMERAS; i++)
 				{
 					DWORD exitcode;
 
-					BOOL rc = GetExitCodeThread(trackerThreads[j], &exitcode);
+					BOOL rc = GetExitCodeThread(grabThreads[i], &exitcode);
 					if (!rc)
 					{
-						cout << "Handle error from GetExitCodeThread() returned for camera at index " << j << endl;
+						cout << "Handle error from GetExitCodeThread() returned for camera at index " << i << endl;
 					}
 					else if (!exitcode)
 					{
-						cout << "Grab thread for camera at index " << j << " exited with errors."
+						cout << "Grab thread for camera at index " << i << " exited with errors."
 							"Please check onscreen print outs for error details" << endl;
-					}					
+					}
 				}
-				for (int i = 0; i < NUM_CAMERAS; i++)
+
+#else
+				for (unsigned int i = 0; i < camListSize; i++)
 				{
-					tracker.RectifyMarkerPos(i);
-					
-					for (int marker_index = 0; marker_index < NUM_MARKERS; marker_index++)
+					// Wait for all threads to finish
+					void* exitcode;
+					int rc = pthread_join(grabThreads[i], &exitcode);
+					if (rc != 0)
 					{
-						cv::putText(tracker.ReceivedImages[i], to_string(i), cv::Point(50, 50),2,2,cv::Scalar(0,255,0));
-						cv::putText(tracker.ReceivedImages[i], to_string(marker_index), tracker.currentPos[i][marker_index], 2, 2, cv::Scalar(0, 255, 0));
-						cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 3, cv::Scalar(0, 0, 255), 3);
-						std::cout << i << marker_index << tracker.currentPos[i][marker_index] << std::endl;
-						
+						cout << "Handle error from pthread_join returned for camera at index " << i << endl;
 					}
-					for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
+					else if ((int)(intptr_t)exitcode == 0)// check thread return code for each camera
 					{
-						cv::rectangle(tracker.ReceivedImages[i], cv::Rect(tracker.currentPosSet[i][marker_set].x - tracker.detectWindowDimX / 2,
-							tracker.currentPosSet[i][marker_set].y - tracker.detectWindowDimY / 2, tracker.detectWindowDimX, tracker.detectWindowDimY), cv::Scalar(255, 0, 0));
+						cout << "Grab thread for camera at index " << i << " exited with errors."
+							"Please check onscreen print outs for error details" << endl;
 					}
 				}
-				auto track_processing = std::chrono::high_resolution_clock::now();
-				std::chrono::duration<double> elapsed_seconds_processing = track_processing - start_processing;
-				std::cout << "Time on tracking " << ": " << elapsed_seconds_processing.count() << std::endl;
-				for (int camera_index = 0; camera_index < NUM_CAMERAS; camera_index++)
-				{
-					for (int marker_inex = 0; marker_inex < NUM_MARKERS; marker_inex++)
-					{
-						// 因为我们截取了一部分图像，所以计算位置之前要还原到原来的2048*2048的像素坐标系下的坐标
-						dataProcess.points[camera_index][marker_inex] = tracker.currentPos[camera_index][marker_inex] 
-								+ dataProcess.offset[camera_index];
-						/*cout << "offset" << dataProcess.offset[camera_index]<<endl;
-						cout << "tracker pos" << tracker.currentPos[camera_index][marker_inex] << endl;
-						cout << "dataprocess pos" << dataProcess.points[camera_index][marker_inex] << endl;*/
-					}
-				}
-				dataProcess.exportGaitData();
-				auto stop_export = std::chrono::high_resolution_clock::now();
-				std::chrono::duration<double> seconds_export = stop_export - track_processing;
-				std::cout << "Time on export gait data: " << seconds_export.count() << std::endl;
-			}
-			
-			if (/*tracker.getColors && */!tracker.TrackerAutoIntialized
-#ifdef TRANS_FRAME 
-				&& dataProcess.GotWorldFrame
 #endif
-				)
-			{
+				auto start_processing = std::chrono::high_resolution_clock::now();
+				std::chrono::duration<double> elapsed_seconds = start_processing - start;
+				std::cout << "Acquiring time on camera " << ": " << elapsed_seconds.count() << std::endl;
+
+
+				// pCam = NULL;
+				if (tracker.TrackerAutoIntialized)
+				{
+					memcpy(tracker.previousPosSet, tracker.currentPosSet, sizeof(tracker.currentPosSet));
+
+					for (int j = 0; j < NUM_CAMERAS; j++)
+					{
+						// Start grab thread
+					/*cout << "processing" << i << endl;*/
+						trackerThreads[j] = CreateThread(nullptr, 0, UpdateTracker, &trackerParaList[j], 0, nullptr);
+						assert(trackerThreads[j] != nullptr);
+					}
+					// Wait for all threads to finish
+					WaitForMultipleObjects(NUM_CAMERAS,		// number of threads to wait for 
+						trackerThreads,				// handles for threads to wait for
+						TRUE,					// wait for all of the threads
+						INFINITE				// wait forever
+					);
+					// Check thread return code for each camera
+					for (int j = 0; j < NUM_CAMERAS; j++)
+					{
+						DWORD exitcode;
+
+						BOOL rc = GetExitCodeThread(trackerThreads[j], &exitcode);
+						if (!rc)
+						{
+							cout << "Handle error from GetExitCodeThread() returned for camera at index " << j << endl;
+						}
+						else if (!exitcode)
+						{
+							cout << "Grab thread for camera at index " << j << " exited with errors."
+								"Please check onscreen print outs for error details" << endl;
+						}
+					}
+					for (int i = 0; i < NUM_CAMERAS; i++)
+					{
+						tracker.RectifyMarkerPos(i);
+
+						for (int marker_index = 0; marker_index < NUM_MARKERS; marker_index++)
+						{
+							cv::putText(tracker.ReceivedImages[i], to_string(i), cv::Point(50, 50), 2, 2, cv::Scalar(0, 255, 0));
+							cv::putText(tracker.ReceivedImages[i], to_string(marker_index), tracker.currentPos[i][marker_index], 2, 2, cv::Scalar(0, 255, 0));
+							cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 3, cv::Scalar(0, 0, 255), 3);
+							std::cout << i << marker_index << tracker.currentPos[i][marker_index] << std::endl;
+
+						}
+						for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
+						{
+							cv::rectangle(tracker.ReceivedImages[i], cv::Rect(tracker.currentPosSet[i][marker_set].x - tracker.detectWindowDimX / 2,
+								tracker.currentPosSet[i][marker_set].y - tracker.detectWindowDimY / 2, tracker.detectWindowDimX, tracker.detectWindowDimY), cv::Scalar(255, 0, 0));
+						}
+					}
+					auto track_processing = std::chrono::high_resolution_clock::now();
+					std::chrono::duration<double> elapsed_seconds_processing = track_processing - start_processing;
+					std::cout << "Time on tracking " << ": " << elapsed_seconds_processing.count() << std::endl;
+					for (int camera_index = 0; camera_index < NUM_CAMERAS; camera_index++)
+					{
+						for (int marker_inex = 0; marker_inex < NUM_MARKERS; marker_inex++)
+						{
+							// 因为我们截取了一部分图像，所以计算位置之前要还原到原来的2048*2048的像素坐标系下的坐标
+							dataProcess.points[camera_index][marker_inex] = tracker.currentPos[camera_index][marker_inex]
+								+ dataProcess.offset[camera_index];
+							/*cout << "offset" << dataProcess.offset[camera_index]<<endl;
+							cout << "tracker pos" << tracker.currentPos[camera_index][marker_inex] << endl;
+							cout << "dataprocess pos" << dataProcess.points[camera_index][marker_inex] << endl;*/
+						}
+					}
+					dataProcess.exportGaitData();
+					auto stop_export = std::chrono::high_resolution_clock::now();
+					std::chrono::duration<double> seconds_export = stop_export - track_processing;
+					std::cout << "Time on export gait data: " << seconds_export.count() << std::endl;
+				}
+
+				if (/*tracker.getColors && */!tracker.TrackerAutoIntialized
+#ifdef TRANS_FRAME 
+					&& dataProcess.GotWorldFrame
+#endif
+					)
+				{
+					cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
+					cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
+					cv::imshow("Right_Upper", tracker.ReceivedImages[2]);
+					cv::imshow("Right_Lower", tracker.ReceivedImages[3]);
+					tracker.InitTracker(ByDetection);
+					//getchar();
+				}
+#ifdef TRANS_FRAME
+
+				if (!dataProcess.GotWorldFrame && num_Acquisition > 15)
+				{
+					//dataProcess.GotWorldFrame = true;
+					try
+					{
+						bool found = dataProcess.FindWorldFrame(tracker.ReceivedImages[0], tracker.ReceivedImages[1]);
+						found = dataProcess.FindWorldFrame(tracker.ReceivedImages[2], tracker.ReceivedImages[3]) && found;
+						if (found)
+						{
+							dataProcess.GotWorldFrame = true;
+							cout << "Find world coordinate system succeed!" << endl;
+						}
+						else
+						{
+							dataProcess.GotWorldFrame = false;
+							cout << "Faild find world coordinate system!\a\a\a" << endl;
+						}
+					}
+					catch (cv::Exception& e)
+					{
+						std::cout << "OpenCV Error: during finding world frame: \n" << e.what() << endl;
+					}
+				}
+#endif
 				cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
 				cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
 				cv::imshow("Right_Upper", tracker.ReceivedImages[2]);
 				cv::imshow("Right_Lower", tracker.ReceivedImages[3]);
-				tracker.InitTracker(ByDetection);
-				//getchar();
-			}
-#ifdef TRANS_FRAME
-
-			if (!dataProcess.GotWorldFrame && num_Acquisition > 15)
-			{
-				//dataProcess.GotWorldFrame = true;
-				try
+				int key = cv::waitKey(1);
+				if (key == 27)
 				{
-					bool found = dataProcess.FindWorldFrame(tracker.ReceivedImages[0], tracker.ReceivedImages[1]);
-					found = dataProcess.FindWorldFrame(tracker.ReceivedImages[2], tracker.ReceivedImages[3]) && found;
-					if (found)
-					{
-						dataProcess.GotWorldFrame = true;
-						cout << "Find world coordinate system succeed!" << endl;
-					}
-					else
-					{
-						dataProcess.GotWorldFrame = false;
-						cout << "Faild find world coordinate system!\a\a\a" << endl;
-					}
+					status = false;
 				}
-				catch (cv::Exception& e)
-				{
-					std::cout << "OpenCV Error: during finding world frame: \n" << e.what() << endl;
-				}
+				num_Acquisition += 1;
 			}
-#endif
-			cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
-			cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
-			cv::imshow("Right_Upper", tracker.ReceivedImages[2]);
-			cv::imshow("Right_Lower", tracker.ReceivedImages[3]);
-			int key = cv::waitKey(1);
-			if (key == 27)
-			{
-				status = false;
-			}
-			num_Acquisition += 1;
-        }
+		}
+		catch (Spinnaker::Exception& e)
+		{
+			std::cout << "Spinnaker Error: during tracking: \n" << e.what() << endl;
+		}
+		catch (cv::Exception& e)
+		{
+			std::cout << "OpenCV Error: during tracking: \n" << e.what() << endl;
+		}
 		// Clear CameraPtr array and close all handles
 		for (unsigned int i = 0; i < NUM_CAMERAS; i++)
 		{    
@@ -347,7 +358,7 @@ int main(int /*argc*/, char** /*argv*/)
 		delete[] trackerThreads;
 		delete[] grabThreads;
         cv::destroyAllWindows();
-		pCam = NULL;
+		pCam = nullptr;
     }
     // sometimes AcquireImages may throw cv::Exception or Spinnaker::Exception
     // using try catch makes sure we EndAcquisition for each camera
@@ -368,6 +379,7 @@ int main(int /*argc*/, char** /*argv*/)
 		ResetExposure(pCam);
 		ResetTrigger(pCam);
         pCam->DeInit();
+		pCam = nullptr; // 一定要设为nullptr, 否则在system->ReleaseInstance()时会出错
     }
     //pCam = NULL;
 
@@ -375,7 +387,8 @@ int main(int /*argc*/, char** /*argv*/)
     camList.Clear();
 
     // Release system
+	getchar();
     system->ReleaseInstance();
-    getchar();
+    
     return true;
 }
