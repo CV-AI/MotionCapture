@@ -1,7 +1,11 @@
+#ifndef DATA_PROCESS_HEADER
+#define DATA_PROCESS_HEADER
+
 #include "Tracker.hpp"
 #include <fstream>
 #include <opencv2/imgproc/types_c.h>
 #include <sstream>
+#include "moving_average.hpp"
 //TwinCAT需要的两个头文件
 #include "TcAdsDef.h"
 #include "TcAdsAPI.h"
@@ -11,7 +15,7 @@ cv::Point3d scale(cv::Point3d u);
 cv::Point3d operator*(cv::Mat M, cv::Point3d p);
 class DataProcess
 {
-	
+
 	const double pi = 3.1415926535898;
 
 public:
@@ -30,15 +34,17 @@ public:
 	void getJointAngle();
 	bool exportGaitData();
 	bool FrameTransform();
-	bool DataProcess::FindWorldFrame(cv::Mat,cv::Mat);
+	bool DataProcess::FindWorldFrame(cv::Mat, cv::Mat);
 	cv::Point points[4][6];
-	cv::Point3d MarkerPos3D[2][6];
-
+	cv::Point3f MarkerPos3D[2][6];
+	// create exponential average object
+	EMA ema;
 	cv::Mat image;
 	double time = 0;
-	double hip[2]; // 0 for left, 1 for right
-	double knee[2];
-	double ankle[2];
+	float hip[2]; // 0 for left, 1 for right
+	float knee[2];
+	float ankle[2];
+	float* eura_angles;
 	bool GotWorldFrame;
 	bool gettime = false;
 	cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,200), cv::Point(750,500), cv::Point(800,200) };
@@ -68,3 +74,5 @@ public:
 	unsigned long lHdlVar2;   	//创建句柄
 	char szVar2[20] = { "MAIN.Array1" };
 };
+#endif // !DATA_PROCESS_HEADER
+

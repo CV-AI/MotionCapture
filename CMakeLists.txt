@@ -26,16 +26,16 @@ set(MY_HEADER_FILES
         include/Acquisition.hpp
         include/Tracker.hpp
         include/DataProcess.hpp
+		include/moving_average.hpp
 		include/TcAdsDef.h
 		include/TcAdsAPI.h
-		include/kalman_filter.h
         )
 
 set(MY_SOURCE_FILES
         src/main.cpp
         src/DataProcess.cpp
         src/Tracker.cpp
-		src/kalman_filter.c
+        src/moving_average.cpp
         )
 
 

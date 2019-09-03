@@ -14,9 +14,10 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	knee_file.open("knee.csv");
 	hip_file.open("hip.csv");
 	ankle_file.open("ankle.csv");
+	
 	// OpenCV's distortion coefficient vector is composed of MATLAB's two tangential distortion coefficients 
 	// followed by the two radial distortion coefficients.
-	std::vector < std::vector<float>> distorCoeffList = {
+	std::vector < std::vector<double>> distorCoeffList = {
 						{0, 0, -0.0560974273936180, 0.0820468069671561}, // assigning vector like this requires C++11 or higher
 						{0, 0, -0.0702735401089445, 0.102611484500887},
 						{0, 0, -0.0560974273936180, 0.0820468069671561},
@@ -41,13 +42,13 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	// initialize rotation and translation matrix for left and right camera set
 	// these hard coded parameters are calculated by matlab for camera caliabration
 	// rotation matrix for camera set in left
-	std::vector<float> rotationMatLeftVec = {
+	std::vector < double > rotationMatLeftVec = {
 						0.999872825151855,-0.00942487454477512,0.0128648848678506,
 						0.00993803474975875, 0.999133141003343, -0.0404252645520858,
 						-0.0124727297798192, 0.0405479751480735, 0.999099741128598
 	};
 	// rotation matrix for camera set in right
-	std::vector<float> rotationMatRightVec = {
+	std::vector < double > rotationMatRightVec = {
 						0.999872825151855,-0.00942487454477512,0.0128648848678506,
 						0.00993803474975875, 0.999133141003343, -0.0404252645520858,
 						-0.0124727297798192, 0.0405479751480735, 0.999099741128598
@@ -57,10 +58,10 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	std::cout << "Left Camera Set rotation Matrix: \n" << rotationMatLeft << std::endl;
 	std::cout << "Right Camera Set rotation Matrix: \n" << rotationMatRight << std::endl;
 	// translation matrix for camera set in left
-	std::vector<float> translationMatLeftVec =
+	std::vector<double> translationMatLeftVec =
 	{ 9.62562726230605, -244.628114017665, -13.0410750920663 };
 	// translation matrix for camera set in right
-	std::vector<float> translationMatRightVec =
+	std::vector<double> translationMatRightVec =
 	{ 9.62562726230605, -244.628114017665, -13.0410750920663 };
 
 	translationMatLeft = cv::Mat(translationMatLeftVec.size(), 1, CV_64F, translationMatLeftVec.data());
@@ -96,6 +97,7 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
 	cv::initUndistortRectifyMap(cameraMatrix[2], distorCoeff[2], R_upper, P_upper, cv::Size(2048, 2048), CV_32F, mapX[2], mapY[2]);
 	cv::initUndistortRectifyMap(cameraMatrix[3], distorCoeff[3], R_lower, P_lower, cv::Size(2048, 2048), CV_32F, mapX[3], mapY[3]);
+
 }
 
 
@@ -128,9 +130,9 @@ void DataProcess::mapTo3D()
 		for (int marker = 0; marker < 6; marker++)
 		{
 
-			MarkerPos3D[marker_set][marker].x = (double(points[2 * marker_set][marker].x) - cx) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
-			MarkerPos3D[marker_set][marker].y = (double(points[2 * marker_set][marker].y) - cy) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
-			MarkerPos3D[marker_set][marker].z = fy * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
+			MarkerPos3D[marker_set][marker].x = (float(points[2 * marker_set][marker].x) - cx) * T / (float(points[2 * marker_set][marker].y) - float(points[2 * marker_set + 1][marker].y));
+			MarkerPos3D[marker_set][marker].y = (float(points[2 * marker_set][marker].y) - cy) * T / (float(points[2 * marker_set][marker].y) - float(points[2 * marker_set + 1][marker].y));
+			MarkerPos3D[marker_set][marker].z = fy * T / (float(points[2 * marker_set][marker].y) - float(points[2 * marker_set + 1][marker].y));
 			std::cout << "Camera Set " << marker_set << " Marker " << marker << MarkerPos3D[marker_set][marker] << std::endl;
 		}
 	}
@@ -151,6 +153,8 @@ void DataProcess::getJointAngle()
 		hip[i] = ((atan2(thigh[i].x, abs(thigh[i].z))) / pi) * 180;
 		knee[i] = ((acos((thigh[i].x * shank[i].x + thigh[i].z * shank[i].z) / (sqrt(thigh[i].x * thigh[i].x + thigh[i].z * thigh[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
 		ankle[i] = ((acos((foot[i].x * shank[i].x + foot[i].z * shank[i].z) / (sqrt(foot[i].x * foot[i].x + foot[i].z * foot[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
+		
+		
 		std::cout <<"Camera Set: "<<i<< " hip:   " << hip[i] << "   " << "knee:   " << knee[i] << "   " << "ankle:   " << ankle[i] << std::endl;
 	}
 	knee_file << knee[0] << "," <<knee[1]<< "\n";
@@ -164,6 +168,18 @@ bool DataProcess::exportGaitData()
 	mapTo3D();
 	getJointAngle();
 
+	std::vector<float> joint_angles = { hip[0], hip[1], knee[0], knee[1], ankle[0], ankle[1] };
+	if (ema.EMA_established)
+	{
+		eura_angles = ema.filter(joint_angles);
+		//通过句柄向PLC写入数组
+		nErr = AdsSyncWriteReq(pAddr, ADSIGRP_SYM_VALBYHND, lHdlVar2, sizeof(eura_angles), &eura_angles[0]);
+		if (nErr) std::cerr << "Error: AdsSyncReadReq: " << nErr << '\n';
+	}
+	else
+	{
+		ema.feed(joint_angles);
+	}
 	return success;
 }
 
@@ -232,19 +248,19 @@ cv::Point3d crossing(cv::Point3d u, cv::Point3d v)
 // 归一化
 cv::Point3d scale(cv::Point3d u)
 {
-	double length = std::sqrt(pow(u.x, 2)+ pow(u.y,2)+pow(u.z,2));
+	float length = std::sqrt(pow(u.x, 2)+ pow(u.y,2)+pow(u.z,2));
 	return u/length;
 }
 
 cv::Point3d operator*(cv::Mat M, cv::Point3d p)
 {
 	assert(M.cols == 3, "Matrix must have the same col number as point's row number");
-	cv::Mat_<double> src(3/*rows*/, 1 /* cols */);
+	cv::Mat_<float> src(3/*rows*/, 1 /* cols */);
 
 	src(0, 0) = p.x;
 	src(1, 0) = p.y;
 	src(2, 0) = p.z;
 
-	cv::Mat_<double> dst = M * src; //USE MATRIX ALGEBRA 
+	cv::Mat_<float> dst = M * src; //USE MATRIX ALGEBRA 
 	return cv::Point3d(dst(0, 0), dst(1, 0), dst(2,0));
 }
