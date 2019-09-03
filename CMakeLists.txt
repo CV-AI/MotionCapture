@@ -25,7 +25,7 @@ message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 set(MY_HEADER_FILES
         include/Acquisition.hpp
         include/Tracker.hpp
-        include/DataProcess.h
+        include/DataProcess.hpp
 		include/TcAdsDef.h
 		include/TcAdsAPI.h
 		include/kalman_filter.h

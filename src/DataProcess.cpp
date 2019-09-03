@@ -1,4 +1,4 @@
-#include "DataProcess.h"
+#include "DataProcess.hpp"
 #include <algorithm>
 #include <iostream>
 
@@ -22,7 +22,21 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 						{0, 0, -0.0560974273936180, 0.0820468069671561},
 						{0, 0, -0.0702735401089445, 0.102611484500887}
 	};
-
+	// initiate parameters for camera rectification
+	for (int camera = 0; camera < numCameras; camera++)
+	{
+		// use CV_64F type for inputs of function of stereoRectify
+		cameraMatrix[camera] = cv::Mat::zeros(3, 3, CV_64F);
+		cameraMatrix[camera].at<double>(0, 0) = fx_list[camera];
+		cameraMatrix[camera].at<double>(1, 1) = fy_list[camera];
+		cameraMatrix[camera].at<double>(0, 2) = cx_list[camera];
+		cameraMatrix[camera].at<double>(1, 2) = cy_list[camera];
+		cameraMatrix[camera].at<double>(2, 2) = 1;
+		// 4 rows, 1 column
+		distorCoeff[camera] = cv::Mat(distorCoeffList[camera].size(), 1, CV_64F, distorCoeffList[camera].data());
+		std::cout << "Camera " << camera << " Matrix: \n" << cameraMatrix[camera] << std::endl;
+		std::cout << "Camera " << camera << " distortion vector: \n" << distorCoeff[camera] << std::endl;
+	}
 	//
 	// initialize rotation and translation matrix for left and right camera set
 	// these hard coded parameters are calculated by matlab for camera caliabration
@@ -53,51 +67,36 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	translationMatRight = cv::Mat(translationMatRightVec.size(), 1, CV_64F, translationMatRightVec.data());
 	std::cout << "Left Camera Set translation Matrix: \n" << translationMatLeft << std::endl;
 	std::cout << "Right Camera Set translation Matrix: \n" << translationMatRight << std::endl;
-	// initiate parameters for camera rectification
-	for (int camera = 0; camera < numCameras; camera++)
-	{
-		cameraMatrix[camera] = cv::Mat::zeros(3, 3, CV_64F);
-		cameraMatrix[camera].at<double>(0, 0) = fx_list[camera];
-		cameraMatrix[camera].at<double>(1, 1) = fy_list[camera];
-		cameraMatrix[camera].at<double>(0, 2) = cx_list[camera];
-		cameraMatrix[camera].at<double>(1, 2) = cy_list[camera];
-		cameraMatrix[camera].at<double>(2, 2) = 1;
-		// 4 rows, 1 column
-		distorCoeff[camera] = cv::Mat(distorCoeffList[camera].size(), 1, CV_64F, distorCoeffList[camera].data());
-		std::cout << "Camera " << camera << " Matrix: \n" << cameraMatrix[camera] << std::endl;
-		std::cout << "Camera " << camera << " distortion vector: \n" << distorCoeff[camera] << std::endl;
-	};
-	/*立体校正的时候需要两幅图像共面并且行对准，以使得立体匹配更方便
-	  使的两幅图像共面的方法就是把两个相机平面投影到一个公共的成像平面上，这样每幅图像投影到公共平面
-	  就需要一个旋转矩阵R, stereoRectify()这个函数计算的就是从图像平面投影到公共成像平面的的旋转矩阵Rl,Rr.
-	  RlRr就是左右相机平面共面的校正旋转矩阵，左相机经过Rl旋转，右相机经过Rr旋转之后，两幅图像就已经共面了；
-	  其中Pl Pr为两个相机的校正内参矩阵(3x4,最后一列为0),也可以称为相机坐标系到像素坐标系的投影矩阵，
-	  Q 为像素坐标系与相机坐标系之间的重投影矩阵；
-	*/
+	
+	// 立体校正的时候需要两幅图像共面并且行对准，以使得立体匹配更方便
+	// 使的两幅图像共面的方法就是把两个相机平面投影到一个公共的成像平面上，这样每幅图像投影到公共平面
+	//  就需要一个旋转矩阵R, stereoRectify()这个函数计算的就是从图像平面投影到公共成像平面的的旋转矩阵Rl,Rr.
+	//  RlRr就是左右相机平面共面的校正旋转矩阵，左相机经过Rl旋转，右相机经过Rr旋转之后，两幅图像就已经共面了；
+	//  其中Pl Pr为两个相机的校正内参矩阵(3x4,最后一列为0),也可以称为相机坐标系到像素坐标系的投影矩阵，
+	//  Q 为像素坐标系与相机坐标系之间的重投影矩阵；
+	
 	cv::Rect validROIL, validROIR;
 	cv::Mat R_upper, P_upper, R_lower, P_lower, Q;
 
-	// use CV_64F type for inputs of function of stereoRectify
-	cv::stereoRectify(cameraMatrix[0], distorCoeff[0], cameraMatrix[1], distorCoeff[1], cv::Size(2048, 2048),
-		rotationMatLeft, translationMatLeft, R_upper, R_lower, P_upper, P_lower, Q, cv::CALIB_ZERO_DISPARITY, -1,
-		cv::Size(2048, 2048), &validROIL, &validROIR);
-	/*根据stereoRectify 计算出来的R 和 P 来计算图像的映射表 mapx, mapy
-	mapx, mapy这两个映射表接下来可以给remap()函数调用，来校正图像，
-	使得两幅图像共面并且行对准*/
-
-
+	
+	cv::stereoRectify(cameraMatrix[0], distorCoeff[0], cameraMatrix[1], distorCoeff[1], cv::Size(2048, 2048), 
+		rotationMatLeft, translationMatLeft, R_upper, R_lower, P_upper, P_lower, Q, 
+		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
+	// 根据stereoRectify 计算出来的R 和 P 来计算图像的映射表 mapx, mapy
+	// mapx, mapy这两个映射表接下来可以给remap()函数调用，来校正图像，
+	// 使得两幅图像共面并且行对准
 	// use CV_32F for function initUndistortRectifyMap
-	initUndistortRectifyMap(cameraMatrix[0], distorCoeff[0], R_upper, P_upper, cv::Size(2048, 2048), CV_32FC1, mapX[0], mapY[0]);
-	initUndistortRectifyMap(cameraMatrix[1], distorCoeff[1], R_lower, P_lower, cv::Size(2048, 2048), CV_32FC1, mapX[1], mapY[1]);
+	cv::initUndistortRectifyMap(cameraMatrix[0], distorCoeff[0], R_upper, P_upper, cv::Size(2048, 2048), CV_32F, mapX[0], mapY[0]);
+	cv::initUndistortRectifyMap(cameraMatrix[1], distorCoeff[1], R_lower, P_lower, cv::Size(2048, 2048), CV_32F, mapX[1], mapY[1]);
+	
 	// 计算右边一对相机的map matrix
-
-	cv::stereoRectify(cameraMatrix[2], distorCoeff[2], cameraMatrix[3], distorCoeff[3], cv::Size(2048, 2048),
-		rotationMatRight, translationMatRight, R_upper, R_lower, P_upper, P_lower, Q, cv::CALIB_ZERO_DISPARITY, -1,
-		cv::Size(2048, 2048), &validROIL, &validROIR);
-	initUndistortRectifyMap(cameraMatrix[2], distorCoeff[2], R_upper, P_upper, cv::Size(2048, 2048), CV_32FC1, mapX[2], mapY[2]);
-	initUndistortRectifyMap(cameraMatrix[3], distorCoeff[3], R_lower, P_lower, cv::Size(2048, 2048), CV_32FC1, mapX[3], mapY[3]);
-	//std::cout << "map type  "<<mapX[0].type() << std::endl;
-};
+	//cv::Mat R_upper_, R_lower_, P_upper_, P_lower_, Q_;
+	cv::stereoRectify(cameraMatrix[2], distorCoeff[2], cameraMatrix[3], distorCoeff[3], cv::Size(2048, 2048), 
+		rotationMatRight, translationMatRight, R_upper, R_lower, P_upper, P_lower, Q, 
+		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
+	cv::initUndistortRectifyMap(cameraMatrix[2], distorCoeff[2], R_upper, P_upper, cv::Size(2048, 2048), CV_32F, mapX[2], mapY[2]);
+	cv::initUndistortRectifyMap(cameraMatrix[3], distorCoeff[3], R_lower, P_lower, cv::Size(2048, 2048), CV_32F, mapX[3], mapY[3]);
+}
 
 
 DataProcess::~DataProcess()
@@ -105,7 +104,7 @@ DataProcess::~DataProcess()
 	knee_file.close();
 	hip_file.close();
 	ankle_file.close();
-};
+}
 
 
 void DataProcess::mapTo3D()
@@ -122,30 +121,26 @@ void DataProcess::mapTo3D()
 			// at<float>(y,x)是因为y指的是n_row, x指的是n_col
 			points[camera][marker].x = mapX[camera].at<float>(int(temp.y), int(temp.x));
 			points[camera][marker].y = mapY[camera].at<float>(int(temp.y), int(temp.x));
-		};
-	};
-	for (int i = 0; i < numCameras / 2; i++)
+		}
+	}
+	for (int marker_set = 0; marker_set < numCameras / 2; marker_set++)
 	{
-
-		// j 是marker 的序号
-		for (int j = 0; j < 6; j++)
+		for (int marker = 0; marker < 6; marker++)
 		{
 
-			MarkerPos3D[i][j].x = (double(points[2 * i][j].x) - cx) * T / (double(points[2 * i][j].y) - double(points[2 * i + 1][j].y)) /*+ delta_cy*/;
-			MarkerPos3D[i][j].y = (double(points[2 * i][j].y) - cy) * T / (double(points[2 * i][j].y) - double(points[2 * i + 1][j].y))/* + delta_cy*/;
-			MarkerPos3D[i][j].z = fy * T / ((double(points[2 * i][j].y) - double(points[2 * i + 1][j].y)) /*+ delta_cy*/);
-			/*MarkerPos3D[i][j] = MarkerPos3D[i][j] + Transform[i];
-			MarkerPos3D[i][j] = Rotation[i] * MarkerPos3D[i][j];*/
-			std::cout << "Camera Set " << i << " Marker " << j << MarkerPos3D[i][j] << std::endl;
-		};
-	};
-};
+			MarkerPos3D[marker_set][marker].x = (double(points[2 * marker_set][marker].x) - cx) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
+			MarkerPos3D[marker_set][marker].y = (double(points[2 * marker_set][marker].y) - cy) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
+			MarkerPos3D[marker_set][marker].z = fy * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
+			std::cout << "Camera Set " << marker_set << " Marker " << marker << MarkerPos3D[marker_set][marker] << std::endl;
+		}
+	}
+}
 
 
 void DataProcess::getJointAngle()
 {
-	mapTo3D();
-	/* 所有的坐标现在已经转换到自定义坐标系，矢状面是x-z平面， 额状面是y-z平面*/
+	
+	// 所有的坐标现在已经转换到自定义坐标系，矢状面是x-z平面， 额状面是y-z平面
 	for (int i = 0; i < 2; i++)
 	{
 
@@ -166,6 +161,7 @@ void DataProcess::getJointAngle()
 bool DataProcess::exportGaitData()
 {
 	bool success = true;
+	mapTo3D();
 	getJointAngle();
 
 	return success;
@@ -186,16 +182,6 @@ bool DataProcess::FindWorldFrame(cv::Mat upper,cv::Mat lower)
 	cv::Point3d vector_x, vector_y, vector_z, p0, p1,p2;
 	std::vector<cv::Point3d> vectors(3);
 	std::vector<cv::Point2d> corners_upper, corners_lower;
-	/*cv::namedWindow("upper", 0);
-	cv::imshow("upper", upper_bgr);
-	cv::waitKey(0);*/
-	
-	/*std::vector<int> markerIds;
-	std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
-	cv::Ptr<cv::aruco::DetectorParameters> parameters;
-	cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_ARUCO_ORIGINAL);
-	cv::aruco::detectMarkers(upper_bgr, dictionary, markerCorners, markerIds, parameters, rejectedCandidates);
-	cv::aruco::drawDetectedMarkers(upper_bgr, markerCorners, markerIds);*/
 	
 	bool found = cv::findChessboardCorners(upper_bgr, boardsize, corners_upper);
 	std::cout << "found" << found << std::endl;
