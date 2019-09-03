@@ -6,14 +6,16 @@
 
 class EMA
 {
+	double eura_angles[6];
 public:
 	bool EMA_established = false; // whether the EMA get enough numbers for initialization
 	const int INIT_NUM = 20; // after INIT_NUM numbers are input, EMA are established
 	int num_terms = 0;
-	float weight = 0.9;
-	std::vector<float> S_pre;
-	float* filter(std::vector<float> angles);
-	void feed(std::vector<float> angles);
+	double weight = 0.9;
+	std::vector<double> S_pre;
+	
+	double* filter(std::vector<double> angles);
+	void feed(std::vector<double> angles);
 };
 
 

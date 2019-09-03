@@ -36,15 +36,15 @@ public:
 	bool FrameTransform();
 	bool DataProcess::FindWorldFrame(cv::Mat, cv::Mat);
 	cv::Point points[4][6];
-	cv::Point3f MarkerPos3D[2][6];
+	cv::Point3d MarkerPos3D[2][6];
 	// create exponential average object
 	EMA ema;
 	cv::Mat image;
 	double time = 0;
-	float hip[2]; // 0 for left, 1 for right
-	float knee[2];
-	float ankle[2];
-	float* eura_angles;
+	double hip[2]; // 0 for left, 1 for right
+	double knee[2];
+	double ankle[2];
+	double* eura_angles;
 	bool GotWorldFrame;
 	bool gettime = false;
 	cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,200), cv::Point(750,500), cv::Point(800,200) };

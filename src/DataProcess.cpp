@@ -130,9 +130,9 @@ void DataProcess::mapTo3D()
 		for (int marker = 0; marker < 6; marker++)
 		{
 
-			MarkerPos3D[marker_set][marker].x = (float(points[2 * marker_set][marker].x) - cx) * T / (float(points[2 * marker_set][marker].y) - float(points[2 * marker_set + 1][marker].y));
-			MarkerPos3D[marker_set][marker].y = (float(points[2 * marker_set][marker].y) - cy) * T / (float(points[2 * marker_set][marker].y) - float(points[2 * marker_set + 1][marker].y));
-			MarkerPos3D[marker_set][marker].z = fy * T / (float(points[2 * marker_set][marker].y) - float(points[2 * marker_set + 1][marker].y));
+			MarkerPos3D[marker_set][marker].x = (double(points[2 * marker_set][marker].x) - cx) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
+			MarkerPos3D[marker_set][marker].y = (double(points[2 * marker_set][marker].y) - cy) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
+			MarkerPos3D[marker_set][marker].z = fy * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
 			std::cout << "Camera Set " << marker_set << " Marker " << marker << MarkerPos3D[marker_set][marker] << std::endl;
 		}
 	}
@@ -168,10 +168,11 @@ bool DataProcess::exportGaitData()
 	mapTo3D();
 	getJointAngle();
 
-	std::vector<float> joint_angles = { hip[0], hip[1], knee[0], knee[1], ankle[0], ankle[1] };
+	std::vector<double> joint_angles = { hip[0], hip[1], knee[0], knee[1], ankle[0], ankle[1] };
 	if (ema.EMA_established)
 	{
 		eura_angles = ema.filter(joint_angles);
+		std::cout << eura_angles << std::endl;
 		//通过句柄向PLC写入数组
 		nErr = AdsSyncWriteReq(pAddr, ADSIGRP_SYM_VALBYHND, lHdlVar2, sizeof(eura_angles), &eura_angles[0]);
 		if (nErr) std::cerr << "Error: AdsSyncReadReq: " << nErr << '\n';
