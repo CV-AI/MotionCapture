@@ -155,10 +155,10 @@ void* AcquireImages(void* arg)
 
 			pCam->TriggerSoftware.Execute();
 		}
-		else
+		/*else
 		{
 			cout << "Use the hardware to trigger image acquisition." << endl;
-		}
+		}*/
         // Retrieve next received image
         //
         // *** NOTES ***`
@@ -196,6 +196,7 @@ void* AcquireImages(void* arg)
     catch (Spinnaker::Exception &e)
     {
         std::cout << "Error during acquiring images: " << e.what() << endl;
+		return false;
     }
 }
 // This function config the camera settings
@@ -315,7 +316,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 			if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
 			{
 				cout << "Unable to disable trigger mode. Aborting..." << endl;
-				return -1;
+				return false;
 			}
 
 			pCam->TriggerMode.SetValue(TriggerMode_Off);
@@ -441,7 +442,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 			if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
 			{
 				cout << "Unable to disable trigger mode. Aborting..." << endl;
-				return -1;
+				return false;
 			}
 
 			pCam->TriggerMode.SetValue(TriggerMode_Off);
@@ -461,7 +462,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 				if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
 				{
 					cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
-					return -1;
+					return false;
 				}
 
 				pCam->TriggerSource.SetValue(TriggerSource_Software);
@@ -474,7 +475,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 				if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)
 				{
 					cout << "Unable to set trigger mode (node retrieval). Aborting..." << endl;
-					return -1;
+					return false;
 				}
 
 				pCam->TriggerSource.SetValue(TriggerSource_Line0);
@@ -492,7 +493,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 			if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
 			{
 				cout << "Unable to disable trigger mode. Aborting..." << endl;
-				return -1;
+				return false;
 			}
 
 			pCam->TriggerMode.SetValue(TriggerMode_On);
@@ -676,7 +677,6 @@ int ResetExposure(CameraPtr pCam)
 
 bool ResetTrigger(CameraPtr pCam)
 {
-	bool status = true;
 	try
 	{
 		if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
@@ -691,6 +691,6 @@ bool ResetTrigger(CameraPtr pCam)
 	catch (Spinnaker::Exception& e)
 	{
 		cout << "Error: " << e.what() << endl;
-		status = false;
+		return false;
 	}
 }

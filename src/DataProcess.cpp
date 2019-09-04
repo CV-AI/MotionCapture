@@ -15,13 +15,13 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	hip_file.open("hip.csv");
 	ankle_file.open("ankle.csv");
 	
-	// OpenCV's distortion coefficient vector is composed of MATLAB's two tangential distortion coefficients 
-	// followed by the two radial distortion coefficients.
+	// OpenCV's distortion coefficient vector:  the first two radial parameters come first; these are followed by the
+	// two tangential parameters --LearnOpenCV3 Chapter19 Page724
 	std::vector < std::vector<double>> distorCoeffList = {
-						{0, 0, -0.0560974273936180, 0.0820468069671561}, // assigning vector like this requires C++11 or higher
-						{0, 0, -0.0702735401089445, 0.102611484500887},
-						{0, 0, -0.0560974273936180, 0.0820468069671561},
-						{0, 0, -0.0702735401089445, 0.102611484500887}
+						{-0.0560974273936180, 0.0820468069671561, 0, 0}, // assigning vector like this requires C++11 or higher
+						{-0.0702735401089445, 0.102611484500887, 0, 0},
+						{-0.0560974273936180, 0.0820468069671561, 0, 0}, // assigning vector like this requires C++11 or higher
+						{-0.0702735401089445, 0.102611484500887, 0, 0}
 	};
 	// initiate parameters for camera rectification
 	for (int camera = 0; camera < numCameras; camera++)
@@ -77,12 +77,13 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	//  Q 为像素坐标系与相机坐标系之间的重投影矩阵；
 	
 	cv::Rect validROIL, validROIR;
-	cv::Mat R_upper, P_upper, R_lower, P_lower, Q;
+	cv::Mat R_upper, P_upper, R_lower, P_lower;
 
 	
 	cv::stereoRectify(cameraMatrix[0], distorCoeff[0], cameraMatrix[1], distorCoeff[1], cv::Size(2048, 2048), 
-		rotationMatLeft, translationMatLeft, R_upper, R_lower, P_upper, P_lower, Q, 
+		rotationMatLeft, translationMatLeft, R_upper, R_lower, P_upper, P_lower, Q_left, 
 		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
+	std::cout << "disparity map matrix for LEFT cameras: \n" << Q_left << std::endl;
 	// 根据stereoRectify 计算出来的R 和 P 来计算图像的映射表 mapx, mapy
 	// mapx, mapy这两个映射表接下来可以给remap()函数调用，来校正图像，
 	// 使得两幅图像共面并且行对准
@@ -93,8 +94,9 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	// 计算右边一对相机的map matrix
 	//cv::Mat R_upper_, R_lower_, P_upper_, P_lower_, Q_;
 	cv::stereoRectify(cameraMatrix[2], distorCoeff[2], cameraMatrix[3], distorCoeff[3], cv::Size(2048, 2048), 
-		rotationMatRight, translationMatRight, R_upper, R_lower, P_upper, P_lower, Q, 
+		rotationMatRight, translationMatRight, R_upper, R_lower, P_upper, P_lower, Q_right, 
 		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
+	std::cout << "disparity map matrix for RIGHT cameras: \n" << Q_right << std::endl;
 	cv::initUndistortRectifyMap(cameraMatrix[2], distorCoeff[2], R_upper, P_upper, cv::Size(2048, 2048), CV_32F, mapX[2], mapY[2]);
 	cv::initUndistortRectifyMap(cameraMatrix[3], distorCoeff[3], R_lower, P_lower, cv::Size(2048, 2048), CV_32F, mapX[3], mapY[3]);
 
@@ -112,8 +114,7 @@ DataProcess::~DataProcess()
 void DataProcess::mapTo3D()
 {
 
-	// i 是相机组的序号（每一对相机）
-	//TODO: 自定义的矩阵乘法较慢，多次遍历也比较花时间，最好写成opencv自带的矩阵乘法
+	
 	cv::Point temp;
 	for (int camera = 0; camera < numCameras; camera++)
 	{
@@ -125,17 +126,41 @@ void DataProcess::mapTo3D()
 			points[camera][marker].y = mapY[camera].at<float>(int(temp.y), int(temp.x));
 		}
 	}
+	// This is slightly quicker, but I'm not sure about the math
 	for (int marker_set = 0; marker_set < numCameras / 2; marker_set++)
 	{
 		for (int marker = 0; marker < 6; marker++)
 		{
-
 			MarkerPos3D[marker_set][marker].x = (double(points[2 * marker_set][marker].x) - cx) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
 			MarkerPos3D[marker_set][marker].y = (double(points[2 * marker_set][marker].y) - cy) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
 			MarkerPos3D[marker_set][marker].z = fy * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
-			std::cout << "Camera Set " << marker_set << " Marker " << marker << MarkerPos3D[marker_set][marker] << std::endl;
+			//std::cout << "Camera Set " << marker_set << " Marker " << marker << MarkerPos3D[marker_set][marker] << std::endl;
 		}
 	}
+	
+	std::vector<cv::Vec3d> disparityVecLeft, disparityVecRight;
+
+	for (int marker = 0; marker < 6; marker++)
+	{
+
+		disparityVecLeft.push_back(cv::Vec3d(double(points[0][marker].x),
+			double(points[0][marker].y), double(points[0][marker].y) - double(points[1][marker].y)));
+		disparityVecRight.push_back(cv::Vec3d(double(points[2][marker].x),
+			double(points[2][marker].y), double(points[2][marker].y) - double(points[3][marker].y)));
+	}
+	std::vector<cv::Vec3d> MarkerPosVecL, MarkerPosVecR;
+	cv::perspectiveTransform(disparityVecLeft, MarkerPosVecL, Q_left);
+	cv::perspectiveTransform(disparityVecRight, MarkerPosVecR, Q_right);
+	//std::cout << "Marker position\n"<< MarkerPosVecL[0] << std::endl;
+	
+	for (int marker = 0; marker < 6; marker++)
+	{
+		MarkerPos3D[0][marker] = cv::Point3d(MarkerPosVecL[marker]);
+		MarkerPos3D[1][marker] = cv::Point3d(MarkerPosVecR[marker]);
+		/*std::cout << "Left Camera Set "  << " Marker " << marker << MarkerPos3D[0][marker] << std::endl;
+		std::cout << "Right Camera Set " << " Marker " << marker << MarkerPos3D[1][marker] << std::endl;*/
+	}
+	
 }
 
 
@@ -155,18 +180,18 @@ void DataProcess::getJointAngle()
 		ankle[i] = ((acos((foot[i].x * shank[i].x + foot[i].z * shank[i].z) / (sqrt(foot[i].x * foot[i].x + foot[i].z * foot[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
 		
 		
-		std::cout <<"Camera Set: "<<i<< " hip:   " << hip[i] << "   " << "knee:   " << knee[i] << "   " << "ankle:   " << ankle[i] << std::endl;
+		//std::cout <<"Camera Set: "<<i<< " hip:   " << hip[i] << "   " << "knee:   " << knee[i] << "   " << "ankle:   " << ankle[i] << std::endl;
 	}
-	knee_file << knee[0] << "," <<knee[1]<< "\n";
+	/*knee_file << knee[0] << "," <<knee[1]<< "\n";
 	hip_file << hip[0]<<"," << hip[1] << "\n";
-	ankle_file << ankle[0] << "," << ankle[1]<< "\n";
+	ankle_file << ankle[0] << "," << ankle[1]<< "\n";*/
 }
 
 bool DataProcess::exportGaitData()
 {
 	bool success = true;
-	mapTo3D();
-	getJointAngle();
+	mapTo3D(); // 主要的时间消耗 约14ms
+	getJointAngle(); // 约4ms
 
 	std::vector<double> joint_angles = { hip[0], hip[1], knee[0], knee[1], ankle[0], ankle[1] };
 	if (ema.EMA_established)
@@ -255,7 +280,7 @@ cv::Point3d scale(cv::Point3d u)
 
 cv::Point3d operator*(cv::Mat M, cv::Point3d p)
 {
-	assert(M.cols == 3, "Matrix must have the same col number as point's row number");
+	assert(M.cols == 3); // "Matrix must have the same col number as point's row number");
 	cv::Mat_<float> src(3/*rows*/, 1 /* cols */);
 
 	src(0, 0) = p.x;

@@ -32,6 +32,6 @@ void EMA::feed(std::vector<double> angles) // feed numbers to establish EMA
 	if (num_terms >= INIT_NUM)
 	{
 		EMA_established = true; // after INIT_NUM numbers are input, EMA are established
-		std::cout << "-----------------------EMA now established-------------------------------- \n\n\a\a" << std::endl;
+		std::cout << "---------------------------EMA now established-------------------------------- \n\n\a\a" << std::endl;
 	}
 }

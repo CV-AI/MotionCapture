@@ -6,7 +6,7 @@
 
 class EMA
 {
-	double eura_angles[6];
+	double eura_angles[6] = { 0,0,0,0,0,0 };
 public:
 	bool EMA_established = false; // whether the EMA get enough numbers for initialization
 	const int INIT_NUM = 20; // after INIT_NUM numbers are input, EMA are established

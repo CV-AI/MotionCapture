@@ -205,8 +205,8 @@ int main(int /*argc*/, char** /*argv*/)
 					}
 				}
 #endif
-				auto start_processing = std::chrono::high_resolution_clock::now();
-				std::chrono::duration<double> elapsed_seconds = start_processing - start;
+				auto start_tracking = std::chrono::high_resolution_clock::now();
+				std::chrono::duration<double> elapsed_seconds = start_tracking - start;
 				std::cout << "Acquiring time on camera " << ": " << elapsed_seconds.count() << std::endl;
 
 
@@ -244,6 +244,7 @@ int main(int /*argc*/, char** /*argv*/)
 								"Please check onscreen print outs for error details" << endl;
 						}
 					}
+					auto finish_tracking = std::chrono::high_resolution_clock::now();
 					for (int i = 0; i < NUM_CAMERAS; i++)
 					{
 						tracker.RectifyMarkerPos(i);
@@ -253,7 +254,7 @@ int main(int /*argc*/, char** /*argv*/)
 							cv::putText(tracker.ReceivedImages[i], to_string(i), cv::Point(50, 50), 2, 2, cv::Scalar(0, 255, 0));
 							cv::putText(tracker.ReceivedImages[i], to_string(marker_index), tracker.currentPos[i][marker_index], 2, 2, cv::Scalar(0, 255, 0));
 							cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 3, cv::Scalar(0, 0, 255), 3);
-							std::cout << i << marker_index << tracker.currentPos[i][marker_index] << std::endl;
+							// std::cout << i << marker_index << tracker.currentPos[i][marker_index] << std::endl;
 
 						}
 						for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
@@ -262,8 +263,8 @@ int main(int /*argc*/, char** /*argv*/)
 								tracker.currentPosSet[i][marker_set].y - tracker.detectWindowDimY / 2, tracker.detectWindowDimX, tracker.detectWindowDimY), cv::Scalar(255, 0, 0));
 						}
 					}
-					auto track_processing = std::chrono::high_resolution_clock::now();
-					std::chrono::duration<double> elapsed_seconds_processing = track_processing - start_processing;
+					
+					std::chrono::duration<double> elapsed_seconds_processing = finish_tracking - start_tracking;
 					std::cout << "Time on tracking " << ": " << elapsed_seconds_processing.count() << std::endl;
 					for (int camera_index = 0; camera_index < NUM_CAMERAS; camera_index++)
 					{
@@ -279,7 +280,7 @@ int main(int /*argc*/, char** /*argv*/)
 					}
 					dataProcess.exportGaitData();
 					auto stop_export = std::chrono::high_resolution_clock::now();
-					std::chrono::duration<double> seconds_export = stop_export - track_processing;
+					std::chrono::duration<double> seconds_export = stop_export - finish_tracking;
 					std::cout << "Time on export gait data: " << seconds_export.count() << std::endl;
 				}
 

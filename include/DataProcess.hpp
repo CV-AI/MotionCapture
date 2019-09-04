@@ -55,10 +55,12 @@ public:
 	const double cy_lower = 997.561141920296;
 	cv::Mat cameraMatrix[4];
 	cv::Mat distorCoeff[4];
+	// 4×4  disparity-to-depth mapping matrix (see reprojectImageTo3D ).
+	cv::Matx44d Q_left, Q_right;
 	float cx_list[4] = { 1010.13238776137, 1010.13238776137 ,1010.13238776137 ,1010.13238776137 };
 	float cy_list[4] = { 991.338656997527, 991.338656997527,991.338656997527,991.338656997527 };
 	float fx_list[4] = { 1121.56188766987, 1121.56188766987,1121.56188766987,1121.56188766987 };
-	float fy_list[4] = { 1121.56188766987, 1121.56188766987,1121.56188766987,1121.56188766987 };
+	float fy_list[4] = { 1120.60483176776, 1120.60483176776,1120.60483176776,1120.60483176776 };
 	cv::Mat rotationMatLeft, rotationMatRight;
 	cv::Mat translationMatLeft, translationMatRight;
 	cv::Mat mapX[4];
