@@ -129,14 +129,12 @@ int main(int /*argc*/, char** /*argv*/)
 			trackerParaList[j].trackerPtr = &trackerList[j];
 			trackerParaList[j].camera_index = j;
 			trackerParaList[j].tracker_type = ByDetection;
+			paraList[j].pCam = camList.GetByIndex(j);
+			paraList[j].cvImage = &tracker.ReceivedImages[CameraIndex[j]];
 		}
-#if defined(_WIN32)
 		HANDLE* grabThreads = new HANDLE[NUM_CAMERAS];
 		HANDLE* trackerThreads = new HANDLE[NUM_CAMERAS];
-#else
-		pthread_t* grabThreads = new pthread_t[NUM_CAMERAS];
-		pthread_t* trackerThreads = new pthread_t[NUM_CAMERAS];
-#endif
+
 
 		
         // acquire images and do something
@@ -146,25 +144,21 @@ int main(int /*argc*/, char** /*argv*/)
 		int num_Acquisition = 0; // init tracker after some images to assure auto balance finished
 		try
 		{
+			auto start_acquiring = std::chrono::high_resolution_clock::now();
+			auto start_tracking = std::chrono::high_resolution_clock::now();
+			auto finish_tracking = std::chrono::high_resolution_clock::now();
+			auto stop_export = std::chrono::high_resolution_clock::now();
+			auto stop_drawing = std::chrono::high_resolution_clock::now();
 			while (status)
 			{
 				// acquire images
-				auto start = std::chrono::high_resolution_clock::now();
+				start_acquiring = std::chrono::high_resolution_clock::now();
 				for (unsigned int i = 0; i < NUM_CAMERAS; i++)
 				{
-					paraList[i].pCam = camList.GetByIndex(i);
-					paraList[i].cvImage = &tracker.ReceivedImages[CameraIndex[i]];
 					// Start grab thread
-#if defined(_WIN32)
-				/*cout << "processing" << i << endl;*/
 					grabThreads[i] = CreateThread(nullptr, 0, AcquireImages, &paraList[i], 0, nullptr);
 					assert(grabThreads[i] != nullptr);
-#else
-					int err = pthread_create(&(grabThreads[i]), nullptr, &AcquireImages, &paraList[i]);
-					assert(err == 0);
-#endif
 				}
-#if defined(_WIN32)
 				// Wait for all threads to finish
 				WaitForMultipleObjects(NUM_CAMERAS,		// number of threads to wait for 
 					grabThreads,				// handles for threads to wait for
@@ -187,27 +181,10 @@ int main(int /*argc*/, char** /*argv*/)
 							"Please check onscreen print outs for error details" << endl;
 					}
 				}
-
-#else
-				for (unsigned int i = 0; i < camListSize; i++)
-				{
-					// Wait for all threads to finish
-					void* exitcode;
-					int rc = pthread_join(grabThreads[i], &exitcode);
-					if (rc != 0)
-					{
-						cout << "Handle error from pthread_join returned for camera at index " << i << endl;
-					}
-					else if ((int)(intptr_t)exitcode == 0)// check thread return code for each camera
-					{
-						cout << "Grab thread for camera at index " << i << " exited with errors."
-							"Please check onscreen print outs for error details" << endl;
-					}
-				}
-#endif
-				auto start_tracking = std::chrono::high_resolution_clock::now();
-				std::chrono::duration<double> elapsed_seconds = start_tracking - start;
-				std::cout << "Acquiring time on camera " << ": " << elapsed_seconds.count() << std::endl;
+				
+				start_tracking = std::chrono::high_resolution_clock::now();
+				std::chrono::duration<double> time_acquiring = start_tracking - start_acquiring;
+				std::cout << "Acquiring time on camera " << ": " << time_acquiring.count() << std::endl;
 
 
 				// pCam = NULL;
@@ -244,7 +221,7 @@ int main(int /*argc*/, char** /*argv*/)
 								"Please check onscreen print outs for error details" << endl;
 						}
 					}
-					auto finish_tracking = std::chrono::high_resolution_clock::now();
+					
 					for (int i = 0; i < NUM_CAMERAS; i++)
 					{
 						tracker.RectifyMarkerPos(i);
@@ -263,9 +240,9 @@ int main(int /*argc*/, char** /*argv*/)
 								tracker.currentPosSet[i][marker_set].y - tracker.detectWindowDimY / 2, tracker.detectWindowDimX, tracker.detectWindowDimY), cv::Scalar(255, 0, 0));
 						}
 					}
-					
-					std::chrono::duration<double> elapsed_seconds_processing = finish_tracking - start_tracking;
-					std::cout << "Time on tracking " << ": " << elapsed_seconds_processing.count() << std::endl;
+					finish_tracking = std::chrono::high_resolution_clock::now();
+					std::chrono::duration<double> time_tracking = finish_tracking - start_tracking;
+					std::cout << "Time on tracking " << ": " << time_tracking.count() << std::endl;
 					for (int camera_index = 0; camera_index < NUM_CAMERAS; camera_index++)
 					{
 						for (int marker_inex = 0; marker_inex < NUM_MARKERS; marker_inex++)
@@ -279,12 +256,14 @@ int main(int /*argc*/, char** /*argv*/)
 						}
 					}
 					dataProcess.exportGaitData();
-					auto stop_export = std::chrono::high_resolution_clock::now();
-					std::chrono::duration<double> seconds_export = stop_export - finish_tracking;
-					std::cout << "Time on export gait data: " << seconds_export.count() << std::endl;
+					//Sleep(15); // sleep for milliseconds
+					stop_export = std::chrono::high_resolution_clock::now();
+					std::chrono::duration<double> time_export = stop_export - finish_tracking;
+					std::cout << "Time on export gait data: " << time_export.count() << std::endl;
+					
 				}
 
-				if (/*tracker.getColors && */!tracker.TrackerAutoIntialized
+				if (/*tracker.getColors && */!tracker.TrackerAutoIntialized && num_Acquisition > 15
 #ifdef TRANS_FRAME 
 					&& dataProcess.GotWorldFrame
 #endif
@@ -333,6 +312,8 @@ int main(int /*argc*/, char** /*argv*/)
 					status = false;
 				}
 				num_Acquisition += 1;
+				std::chrono::duration<double> time_total = stop_drawing - start_acquiring;
+				std::cout << "Total time: " << time_total.count() << std::endl;
 			}
 		}
 		catch (Spinnaker::Exception& e)

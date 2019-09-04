@@ -25,9 +25,6 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#ifndef _WIN32
-#include <pthread.h>
-#endif
 
 using namespace Spinnaker;
 using namespace Spinnaker::GenApi;
@@ -41,8 +38,8 @@ enum triggerType
 };
 const triggerType chosenTrigger = HARDWARE;
 cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,200), cv::Point(750,500), cv::Point(800,200) };
-const int64_t numBuffers = 3;
-const float frameRate = 30.0f;
+const int64_t numBuffers = 5;
+const float frameRate = 50.0f;
 int64_t height[4] = { 1280, 1280, 1280, 1280 };
 int64_t width[4] = { 800, 800, 736, 736 };
 bool SetExposureManual = false;
@@ -109,7 +106,7 @@ int DisableHeartbeat(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDev
 }
 #endif
 cv::Mat ConvertToCVmat(ImagePtr spinImage);
-bool ConfigCamera(CameraPtr pCam);
+bool ConfigCamera(CameraPtr pCam, int cameraIndex);
 int ResetExposure(CameraPtr pCam);
 int PrintDeviceInfo(INodeMap & nodeMap);
 /*
@@ -125,26 +122,17 @@ cv::Mat ConvertToCVmat(ImagePtr spinImage)
     return cv::Mat(colsize + YPadding, rowsize + XPadding, CV_MAKETYPE(CV_8U, spinImage->GetNumChannels()), spinImage->GetData(), spinImage->GetStride());
 }
 // This function acquires images from a device.
-#if defined (_WIN32)
 DWORD WINAPI AcquireImages(LPVOID lpParam)
 {
 	AcquisitionParameters acqPara = *((AcquisitionParameters*) lpParam);
 	CameraPtr pCam = acqPara.pCam;
 	cv::Mat* cvImage = acqPara.cvImage;
-#else
-void* AcquireImages(void* arg)
-{
-	AcquisitionParameters acqPara = *((AcquisitionParameters*)lpParam);
-	CameraPtr pCam = acqPara.pCam;
-	cv::Mat* cvImage = acqPara.cvImage;
-#endif
 
     try
     {
 		// Use trigger to capture image
 		//
 		// *** NOTES ***
-		
 		if (chosenTrigger == SOFTWARE)
 		{
 			// Execute software trigger
@@ -155,10 +143,7 @@ void* AcquireImages(void* arg)
 
 			pCam->TriggerSoftware.Execute();
 		}
-		/*else
-		{
-			cout << "Use the hardware to trigger image acquisition." << endl;
-		}*/
+		
         // Retrieve next received image
         //
         // *** NOTES ***`

@@ -14,7 +14,7 @@ constexpr auto MIN_H_RED = 0;
 const int NUM_CAMERAS = 4;
 const int NUM_MARKERS = 6;
 const int NUM_MARKER_SET = 3;
-const double weight = 0.5;
+const double weight = 0.75;
 enum TrackerType { ByDetection, CV_KCF, ByColor };
 
 class Tracker
@@ -56,7 +56,6 @@ public:
 	bool RectifyMarkerPos(int);
 	int detectWindowDimX; // the dimension of detectWindow_Initial
 	int detectWindowDimY;
-	int numCameras;
 	int threshold;
 	bool TrackerAutoIntialized;
 };
@@ -78,7 +77,6 @@ public:
 	}
 };
 
-#if defined (_WIN32)
 DWORD WINAPI UpdateTracker(LPVOID lpParam);
-#endif
+
 

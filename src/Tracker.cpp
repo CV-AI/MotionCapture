@@ -3,7 +3,7 @@
 #include <algorithm>
 
 
-Tracker::Tracker():detectWindowDimX(100), detectWindowDimY(100),numCameras(4),threshold(100),TrackerAutoIntialized(false)
+Tracker::Tracker():detectWindowDimX(100), detectWindowDimY(100),threshold(100),TrackerAutoIntialized(false)
 {
 	cv::Point momentum[NUM_CAMERAS] = { cv::Point(0,0), cv::Point(0,0),cv::Point(0,0), cv::Point(0,0) };
 	
@@ -339,10 +339,8 @@ bool Tracker::FilterInitialImage()
 	return true;
 }
 
-#if defined (_WIN32)
 DWORD WINAPI UpdateTracker(LPVOID lpParam)
 {
-#endif
 	TrackerParameters para = *((TrackerParameters*)lpParam);
 	int camera_index = para.camera_index;
 	Tracker* trackerPtr = para.trackerPtr;
