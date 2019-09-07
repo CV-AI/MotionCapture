@@ -116,6 +116,7 @@ void DataProcess::mapTo3D()
 
 	
 	cv::Point temp;
+	// 双目校正 stereo rectification
 	for (int camera = 0; camera < numCameras; camera++)
 	{
 		for (int marker = 0; marker < 6; marker++)
@@ -127,16 +128,16 @@ void DataProcess::mapTo3D()
 		}
 	}
 	// This is slightly quicker, but I'm not sure about the math
-	for (int marker_set = 0; marker_set < numCameras / 2; marker_set++)
-	{
-		for (int marker = 0; marker < 6; marker++)
-		{
-			MarkerPos3D[marker_set][marker].x = (double(points[2 * marker_set][marker].x) - cx) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
-			MarkerPos3D[marker_set][marker].y = (double(points[2 * marker_set][marker].y) - cy) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
-			MarkerPos3D[marker_set][marker].z = fy * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
-			//std::cout << "Camera Set " << marker_set << " Marker " << marker << MarkerPos3D[marker_set][marker] << std::endl;
-		}
-	}
+	//for (int marker_set = 0; marker_set < numCameras / 2; marker_set++)
+	//{
+	//	for (int marker = 0; marker < 6; marker++)
+	//	{
+	//		MarkerPos3D[marker_set][marker].x = (double(points[2 * marker_set][marker].x) - cx) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
+	//		MarkerPos3D[marker_set][marker].y = (double(points[2 * marker_set][marker].y) - cy) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
+	//		MarkerPos3D[marker_set][marker].z = fy * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
+	//		//std::cout << "Camera Set " << marker_set << " Marker " << marker << MarkerPos3D[marker_set][marker] << std::endl;
+	//	}
+	//}
 	
 	std::vector<cv::Vec3d> disparityVecLeft, disparityVecRight;
 
@@ -151,14 +152,11 @@ void DataProcess::mapTo3D()
 	std::vector<cv::Vec3d> MarkerPosVecL, MarkerPosVecR;
 	cv::perspectiveTransform(disparityVecLeft, MarkerPosVecL, Q_left);
 	cv::perspectiveTransform(disparityVecRight, MarkerPosVecR, Q_right);
-	//std::cout << "Marker position\n"<< MarkerPosVecL[0] << std::endl;
 	
 	for (int marker = 0; marker < 6; marker++)
 	{
 		MarkerPos3D[0][marker] = cv::Point3d(MarkerPosVecL[marker]);
 		MarkerPos3D[1][marker] = cv::Point3d(MarkerPosVecR[marker]);
-		/*std::cout << "Left Camera Set "  << " Marker " << marker << MarkerPos3D[0][marker] << std::endl;
-		std::cout << "Right Camera Set " << " Marker " << marker << MarkerPos3D[1][marker] << std::endl;*/
 	}
 	
 }
@@ -197,10 +195,9 @@ bool DataProcess::exportGaitData()
 	if (ema.EMA_established)
 	{
 		eura_angles = ema.filter(joint_angles);
-		std::cout << eura_angles << std::endl;
 		//通过句柄向PLC写入数组
 		nErr = AdsSyncWriteReq(pAddr, ADSIGRP_SYM_VALBYHND, lHdlVar2, sizeof(eura_angles), &eura_angles[0]);
-		if (nErr) std::cerr << "Error: AdsSyncReadReq: " << nErr << '\n';
+		//if (nErr) std::cerr << "Error: AdsSyncReadReq: " << nErr << '\n';
 	}
 	else
 	{

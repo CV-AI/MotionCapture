@@ -55,7 +55,7 @@ int main(int /*argc*/, char** /*argv*/)
 	assert(numCameras == NUM_CAMERAS);
 	// set current process as high priority (second highest, the highest is Real time)
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
-    CameraPtr pCam = NULL;
+    CameraPtr pCam = nullptr;
     try 
     {
         // Give each camera index
@@ -263,7 +263,7 @@ int main(int /*argc*/, char** /*argv*/)
 					
 				}
 
-				if (/*tracker.getColors && */!tracker.TrackerAutoIntialized && num_Acquisition > 15
+				if (/*tracker.getColors && */!tracker.TrackerAutoIntialized && num_Acquisition > 20
 #ifdef TRANS_FRAME 
 					&& dataProcess.GotWorldFrame
 #endif
@@ -312,8 +312,12 @@ int main(int /*argc*/, char** /*argv*/)
 					status = false;
 				}
 				num_Acquisition += 1;
+				stop_drawing = std::chrono::high_resolution_clock::now();
+				std::chrono::duration<double> time_showing = stop_drawing - stop_export;
+				std::cout << "Time on showing images: " << time_showing.count() << std::endl;
 				std::chrono::duration<double> time_total = stop_drawing - start_acquiring;
 				std::cout << "Total time: " << time_total.count() << std::endl;
+				
 			}
 		}
 		catch (Spinnaker::Exception& e)

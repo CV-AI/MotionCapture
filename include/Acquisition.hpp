@@ -38,18 +38,19 @@ enum triggerType
 };
 const triggerType chosenTrigger = HARDWARE;
 cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,200), cv::Point(750,500), cv::Point(800,200) };
-const int64_t numBuffers = 5;
+const int64_t numBuffers = 3;
 const float frameRate = 50.0f;
+float exposureTimeToSet = 10000.0f;
 int64_t height[4] = { 1280, 1280, 1280, 1280 };
 int64_t width[4] = { 800, 800, 736, 736 };
-bool SetExposureManual = false;
+bool SetExposureManual = true;
 class AcquisitionParameters
 {
 public:
 	AcquisitionParameters()
 	{
-		pCam = NULL;
-		cvImage = & cv::Mat(1280, 800, CV_8UC3);
+		pCam = nullptr;
+		cvImage = nullptr;
 	}
 	CameraPtr pCam = NULL;
 	cv::Mat* cvImage;
@@ -189,7 +190,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 {
 	bool status = true;
     
-    std::cout << "\n" << "\n" << "*** IMAGE ACQUISITION ***" << "\n" << endl;
+    std::cout << "\n" << "\n" << "*** CAMERA CONFIG ***" << "\n" << endl;
     
     try
     {
@@ -276,7 +277,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 			}
 
 			// Display Buffer Info
-			cout << endl << "Default Buffer Handling Mode: " << ptrHandlingModeEntry->GetDisplayName() << endl;
+			cout << "\n" << "Default Buffer Handling Mode: " << ptrHandlingModeEntry->GetDisplayName() << endl;
 			cout << "Default Buffer Count: " << ptrBufferCount->GetValue() << endl;
 			cout << "Maximum Buffer Count: " << ptrBufferCount->GetMax() << endl;
 
@@ -477,13 +478,21 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 			//
 			if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
 			{
-				cout << "Unable to disable trigger mode. Aborting..." << endl;
+				cout << "Unable to enable trigger mode. Aborting..." << endl;
 				return false;
 			}
 
 			pCam->TriggerMode.SetValue(TriggerMode_On);
-
-			cout << "Trigger mode turned back on..." << endl << endl;
+			// trigger overlap readout enable you to trigger the camear while the image data is being set to PC
+			// PLEASE watch https://www.youtube.com/watch?v=o9s5o7IjTzw if you don't understand about trigger mode
+			cout << "Trigger mode turned back on..." << "\n" << endl;
+			if (pCam->TriggerOverlap == NULL || pCam->TriggerOverlap.GetAccessMode() != RW)
+			{
+				cout << "Unable to turn on trigger overlap. Aborting..." << endl;
+				return false;
+			}
+			pCam->TriggerOverlap.SetValue(TriggerOverlap_ReadOut);
+			std::cout << "Trigger Overlap: " << pCam->TriggerOverlap.GetValue() << std::endl;;
 		}
 		catch (Spinnaker::Exception& e)
 		{
@@ -541,7 +550,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 				const float exposureTimeMax = pCam->ExposureTime.GetMax();
 				const float exposureTimeMin = pCam->ExposureTime.GetMin();
 				cout << "Max exposure time: " << exposureTimeMax << ", min exposure time: " << exposureTimeMin << endl;
-				float exposureTimeToSet = 17000.0f;
+				
 
 				if (exposureTimeToSet > exposureTimeMax || exposureTimeToSet < exposureTimeMin)
 				{
@@ -550,7 +559,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 
 				pCam->ExposureTime.SetValue(exposureTimeToSet);
 
-				cout << std::fixed << "Shutter time set to " << exposureTimeToSet << " us..." << "\n" << endl;
+				cout << std::fixed << "Shutter time set to " << pCam->ExposureTime.GetValue() << " us..." << "\n" << endl;
 			}
 			else
 			{

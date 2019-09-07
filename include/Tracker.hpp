@@ -9,8 +9,13 @@
 #include <Windows.h>
 #include<cmath>
 
-constexpr auto MAX_H_RED = 40;
-constexpr auto MIN_H_RED = 0;
+// MAX and MIN H, S, V
+const int MAX_H_RED = 50;
+const int  MIN_H_RED = 0;
+const int MAX_SATURATION = 255;
+const int MIN_SATURATION = 120;
+const int MAX_VALUE = 255;
+const int MIN_VALUE = 120;
 const int NUM_CAMERAS = 4;
 const int NUM_MARKERS = 6;
 const int NUM_MARKER_SET = 3;

@@ -3,7 +3,7 @@
 #include <algorithm>
 
 
-Tracker::Tracker():detectWindowDimX(100), detectWindowDimY(100),threshold(100),TrackerAutoIntialized(false)
+Tracker::Tracker():detectWindowDimX(120), detectWindowDimY(120),threshold(100),TrackerAutoIntialized(false)
 {
 	cv::Point momentum[NUM_CAMERAS] = { cv::Point(0,0), cv::Point(0,0),cv::Point(0,0), cv::Point(0,0) };
 	
@@ -78,8 +78,9 @@ void Tracker::ColorThresholding(int marker_index)
 {
 	cv::cvtColor(detectWindow, detectWindow, CV_RGB2HSV);
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
-	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED, 160, 80), cv::Scalar(MAX_H_RED, 255, 255), rangeRes);
+	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED, MIN_SATURATION, MIN_VALUE), cv::Scalar(MAX_H_RED, MAX_SATURATION, MAX_VALUE), rangeRes);
 	detectWindow = rangeRes;
+
 	/*for (int j = 0; j < detectWindow.rows; j++)
 	{
 		uchar*data = detectWindow.ptr<uchar>(j);
@@ -99,9 +100,10 @@ void Tracker::ColorThresholding(int marker_index)
 
 void Tracker::ColorThresholding()
 {
+	cv::imwrite("HSV.jpg", detectWindow_Initial);
 	cv::cvtColor(detectWindow_Initial, detectWindow_Initial, CV_RGB2HSV);
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow_Initial.size(), CV_8UC1);
-	cv::inRange(detectWindow_Initial, cv::Scalar(MIN_H_RED, 160, 80), cv::Scalar(MAX_H_RED, 255, 255), rangeRes);
+	cv::inRange(detectWindow_Initial, cv::Scalar(MIN_H_RED, MIN_SATURATION, MIN_VALUE), cv::Scalar(MAX_H_RED, MAX_SATURATION, MAX_VALUE), rangeRes);
 	detectWindow_Initial = rangeRes;
 }
 
