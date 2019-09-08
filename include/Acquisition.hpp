@@ -166,6 +166,7 @@ DWORD WINAPI AcquireImages(LPVOID lpParam)
             std::cout << "Image incomplete: "
                     << Image::GetImageStatusDescription(pResultImage->GetImageStatus())
                     << "..." << "\n" << endl;
+			return false;
         }
         else
         {
@@ -276,7 +277,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 				return false;
 			}
 
-			// Display Buffer Info
+			// Display Buffer Info: GetDisplayName return human readable name for this entry
 			cout << "\n" << "Default Buffer Handling Mode: " << ptrHandlingModeEntry->GetDisplayName() << endl;
 			cout << "Default Buffer Count: " << ptrBufferCount->GetValue() << endl;
 			cout << "Maximum Buffer Count: " << ptrBufferCount->GetMax() << endl;
@@ -292,50 +293,76 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 		{
 			cout << "Error during setting Buffers: " << e.what() << endl;
 		}
-		//Set FrameRate
-		//	Frame rate setting
-		//	Turn on frame rate control 
 		try
 		{
-			
-			// Trigger Mode needs to be turned off to set frame rate
-			if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
+			if (pCam->BalanceWhiteAuto == NULL || pCam->BalanceWhiteAuto.GetAccessMode() != RW)
 			{
-				cout << "Unable to disable trigger mode. Aborting..." << endl;
+				std::cerr << "Unable to set whilte balance mode. Aborting..." << std::endl;
 				return false;
 			}
+			// turn off white balance to set balance ratio
+			pCam->BalanceWhiteAuto.SetValue(BalanceWhiteAuto_Off);
+			if (!IsReadable(pCam->BalanceRatio) || !IsWritable(pCam->BalanceRatio))
+			{
+				std::cerr << "Unable to set white balance ratio. Aborting..." << std::endl;
+				return false;
+			}
+			pCam->BalanceRatio.SetValue(1.5);
+			std::cout << "White Balance ratio: " << pCam->BalanceRatio.GetValue() << std::endl;
+			// turn White Balance back on
+			pCam->BalanceWhiteAuto.SetValue(BalanceWhiteAuto_Continuous);
+			std::cout << "White Balance status: " << pCam->BalanceWhiteAuto.GetValue() << std::endl;
 
-			pCam->TriggerMode.SetValue(TriggerMode_Off);
-			// enable frame rate setting
-			cout << "Trigger mode disabled..." << endl;
-			if (!IsReadable(pCam->AcquisitionFrameRateEnable) || !IsWritable(pCam->AcquisitionFrameRateEnable))
-			{
-				cout << " Unable to enable Acquisition Frame Rate (node retrieval)" << endl;
-				cout << "IsReadble: " << IsReadable(pCam->AcquisitionFrameRateEnable) <<
-						", IsWritable: " << IsWritable(pCam->AcquisitionFrameRateEnable) << endl;
-			}
-			pCam->AcquisitionFrameRateEnable.SetValue(true);
-			cout << "AcquisitionFrameRate Enabled..." << endl;
-			// read current frame rate
-			if (!IsReadable(pCam->AcquisitionFrameRate))
-			{
-				cout << " Unable to read Acquisition Frame Rate (node retrieval)" << endl;
-			}
-			cout << "Current Frame Rate: " << pCam->AcquisitionFrameRate.GetValue() << endl;
-			// set frame rate
-			if (!IsReadable(pCam->AcquisitionFrameRate) || !IsWritable(pCam->AcquisitionFrameRate))
-			{
-				cout << " Unable to set Acquisition Frame Rate (node retrieval)" << endl;
-				cout << "IsReadble: " << IsReadable(pCam->AcquisitionFrameRate) <<
-					", IsWritable: " << IsWritable(pCam->AcquisitionFrameRate) << endl;
-			}
-			pCam->AcquisitionFrameRate.SetValue(frameRate);
-			cout << "Camera Frame rate is set to " << frameRate << endl;
+
 		}
 		catch (Spinnaker::Exception& e)
 		{
-			cout << "Error during setting Acquisition rate: " << e.what() << endl;
+			cout << "Error during setting white balance: " << e.what() << endl;
 		}
+		//Set FrameRate
+		//	Frame rate setting
+		//	Turn on frame rate control 
+		//try
+		//{
+		//	
+		//	// Trigger Mode needs to be turned off to set frame rate
+		//	if (pCam->TriggerMode == NULL || pCam->TriggerMode.GetAccessMode() != RW)
+		//	{
+		//		cout << "Unable to disable trigger mode. Aborting..." << endl;
+		//		return false;
+		//	}
+
+		//	pCam->TriggerMode.SetValue(TriggerMode_Off);
+		//	// enable frame rate setting
+		//	cout << "Trigger mode disabled..." << endl;
+		//	if (!IsReadable(pCam->AcquisitionFrameRateEnable) || !IsWritable(pCam->AcquisitionFrameRateEnable))
+		//	{
+		//		cout << " Unable to enable Acquisition Frame Rate (node retrieval)" << endl;
+		//		cout << "IsReadble: " << IsReadable(pCam->AcquisitionFrameRateEnable) <<
+		//				", IsWritable: " << IsWritable(pCam->AcquisitionFrameRateEnable) << endl;
+		//	}
+		//	pCam->AcquisitionFrameRateEnable.SetValue(true);
+		//	cout << "AcquisitionFrameRate Enabled..." << endl;
+		//	// read current frame rate
+		//	if (!IsReadable(pCam->AcquisitionFrameRate))
+		//	{
+		//		cout << " Unable to read Acquisition Frame Rate (node retrieval)" << endl;
+		//	}
+		//	cout << "Current Frame Rate: " << pCam->AcquisitionFrameRate.GetValue() << endl;
+		//	// set frame rate
+		//	if (!IsReadable(pCam->AcquisitionFrameRate) || !IsWritable(pCam->AcquisitionFrameRate))
+		//	{
+		//		cout << " Unable to set Acquisition Frame Rate (node retrieval)" << endl;
+		//		cout << "IsReadble: " << IsReadable(pCam->AcquisitionFrameRate) <<
+		//			", IsWritable: " << IsWritable(pCam->AcquisitionFrameRate) << endl;
+		//	}
+		//	pCam->AcquisitionFrameRate.SetValue(frameRate);
+		//	cout << "Camera Frame rate is set to " << frameRate << endl;
+		//}
+		//catch (Spinnaker::Exception& e)
+		//{
+		//	cout << "Error during setting Acquisition rate: " << e.what() << endl;
+		//}
 		
 		// Set maximum width
 		//
@@ -681,6 +708,7 @@ bool ResetTrigger(CameraPtr pCam)
 		pCam->TriggerMode.SetValue(TriggerMode_Off);
 
 		cout << "Trigger mode disabled..." << endl;
+		return true;
 	}
 	catch (Spinnaker::Exception& e)
 	{

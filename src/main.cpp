@@ -263,7 +263,7 @@ int main(int /*argc*/, char** /*argv*/)
 					
 				}
 
-				if (/*tracker.getColors && */!tracker.TrackerAutoIntialized && num_Acquisition > 20
+				if (/*tracker.getColors && */!tracker.TrackerAutoIntialized && num_Acquisition > 400
 #ifdef TRANS_FRAME 
 					&& dataProcess.GotWorldFrame
 #endif

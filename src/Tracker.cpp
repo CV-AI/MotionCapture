@@ -316,18 +316,19 @@ bool Tracker::RectifyMarkerPos(int camera_index)
 			}
 		}
     }
-	// 对于0，1号相机来说，四号标记点在五号标记点的右边
+	// 对于0，1号相机来说，判断向量4->5标记点是否正确
 	if (camera_index < 2)
 	{
-		if (currentPos[camera_index][4].x < currentPos[camera_index][5].x)
+		if ((currentPos[camera_index][4].x < currentPos[camera_index][5].x) 
+					&& (currentPos[camera_index][4].y > currentPos[camera_index][5].y))
 		{
 			std::swap(currentPos[camera_index][4], currentPos[camera_index][5]);
 		}
 	}
-	// 对于2，3号相机来说，四号标记点在五号标记点的左边
+	// 对于2，3号相机来说
 	else
 	{
-		if (currentPos[camera_index][4].x > currentPos[camera_index][5].x)
+		if (currentPos[camera_index][4].x > currentPos[camera_index][5].x && currentPos[camera_index][4].y > currentPos[camera_index][5].y)
 		{
 			std::swap(currentPos[camera_index][4], currentPos[camera_index][5]);
 		}
