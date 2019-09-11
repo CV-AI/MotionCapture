@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 set(name "MotionCapture")
+set(calib "StereoCalib")
+set(retrive "RetriveImagePairs")
 project ( ${name} )
 
 add_compile_options(-std=c++11)
@@ -15,7 +17,7 @@ set(PTGREY_SDK_LIBRARY_RELEASE  optimized "D:/software/SpinnakerSDK/lib64/vs2015
 set(TCADS_LIBRARY "${PROJECT_SOURCE_DIR}/lib/TcAdsDll.lib")
 
 include_directories(${PTGREY_SDK_INCLUDE_DIR})
-message(STATUS "OpenCV library status:")
+message(STATUS "    OpenCV library status:")
 message(STATUS "    config: ${OpenCV_DIR}")
 message(STATUS "    version: ${OpenCV_VERSION}")
 message(STATUS "    libraries: ${OpenCV_LIBS}")
@@ -26,9 +28,9 @@ set(MY_HEADER_FILES
         include/Acquisition.hpp
         include/Tracker.hpp
         include/DataProcess.hpp
-		include/moving_average.hpp
-		include/TcAdsDef.h
-		include/TcAdsAPI.h
+	include/moving_average.hpp
+	include/TcAdsDef.h
+	include/TcAdsAPI.h
         )
 
 set(MY_SOURCE_FILES
@@ -48,9 +50,25 @@ add_executable(${name}
         ${MY_SOURCE_FILES}
         ${MY_HEADER_FILES})
 
+add_executable(${calib} 
+        src/StereoCalib.cpp)
+
+add_executable(${retrive}
+        include/Acquisition.hpp
+        src/RetriveImagePairs.cpp)
+
 target_link_libraries(${name}
         ${OpenCV_LIBS}
         ${PTGREY_SDK_LIBRARY_DEBUG}
-		${TCADS_LIBRARY}
+	${TCADS_LIBRARY}
         ${PTGREY_SDK_LIBRARY_RELEASE}
-        )
+)
+target_link_libraries(${calib}
+        ${OpenCV_LIBS}}
+)
+
+target_link_libraries(${retrive}
+        ${OpenCV_LIBS}
+        ${PTGREY_SDK_LIBRARY_DEBUG}
+        ${PTGREY_SDK_LIBRARY_RELEASE}
+)

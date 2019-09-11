@@ -42,8 +42,9 @@ const int64_t numBuffers = 3;
 const float frameRate = 50.0f;
 float exposureTimeToSet = 10000.0f;
 int64_t height[4] = { 1280, 1280, 1280, 1280 };
-int64_t width[4] = { 800, 800, 736, 736 };
+int64_t width[4] = { 768, 768, 768, 768 }; // multiple of 32
 bool SetExposureManual = true;
+bool TRACKING = true;
 class AcquisitionParameters
 {
 public:
@@ -170,7 +171,7 @@ DWORD WINAPI AcquireImages(LPVOID lpParam)
         }
         else
         {
-            *cvImage = ConvertToCVmat(pResultImage);
+			*cvImage = ConvertToCVmat(pResultImage);
             pResultImage->Release();
             //needs to be converted into BGR(OpenCV uses RGB)
             //cv::cvtColor(cvImage, cvImage, CV_BayerGB2BGR);
@@ -193,12 +194,12 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
     
     std::cout << "\n" << "\n" << "*** CAMERA CONFIG ***" << "\n" << endl;
     
-    try
-    {
-        INodeMap & nodeMapTLDevice = pCam->GetTLDeviceNodeMap();
+	try
+	{
+		INodeMap& nodeMapTLDevice = pCam->GetTLDeviceNodeMap();
 		INodeMap& sNodeMap = pCam->GetTLStreamNodeMap();
-        // Retrieve GenICam nodemap
-        INodeMap & nodeMap = pCam->GetNodeMap();
+		// Retrieve GenICam nodemap
+		INodeMap& nodeMap = pCam->GetNodeMap();
 		// The device serial number is retrieved in order to keep cameras from 
 		// overwriting one another. Grabbing image IDs could also accomplish
 		// this.
@@ -221,9 +222,11 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 
 		pCam->AcquisitionMode.SetValue(AcquisitionMode_Continuous);
 		cout << "Acquisition mode set to continuous..." << endl;
-		
+
 		if (pCam->PixelFormat != NULL && pCam->PixelFormat.GetAccessMode() == RW)
 		{
+			// RGB8 data is bigger that BayerGB8, is we use BayerGB, data transmitting will be much faster
+			// 但是这时，由于BayerGB8 模式下并不能设置相机自动白平衡，只能用opencv来做，这样又可能更慢
 			pCam->PixelFormat.SetValue(PixelFormat_RGB8);
 
 			cout << "Pixel format set to " << pCam->PixelFormat.GetCurrentEntry()->GetSymbolic() << "..." << endl;
@@ -239,14 +242,14 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 			CEnumerationPtr ptrHandlingMode = sNodeMap.GetNode("StreamBufferHandlingMode");
 			if (!IsAvailable(ptrHandlingMode) || !IsWritable(ptrHandlingMode))
 			{
-				cout << "Unable to set Buffer Handling mode (node retrieval). Aborting..." << endl << endl;
+				cout << "Unable to set Buffer Handling mode (node retrieval). Aborting..." << "\n" << std::endl;;
 				return false;
 			}
 
 			CEnumEntryPtr ptrHandlingModeEntry = ptrHandlingMode->GetCurrentEntry();
 			if (!IsAvailable(ptrHandlingModeEntry) || !IsReadable(ptrHandlingModeEntry))
 			{
-				cout << "Unable to set Buffer Handling mode (Entry retrieval). Aborting..." << endl << endl;
+				cout << "Unable to set Buffer Handling mode (Entry retrieval). Aborting..." << "\n" << std::endl;;
 				return false;
 			}
 
@@ -254,14 +257,14 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 			CEnumerationPtr ptrStreamBufferCountMode = sNodeMap.GetNode("StreamBufferCountMode");
 			if (!IsAvailable(ptrStreamBufferCountMode) || !IsWritable(ptrStreamBufferCountMode))
 			{
-				cout << "Unable to set Buffer Count Mode (node retrieval). Aborting..." << endl << endl;
+				cout << "Unable to set Buffer Count Mode (node retrieval). Aborting..." << "\n" << std::endl;;
 				return false;
 			}
 
 			CEnumEntryPtr ptrStreamBufferCountModeManual = ptrStreamBufferCountMode->GetEntryByName("Manual");
 			if (!IsAvailable(ptrStreamBufferCountModeManual) || !IsReadable(ptrStreamBufferCountModeManual))
 			{
-				cout << "Unable to set Buffer Count Mode entry (Entry retrieval). Aborting..." << endl << endl;
+				cout << "Unable to set Buffer Count Mode entry (Entry retrieval). Aborting..." << "\n" << std::endl;;
 				return false;
 			}
 
@@ -273,7 +276,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 			CIntegerPtr ptrBufferCount = sNodeMap.GetNode("StreamBufferCountManual");
 			if (!IsAvailable(ptrBufferCount) || !IsWritable(ptrBufferCount))
 			{
-				cout << "Unable to set Buffer Count (Integer node retrieval). Aborting..." << endl << endl;
+				cout << "Unable to set Buffer Count (Integer node retrieval). Aborting..." << "\n" << std::endl;;
 				return false;
 			}
 
@@ -287,7 +290,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 			cout << "Buffer count now set to: " << ptrBufferCount->GetValue() << endl;
 			ptrHandlingModeEntry = ptrHandlingMode->GetEntryByName("NewestOnly");
 			ptrHandlingMode->SetIntValue(ptrHandlingModeEntry->GetValue());
-			cout << endl << endl << "Buffer Handling Mode has been set to " << ptrHandlingModeEntry->GetDisplayName() << endl;
+			cout << "\n" << "\n" << "Buffer Handling Mode has been set to " << ptrHandlingModeEntry->GetDisplayName() << endl;
 		}
 		catch (Spinnaker::Exception& e)
 		{
@@ -295,25 +298,30 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 		}
 		try
 		{
-			if (pCam->BalanceWhiteAuto == NULL || pCam->BalanceWhiteAuto.GetAccessMode() != RW)
+			if (pCam->PixelFormat.GetCurrentEntry()->GetSymbolic() == "RGB8")
 			{
-				std::cerr << "Unable to set whilte balance mode. Aborting..." << std::endl;
-				return false;
+				if (pCam->BalanceWhiteAuto == NULL || pCam->BalanceWhiteAuto.GetAccessMode() != RW)
+				{
+					std::cerr << "Unable to set whilte balance mode. Aborting..." << std::endl;
+					return false;
+				}
+				// turn off white balance to set balance ratio
+				pCam->BalanceWhiteAuto.SetValue(BalanceWhiteAuto_Off);
+				if (!IsReadable(pCam->BalanceRatio) || !IsWritable(pCam->BalanceRatio))
+				{
+					std::cerr << "Unable to set white balance ratio. Aborting..." << std::endl;
+					return false;
+				}
+				pCam->BalanceRatio.SetValue(1.5);
+				std::cout << "White Balance ratio: " << pCam->BalanceRatio.GetValue() << std::endl;
+				// turn White Balance back on
+				pCam->BalanceWhiteAuto.SetValue(BalanceWhiteAuto_Continuous);
+				std::cout << "White Balance status: " << pCam->BalanceWhiteAuto.GetCurrentEntry()->GetSymbolic() << std::endl;
 			}
-			// turn off white balance to set balance ratio
-			pCam->BalanceWhiteAuto.SetValue(BalanceWhiteAuto_Off);
-			if (!IsReadable(pCam->BalanceRatio) || !IsWritable(pCam->BalanceRatio))
+			else
 			{
-				std::cerr << "Unable to set white balance ratio. Aborting..." << std::endl;
-				return false;
+				std::cout << "Pixel format is not RGB8, White Balance cannot be turn on..." << std::endl;
 			}
-			pCam->BalanceRatio.SetValue(1.5);
-			std::cout << "White Balance ratio: " << pCam->BalanceRatio.GetValue() << std::endl;
-			// turn White Balance back on
-			pCam->BalanceWhiteAuto.SetValue(BalanceWhiteAuto_Continuous);
-			std::cout << "White Balance status: " << pCam->BalanceWhiteAuto.GetValue() << std::endl;
-
-
 		}
 		catch (Spinnaker::Exception& e)
 		{
@@ -363,7 +371,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 		//{
 		//	cout << "Error during setting Acquisition rate: " << e.what() << endl;
 		//}
-		
+
 		// Set maximum width
 		//
 		// *** NOTES ***
@@ -378,51 +386,63 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 		// The offsetX and offsetY are influenced by height and width
 		// So make sure you config height and width, then config offset
 		// 偏移量offset受到height 和 width影响，所以先设置宽和高
-		if (IsReadable(pCam->Width) && IsWritable(pCam->Width) && pCam->Width.GetInc() != 0 && pCam->Width.GetMax() != 0)
+		try
 		{
-			pCam->Width.SetValue(width[cameraIndex]); // X 方向宽度的递增量为32， 确保Width是32的整倍数
+			if (TRACKING)
+			{
+				if (IsReadable(pCam->Width) && IsWritable(pCam->Width) && pCam->Width.GetInc() != 0 && pCam->Width.GetMax() != 0)
+				{
+					pCam->Width.SetValue(width[cameraIndex]); // X 方向宽度的递增量为32， 确保Width是32的整倍数
 
-			cout << "Width set to " << pCam->Width.GetValue() << "..." << endl;
-		}
-		else
-		{
-			cout << "Width not available..." << endl;
-			status = false;
-		}
-		if (IsReadable(pCam->Height) && IsWritable(pCam->Height) && pCam->Height.GetInc() != 0 && pCam->Height.GetMax() != 0)
-		{
-			pCam->Height.SetValue(height[cameraIndex]);
+					cout << "Width set to " << pCam->Width.GetValue() << "..." << endl;
+				}
+				else
+				{
+					cout << "Width not available..." << endl;
+					status = false;
+				}
+				if (IsReadable(pCam->Height) && IsWritable(pCam->Height) && pCam->Height.GetInc() != 0 && pCam->Height.GetMax() != 0)
+				{
+					pCam->Height.SetValue(height[cameraIndex]);
 
-			cout << "Height set to " << pCam->Height.GetValue() << "..." << endl;
-		}
-		else
-		{
-			cout << "Height not available..." << endl;
-			status = false;
-		}
-		if (IsReadable(pCam->OffsetX) && IsWritable(pCam->OffsetX))
-		{
-			pCam->OffsetX.SetValue(offset[cameraIndex].x);
+					cout << "Height set to " << pCam->Height.GetValue() << "..." << endl;
+				}
+				else
+				{
+					cout << "Height not available..." << endl;
+					status = false;
+				}
+				if (IsReadable(pCam->OffsetX) && IsWritable(pCam->OffsetX))
+				{
+					pCam->OffsetX.SetValue(offset[cameraIndex].x);
 
-			cout << "Offset X set to " << pCam->OffsetX.GetValue() << "..." << endl;
-		}
-		else
-		{
-			cout << "Offset X not available..." << endl;
-			status = false;
-		}
-		//
-		if (IsReadable(pCam->OffsetY) && IsWritable(pCam->OffsetY))
-		{
-			pCam->OffsetY.SetValue(offset[cameraIndex].y);
+					cout << "Offset X set to " << pCam->OffsetX.GetValue() << "..." << endl;
+				}
+				else
+				{
+					cout << "Offset X not available..." << endl;
+					status = false;
+				}
+				//
+				if (IsReadable(pCam->OffsetY) && IsWritable(pCam->OffsetY))
+				{
+					pCam->OffsetY.SetValue(offset[cameraIndex].y);
 
-			cout << "Offset Y set to " << pCam->OffsetY.GetValue() << "..." << endl;
+					cout << "Offset Y set to " << pCam->OffsetY.GetValue() << "..." << endl;
+				}
+				else
+				{
+					cout << "Offset Y not available..." << endl;
+					status = false;
+				}
+			}
+			
 		}
-		else
+		catch (Spinnaker::Exception& e)
 		{
-			cout << "Offset Y not available..." << endl;
-			status = false;
+			cout << "Error during setting white balance: " << e.what() << endl;
 		}
+		
         //process_status = process_status && PrintDeviceInfo(nodeMapTLDevice);
 #ifdef _DEBUG
         cout << "\n" << endl << "*** DEBUG ***" << "\n" << endl;
@@ -519,7 +539,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 				return false;
 			}
 			pCam->TriggerOverlap.SetValue(TriggerOverlap_ReadOut);
-			std::cout << "Trigger Overlap: " << pCam->TriggerOverlap.GetValue() << std::endl;;
+			std::cout << "Trigger Overlap: " << pCam->TriggerOverlap.GetCurrentEntry()->GetSymbolic() << std::endl;;
 		}
 		catch (Spinnaker::Exception& e)
 		{
@@ -679,13 +699,13 @@ int ResetExposure(CameraPtr pCam)
 		//
 		if (!IsReadable(pCam->ExposureAuto) || !IsWritable(pCam->ExposureAuto))
 		{
-			cout << "Unable to enable automatic exposure (node retrieval). Non-fatal error..." << endl << endl;
+			cout << "Unable to enable automatic exposure (node retrieval). Non-fatal error..." << "\n" << std::endl;
 			return -1;
 		}
 
 		pCam->ExposureAuto.SetValue(ExposureAuto_Continuous);
 
-		cout << "Automatic exposure enabled..." << endl << endl;
+		cout << "Automatic exposure enabled..." << "\n" << std::endl;
 	}
 	catch (Spinnaker::Exception& e)
 	{

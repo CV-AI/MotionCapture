@@ -18,10 +18,10 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	// OpenCV's distortion coefficient vector:  the first two radial parameters come first; these are followed by the
 	// two tangential parameters --LearnOpenCV3 Chapter19 Page724
 	std::vector < std::vector<double>> distorCoeffList = {
-						{-0.0560974273936180, 0.0820468069671561, 0, 0}, // assigning vector like this requires C++11 or higher
-						{-0.0702735401089445, 0.102611484500887, 0, 0},
-						{-0.0560974273936180, 0.0820468069671561, 0, 0}, // assigning vector like this requires C++11 or higher
-						{-0.0702735401089445, 0.102611484500887, 0, 0}
+						{-0.100789309140485,  0.111481779308653, 0, 0}, // assigning vector like this requires C++11 or higher
+						{-0.0800015988407199, 0.00913215876167434, 0, 0},
+						{-0.0429979674496634, 0.0565507535722041, 0, 0}, // assigning vector like this requires C++11 or higher
+						{-0.0772943133875519, 0.151213590544407, 0, 0}
 	};
 	// initiate parameters for camera rectification
 	for (int camera = 0; camera < numCameras; camera++)
@@ -43,15 +43,15 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	// these hard coded parameters are calculated by matlab for camera caliabration
 	// rotation matrix for camera set in left
 	std::vector < double > rotationMatLeftVec = {
-						0.999872825151855,-0.00942487454477512,0.0128648848678506,
-						0.00993803474975875, 0.999133141003343, -0.0404252645520858,
-						-0.0124727297798192, 0.0405479751480735, 0.999099741128598
+						0.999656680418481,-0.00430227923311327,-0.0258459220787953,
+						0.003299334490053675, 0.999244543003685, -0.0387228313696110,
+						0.0259929930293835, 0.0386242627212082, 0.998915677443606
 	};
 	// rotation matrix for camera set in right
 	std::vector < double > rotationMatRightVec = {
-						0.999872825151855,-0.00942487454477512,0.0128648848678506,
-						0.00993803474975875, 0.999133141003343, -0.0404252645520858,
-						-0.0124727297798192, 0.0405479751480735, 0.999099741128598
+						0.996293152093159,-0.0317006774801212,-0.0799688823204344,
+						0.0294008181914690, 0.999124135322116, -0.0297750584635399,
+						0.0808427299263845, 0.0273135362803202, 0.996352559967562
 	};
 	rotationMatLeft = cv::Mat(3, 3, CV_64F, rotationMatLeftVec.data());
 	rotationMatRight = cv::Mat(3, 3, CV_64F, rotationMatRightVec.data());
@@ -59,10 +59,10 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	std::cout << "Right Camera Set rotation Matrix: \n" << rotationMatRight << std::endl;
 	// translation matrix for camera set in left
 	std::vector<double> translationMatLeftVec =
-	{ 9.62562726230605, -244.628114017665, -13.0410750920663 };
+	{ -2.44566714617093, - 239.720907753974, - 5.59188270254899 };
 	// translation matrix for camera set in right
 	std::vector<double> translationMatRightVec =
-	{ 9.62562726230605, -244.628114017665, -13.0410750920663 };
+	{ 40.3426341450911, - 264.737756354131,	7.20784279572053 };
 
 	translationMatLeft = cv::Mat(translationMatLeftVec.size(), 1, CV_64F, translationMatLeftVec.data());
 	translationMatRight = cv::Mat(translationMatRightVec.size(), 1, CV_64F, translationMatRightVec.data());
@@ -122,9 +122,11 @@ void DataProcess::mapTo3D()
 		for (int marker = 0; marker < 6; marker++)
 		{
 			temp = cv::Point(points[camera][marker]);
+			std::cout << "After adding offset: Camera " << camera << " Marker " << marker << " " << points[camera][marker] << "\t";
 			// at<float>(y,x)是因为y指的是n_row, x指的是n_col
 			points[camera][marker].x = mapX[camera].at<float>(int(temp.y), int(temp.x));
 			points[camera][marker].y = mapY[camera].at<float>(int(temp.y), int(temp.x));
+			std::cout << "After mapping" << points[camera][marker] << std::endl;
 		}
 	}
 	// This is slightly quicker, but I'm not sure about the math
@@ -157,8 +159,37 @@ void DataProcess::mapTo3D()
 	{
 		MarkerPos3D[0][marker] = cv::Point3d(MarkerPosVecL[marker]);
 		MarkerPos3D[1][marker] = cv::Point3d(MarkerPosVecR[marker]);
+		std::cout << "Camera 0, Marker " << marker << " : " << MarkerPos3D[0][marker] <<"\t";
+		std::cout << "Camera 1, Marker " << marker << " : " << MarkerPos3D[1][marker] << std::endl;
 	}
 	
+}
+
+cv::Point3d DataProcess::mapTo3D(int camera_set, cv::Point upper_point, cv::Point lower_point)
+{
+	cv::Point temp;
+	// 双目校正 stereo rectification
+	
+	temp = cv::Point(upper_point);
+	// at<float>(y,x)是因为y指的是n_row, x指的是n_col
+	upper_point.x = mapX[camera_set].at<float>(int(temp.y), int(temp.x));
+	upper_point.y = mapY[camera_set].at<float>(int(temp.y), int(temp.x));
+	temp = cv::Point(lower_point);
+	lower_point.x = mapX[camera_set].at<float>(int(temp.y), int(temp.x));
+	lower_point.y = mapY[camera_set].at<float>(int(temp.y), int(temp.x));
+
+	cv::Vec3d disparityVec = cv::Vec3d(upper_point.x, upper_point.y, double(upper_point.y)-double(lower_point.y));
+	cv::Vec3d MarkerPosVec;
+	if (camera_set == 0)
+	{
+		cv::perspectiveTransform(disparityVec, MarkerPosVec, Q_left);
+
+	}
+	else
+	{
+		cv::perspectiveTransform(disparityVec, MarkerPosVec, Q_right);
+	}
+	return cv::Point3d(MarkerPosVec);
 }
 
 
@@ -188,7 +219,7 @@ void DataProcess::getJointAngle()
 bool DataProcess::exportGaitData()
 {
 	bool success = true;
-	mapTo3D(); // 主要的时间消耗 约14ms
+	mapTo3D(); // 
 	getJointAngle(); // 约4ms
 
 	std::vector<double> joint_angles = { hip[0], hip[1], knee[0], knee[1], ankle[0], ankle[1] };
@@ -212,7 +243,7 @@ bool DataProcess::FrameTransform()
 	return false;
 } 
 
-bool DataProcess::FindWorldFrame(cv::Mat upper,cv::Mat lower)
+bool DataProcess::FindWorldFrame(int camera_set, cv::Mat upper,cv::Mat lower)
 {
 	cv::Mat upper_bgr,lower_bgr;
 	cv::cvtColor(upper, upper_bgr, CV_RGB2BGR);
@@ -229,15 +260,9 @@ bool DataProcess::FindWorldFrame(cv::Mat upper,cv::Mat lower)
 	if (found)
 	{
 		std::cout << corners_upper << std::endl;
-		p0.x = (corners_upper[0].x - cx) * T / (corners_upper[0].y - corners_lower[0].y);
-		p0.y = (corners_upper[0].y - cy) * T / (corners_upper[0].y - corners_lower[0].y);
-		p0.z = fy * T / (corners_upper[0].y - corners_lower[0].y);
-		p1.x = (corners_upper[2].x - cx) * T / (corners_upper[2].y - corners_lower[2].y);
-		p1.y = (corners_upper[2].y - cy) * T / (corners_upper[2].y - corners_lower[2].y);
-		p1.z = fy * T / (corners_upper[2].y - corners_lower[2].y);
-		p2.x = (corners_upper[7].x - cx) * T / (corners_upper[7].y - corners_lower[7].y);
-		p2.y = (corners_upper[7].y - cy) * T / (corners_upper[7].y - corners_lower[7].y);
-		p2.z = fy * T / (corners_upper[7].y - corners_lower[7].y);
+		p0 = mapTo3D(camera_set, corners_upper[0], corners_lower[0]);
+		p1 = mapTo3D(camera_set, corners_upper[2], corners_lower[2]);
+		p2 = mapTo3D(camera_set, corners_upper[7], corners_lower[7]);
 		vectors[1] = p1 - p0;
 		cv::Point3d transform = -p0;
 		vectors[2] = p2 - p0;
@@ -252,13 +277,14 @@ bool DataProcess::FindWorldFrame(cv::Mat upper,cv::Mat lower)
 		//std::cout << vectors[0] << std::endl;
 		std::cout << "rotation matrix:\n"<<rotation << std::endl;
 		std::cout << "transform matrix:\n" << transform << std::endl;
+		Rotation[camera_set] = rotation;
+		Transform[camera_set] = transform;
 		GotWorldFrame = true;
-		Rotation.push_back(rotation);
-		Transform.push_back(transform);
 		return true;
 	}
 	else
 	{
+		GotWorldFrame = false;
 		return false;
 	}
 }

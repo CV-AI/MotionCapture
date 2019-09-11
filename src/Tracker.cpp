@@ -29,7 +29,6 @@ bool compareContourAreas(std::vector<cv::Point> contour1, std::vector<cv::Point>
 	return (i > j); // 从大到小排序
 }
 
-// initialize with whole image, so detectPosition_Initial is (0, 0)
 // This function get the color of the marker
 void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
 {
@@ -100,7 +99,6 @@ void Tracker::ColorThresholding(int marker_index)
 
 void Tracker::ColorThresholding()
 {
-	cv::imwrite("HSV.jpg", detectWindow_Initial);
 	cv::cvtColor(detectWindow_Initial, detectWindow_Initial, CV_RGB2HSV);
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow_Initial.size(), CV_8UC1);
 	cv::inRange(detectWindow_Initial, cv::Scalar(MIN_H_RED, MIN_SATURATION, MIN_VALUE), cv::Scalar(MAX_H_RED, MAX_SATURATION, MAX_VALUE), rangeRes);
@@ -129,17 +127,6 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 	cv::findContours(masked_window, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
 	std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
 	//cv::drawContours(ReceivedImages[camera_index], contours, -1, cv::Scalar(150, 100, 0), 2);//-1 means draw all contours
-	// remove contours that are too small or large
-	//while (itc != contours.end())
-	//{
-	//	std::cout << "Camera "<<camera_index<<" "<<itc->size() << std::endl;
-	//	//std::cout << "size: " << itc->size() << std::endl;
-	//	if (itc->size() < cmin || itc->size() > cmax)
-	//	{
-	//		itc = contours.erase(itc);
-	//	}
-	//	else itc++;
-	//}
 	
 	std::sort(contours.begin(), contours.end(), compareContourAreas);
 	//contours = std::vector<std::vector<cv::Point>>(contours.begin(), contours.begin() + 6);
@@ -147,7 +134,7 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 	if (contours.size() >= 6)
 	{
 		//std::vector<std::vector<cv::Point>>::const_iterator it = contours.begin();
-	// 找到contour的boundingRect的中心
+		// 找到contour的boundingRect的中心
 		for (int i = 0; i < 6; i++)
 		{
 			std::cout << "contour size" << contours[i].size() << std::endl;
@@ -160,21 +147,11 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 		{
 			currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
 		}
-		//int i = 0;
-		//while (it != contours.end())
-		//{
-
-		//	cv::Moments mom = cv::moments(cv::Mat(*it++));
-		//	// 因为检测窗口不是全部画面，所以要加上检测窗口在全部画面的位置
-		//	currentPos[camera_index][i] = cv::Point(mom.m10 / mom.m00+detectPosition_Initial.x, mom.m01 / mom.m00+ detectPosition_Initial.y);
-		//	i++;
-		//}
-		cv::drawContours(ReceivedImages[camera_index], contours, -1, cv::Scalar(0, 255, 0), 5);//-1 means draw all contours
+		// cv::drawContours(ReceivedImages[camera_index], contours, -1, cv::Scalar(0, 255, 0), 5);//-1 means draw all contours
 		cv::namedWindow("detectwindow", 0);
 		cv::imshow("detectwindow", masked_window);
 		cv::waitKey(0);
 		return true;
-
 	}
 	
 	else
@@ -384,11 +361,6 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 			
 			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[camera_index](detectRect).clone(); 
 			success = (*trackerPtr).getContoursAndMoment(camera_index,j) && success;
-			// 因为标定相机时是全尺寸，所以需要转换回全尺寸下的图像坐标
-			//std::cout << "before " << (*trackerPtr).currentPos[camera_index][2 * j];
-			/*(*trackerPtr).currentPos[camera_index][2*j] = (*trackerPtr).currentPos[camera_index][2 * j]+(*trackerPtr).offset[camera_index];
-			(*trackerPtr).currentPos[camera_index][2*j+1] = (*trackerPtr).currentPos[camera_index][2 * j + 1]+(*trackerPtr).offset[camera_index];*/
-			//std::cout << "after " << (*trackerPtr).currentPos[camera_index][2 * j];
 			(*trackerPtr).momentum[j] = weight*((*trackerPtr).currentPosSet[camera_index][j] - (*trackerPtr).previousPosSet[camera_index][j]);
 		}
 		break;

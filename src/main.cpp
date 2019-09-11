@@ -35,6 +35,7 @@ int main(int /*argc*/, char** /*argv*/)
     cv::namedWindow("Right_Upper", window_type);
     cv::namedWindow("Right_Lower", window_type);
     cv::namedWindow("Left_Lower", window_type);
+	cv::namedWindow("CONCAT", window_type);
     // Retrieve singleton reference to system object
     SystemPtr system = System::GetInstance();
     // Print Spinnaker library version
@@ -43,7 +44,7 @@ int main(int /*argc*/, char** /*argv*/)
         << spinnakerLibraryVersion.major << "."
         << spinnakerLibraryVersion.minor << "."
         << spinnakerLibraryVersion.type << "."
-        << spinnakerLibraryVersion.build << endl << endl;
+        << spinnakerLibraryVersion.build << "\n" << std::endl;
 
     // Retrieve list of cameras from the system
     CameraList camList = system->GetCameras();
@@ -51,7 +52,7 @@ int main(int /*argc*/, char** /*argv*/)
     unsigned int numCameras = camList.GetSize();
 	int CameraIndex[4] = { 0,1,2,3 };
 	dataProcess.numCameras = numCameras;
-	std::cout << "Number of cameras detected: " << numCameras << endl << endl;
+	std::cout << "Number of cameras detected: " << numCameras << "\n" << std::endl;
 	assert(numCameras == NUM_CAMERAS);
 	// set current process as high priority (second highest, the highest is Real time)
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
@@ -139,7 +140,7 @@ int main(int /*argc*/, char** /*argv*/)
 		
         // acquire images and do something
         // main part of this program
-        cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0);
+        //cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0); 
 		bool first_time = true;
 		int num_Acquisition = 0; // init tracker after some images to assure auto balance finished
 		try
@@ -228,16 +229,17 @@ int main(int /*argc*/, char** /*argv*/)
 
 						for (int marker_index = 0; marker_index < NUM_MARKERS; marker_index++)
 						{
-							cv::putText(tracker.ReceivedImages[i], to_string(i), cv::Point(50, 50), 2, 2, cv::Scalar(0, 255, 0));
-							cv::putText(tracker.ReceivedImages[i], to_string(marker_index), tracker.currentPos[i][marker_index], 2, 2, cv::Scalar(0, 255, 0));
-							cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 3, cv::Scalar(0, 0, 255), 3);
+							std::cout << "Camera " << i << " Marker " << marker_index << " " << tracker.currentPos[i][marker_index] << std::endl;
+							cv::putText(tracker.ReceivedImages[i], to_string(i), cv::Point(50, 50), 1, 2, cv::Scalar(0, 255, 0), 2);
+							cv::putText(tracker.ReceivedImages[i], to_string(marker_index), tracker.currentPos[i][marker_index], 1, 2, cv::Scalar(0, 255, 0), 2);
+							cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 3, cv::Scalar(0, 0, 255), 2);
 							// std::cout << i << marker_index << tracker.currentPos[i][marker_index] << std::endl;
 
 						}
 						for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
 						{
 							cv::rectangle(tracker.ReceivedImages[i], cv::Rect(tracker.currentPosSet[i][marker_set].x - tracker.detectWindowDimX / 2,
-								tracker.currentPosSet[i][marker_set].y - tracker.detectWindowDimY / 2, tracker.detectWindowDimX, tracker.detectWindowDimY), cv::Scalar(255, 0, 0));
+								tracker.currentPosSet[i][marker_set].y - tracker.detectWindowDimY / 2, tracker.detectWindowDimX, tracker.detectWindowDimY), cv::Scalar(255, 0, 0),2);
 						}
 					}
 					finish_tracking = std::chrono::high_resolution_clock::now();
@@ -250,9 +252,9 @@ int main(int /*argc*/, char** /*argv*/)
 							// 因为我们截取了一部分图像，所以计算位置之前要还原到原来的2048*2048的像素坐标系下的坐标
 							dataProcess.points[camera_index][marker_inex] = tracker.currentPos[camera_index][marker_inex]
 								+ dataProcess.offset[camera_index];
-							/*cout << "offset" << dataProcess.offset[camera_index]<<endl;
+							cout << "offset" << dataProcess.offset[camera_index]<<endl;
 							cout << "tracker pos" << tracker.currentPos[camera_index][marker_inex] << endl;
-							cout << "dataprocess pos" << dataProcess.points[camera_index][marker_inex] << endl;*/
+							cout << "dataprocess pos" << dataProcess.points[camera_index][marker_inex] << endl;
 						}
 					}
 					dataProcess.exportGaitData();
@@ -263,7 +265,7 @@ int main(int /*argc*/, char** /*argv*/)
 					
 				}
 
-				if (/*tracker.getColors && */!tracker.TrackerAutoIntialized && num_Acquisition > 400
+				if (/*tracker.getColors && */!tracker.TrackerAutoIntialized && num_Acquisition > 30
 #ifdef TRANS_FRAME 
 					&& dataProcess.GotWorldFrame
 #endif
@@ -302,10 +304,15 @@ int main(int /*argc*/, char** /*argv*/)
 					}
 				}
 #endif
-				cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
+				/*cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
 				cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
 				cv::imshow("Right_Upper", tracker.ReceivedImages[2]);
-				cv::imshow("Right_Lower", tracker.ReceivedImages[3]);
+				cv::imshow("Right_Lower", tracker.ReceivedImages[3]);*/
+				cv::Mat combine, combine1, combine2;
+				cv::hconcat(tracker.ReceivedImages[2], tracker.ReceivedImages[0], combine1);
+				cv::hconcat(tracker.ReceivedImages[3], tracker.ReceivedImages[1], combine2);
+				cv::vconcat(combine1, combine2, combine);
+				cv::imshow("CONCAT", combine);
 				int key = cv::waitKey(1);
 				if (key == 27)
 				{
