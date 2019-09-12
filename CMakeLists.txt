@@ -64,7 +64,7 @@ target_link_libraries(${name}
         ${PTGREY_SDK_LIBRARY_RELEASE}
 )
 target_link_libraries(${calib}
-        ${OpenCV_LIBS}}
+        ${OpenCV_LIBS}
 )
 
 target_link_libraries(${retrive}

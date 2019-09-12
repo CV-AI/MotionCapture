@@ -1,7 +1,6 @@
 #include "Spinnaker.h"
 #include "SpinGenApi/SpinnakerGenApi.h"
 #include "Acquisition.hpp"
-#include "DataProcess.hpp"
 #include <iostream>
 #include <sstream>
 #include <chrono>
@@ -24,13 +23,12 @@ int main(int /*argc*/, char** /*argv*/)
 {   
    
 	bool status = true;
-	DataProcess dataProcess;
+	TRACKING = false;
     // let the program know which camera to acquire image from
     
     cv::Mat image_LU, image_RU, image_RL, image_LL; // Left_Upper, Right_Upper, Right_Lower, Left_Lower
 	cv::WindowFlags window_type = cv::WINDOW_FULLSCREEN;
 	cv::namedWindow("CONCAT", window_type);
-	cv::namedWindow("map", window_type);
     // Retrieve singleton reference to system object
     SystemPtr system = System::GetInstance();
     // Print Spinnaker library version
@@ -127,7 +125,7 @@ int main(int /*argc*/, char** /*argv*/)
         // main part of this program
         //cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0); 
 		bool first_time = true;
-		int num_Acquisition = 0; // init tracker after some images to assure auto balance finished
+		int num_Acquisition = 4; // init tracker after some images to assure auto balance finished
 		try
 		{
 			while (status)
@@ -161,35 +159,13 @@ int main(int /*argc*/, char** /*argv*/)
 							"Please check onscreen print outs for error details" << endl;
 					}
 				}
-
-				cv::Mat combine, combine1, combine2, combine3;
+				cv::Mat combine, combine1, combine2;
 				cv::hconcat(images[2], images[0], combine1);
 				cv::hconcat(images[3], images[1], combine2);
 				cv::vconcat(combine1, combine2, combine);
 				cv::resize(combine, combine, cv::Size(1024, 1024));
-				for (int i = 0; i < 32; i++)
-				{
-					for (int j = 0; j < 32; j++)
-					{
-						cv::line(combine, cv::Point(32 * i, 0), cv::Point(32 * i, 1024), cv::Scalar(0, 255, 0));
-					}
-				}
 				cv::imshow("CONCAT", combine);
-				dataProcess.mapImages(images);
-				cv::hconcat(images[2], images[0], combine1);
-				cv::hconcat(images[3], images[1], combine2);
-				cv::vconcat(combine1, combine2, combine3);
-				
-				cv::resize(combine3, combine3, cv::Size(1024, 1024));
-				for (int i = 0; i < 32; i++)
-				{
-					for (int j = 0; j < 32; j++)
-					{
-						cv::line(combine3, cv::Point(32 * i, 0), cv::Point(32 * i, 1024), cv::Scalar(0, 255, 0));
-					}
-				}
-				cv::imshow("map", combine3);
-				//cv::imwrite("map.jpg", combine3);
+
 				int key = cv::waitKey(1);
 				if (key == 27)
 				{
@@ -198,10 +174,10 @@ int main(int /*argc*/, char** /*argv*/)
 				if (key == 32) // space
 				{
 
-					string string0 = "LeftUpper/" + to_string(num_Acquisition) + ".png";
-					string string1 = "LeftLower/" + to_string(num_Acquisition) + ".png";
-					string string2 = "RightUpper/" + to_string(num_Acquisition) + ".png";
-					string string3 = "RightLower/" + to_string(num_Acquisition) + ".png";
+					string string0 = "LeftUpper/" + to_string(num_Acquisition) + ".jpg";
+					string string1 = "LeftLower/" + to_string(num_Acquisition) + ".jpg";
+					string string2 = "RightUpper/" + to_string(num_Acquisition) + ".jpg";
+					string string3 = "RightLower/" + to_string(num_Acquisition) + ".jpg";
 					cv::imwrite(string0, images[0]);
 					cv::imwrite(string1, images[1]);
 					cv::imwrite(string2, images[2]);

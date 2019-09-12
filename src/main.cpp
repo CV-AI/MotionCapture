@@ -51,7 +51,7 @@ int main(int /*argc*/, char** /*argv*/)
   
     unsigned int numCameras = camList.GetSize();
 	int CameraIndex[4] = { 0,1,2,3 };
-	dataProcess.numCameras = numCameras;
+	assert(dataProcess.numCameras == numCameras);
 	std::cout << "Number of cameras detected: " << numCameras << "\n" << std::endl;
 	assert(numCameras == NUM_CAMERAS);
 	// set current process as high priority (second highest, the highest is Real time)
@@ -229,7 +229,7 @@ int main(int /*argc*/, char** /*argv*/)
 
 						for (int marker_index = 0; marker_index < NUM_MARKERS; marker_index++)
 						{
-							std::cout << "Camera " << i << " Marker " << marker_index << " " << tracker.currentPos[i][marker_index] << std::endl;
+							//std::cout << "Camera " << i << " Marker " << marker_index << " " << tracker.currentPos[i][marker_index] << std::endl;
 							cv::putText(tracker.ReceivedImages[i], to_string(i), cv::Point(50, 50), 1, 2, cv::Scalar(0, 255, 0), 2);
 							cv::putText(tracker.ReceivedImages[i], to_string(marker_index), tracker.currentPos[i][marker_index], 1, 2, cv::Scalar(0, 255, 0), 2);
 							cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 3, cv::Scalar(0, 0, 255), 2);
@@ -252,9 +252,9 @@ int main(int /*argc*/, char** /*argv*/)
 							// 因为我们截取了一部分图像，所以计算位置之前要还原到原来的2048*2048的像素坐标系下的坐标
 							dataProcess.points[camera_index][marker_inex] = tracker.currentPos[camera_index][marker_inex]
 								+ dataProcess.offset[camera_index];
-							cout << "offset" << dataProcess.offset[camera_index]<<endl;
+							/*cout << "offset" << dataProcess.offset[camera_index]<<endl;
 							cout << "tracker pos" << tracker.currentPos[camera_index][marker_inex] << endl;
-							cout << "dataprocess pos" << dataProcess.points[camera_index][marker_inex] << endl;
+							cout << "dataprocess pos" << dataProcess.points[camera_index][marker_inex] << endl;*/
 						}
 					}
 					dataProcess.exportGaitData();
@@ -308,7 +308,7 @@ int main(int /*argc*/, char** /*argv*/)
 				cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
 				cv::imshow("Right_Upper", tracker.ReceivedImages[2]);
 				cv::imshow("Right_Lower", tracker.ReceivedImages[3]);*/
-				cv::Mat combine, combine1, combine2;
+				cv::Mat combine, combine1, combine2, combine3;
 				cv::hconcat(tracker.ReceivedImages[2], tracker.ReceivedImages[0], combine1);
 				cv::hconcat(tracker.ReceivedImages[3], tracker.ReceivedImages[1], combine2);
 				cv::vconcat(combine1, combine2, combine);

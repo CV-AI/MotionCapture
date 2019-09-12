@@ -5,7 +5,6 @@
 
 DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 {
-	numCameras = 4;
 	GotWorldFrame = false;
 	time = 0;
 	hip[0] = 0; hip[1] = 0;
@@ -14,14 +13,13 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	knee_file.open("knee.csv");
 	hip_file.open("hip.csv");
 	ankle_file.open("ankle.csv");
-	
-	// OpenCV's distortion coefficient vector:  the first two radial parameters come first; these are followed by the
+	// OpenCV's distortion coefficient vector:  the radial parameters come first; these are followed by the
 	// two tangential parameters --LearnOpenCV3 Chapter19 Page724
 	std::vector < std::vector<double>> distorCoeffList = {
-						{-0.100789309140485,  0.111481779308653, 0, 0}, // assigning vector like this requires C++11 or higher
-						{-0.0800015988407199, 0.00913215876167434, 0, 0},
-						{-0.0429979674496634, 0.0565507535722041, 0, 0}, // assigning vector like this requires C++11 or higher
-						{-0.0772943133875519, 0.151213590544407, 0, 0}
+						{-0.0709573236367611, 0.0819347816184623, -0.00229710720816990,	0.00223004557805238}, // assigning vector like this requires C++11 or higher
+						{-0.0782886283658884, 0.129966473775231, -0.00447759677730269, 0.00371640574661551},
+						{-0.0637950488364343, 0.115821950263960, 0.00448871862274016, 0.00244843774244850}, // assigning vector like this requires C++11 or higher
+						{-0.0732969283921288, 0.139401736087819, 0.00608572295729794, 0.00261382520826605}
 	};
 	// initiate parameters for camera rectification
 	for (int camera = 0; camera < numCameras; camera++)
@@ -42,27 +40,28 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	// initialize rotation and translation matrix for left and right camera set
 	// these hard coded parameters are calculated by matlab for camera caliabration
 	// rotation matrix for camera set in left
+	// the matlab matrix need to be transposed to fit opencv
 	std::vector < double > rotationMatLeftVec = {
-						0.999656680418481,-0.00430227923311327,-0.0258459220787953,
-						0.003299334490053675, 0.999244543003685, -0.0387228313696110,
-						0.0259929930293835, 0.0386242627212082, 0.998915677443606
+						0.999950740825703, -0.00839254784768728, -0.00529915679631496,
+						0.00847312121061239,	0.999845970938895,	0.0153701208261035,
+						0.00516934609771118, -0.0154142641044920,	0.999867830427122
 	};
 	// rotation matrix for camera set in right
 	std::vector < double > rotationMatRightVec = {
-						0.996293152093159,-0.0317006774801212,-0.0799688823204344,
-						0.0294008181914690, 0.999124135322116, -0.0297750584635399,
-						0.0808427299263845, 0.0273135362803202, 0.996352559967562
+						0.999220726328862,	0.0288498130258020, - 0.0269374899201554,
+						- 0.0280613789593659,	0.999179560790386,	0.0292021285119807,
+						0.0277578652947424, - 0.0284234689492265,	0.999210492002146
 	};
-	rotationMatLeft = cv::Mat(3, 3, CV_64F, rotationMatLeftVec.data());
-	rotationMatRight = cv::Mat(3, 3, CV_64F, rotationMatRightVec.data());
+	rotationMatLeft = cv::Mat(3, 3, CV_64F, rotationMatLeftVec.data()).t();
+	rotationMatRight = cv::Mat(3, 3, CV_64F, rotationMatRightVec.data()).t();
 	std::cout << "Left Camera Set rotation Matrix: \n" << rotationMatLeft << std::endl;
 	std::cout << "Right Camera Set rotation Matrix: \n" << rotationMatRight << std::endl;
 	// translation matrix for camera set in left
 	std::vector<double> translationMatLeftVec =
-	{ -2.44566714617093, - 239.720907753974, - 5.59188270254899 };
+	{ 1.09924022464804,-311.013107025229, -0.325991832090340 };
 	// translation matrix for camera set in right
 	std::vector<double> translationMatRightVec =
-	{ 40.3426341450911, - 264.737756354131,	7.20784279572053 };
+	{ 10.6279676948522, - 264.663517556467, - 9.95862862688720 };
 
 	translationMatLeft = cv::Mat(translationMatLeftVec.size(), 1, CV_64F, translationMatLeftVec.data());
 	translationMatRight = cv::Mat(translationMatRightVec.size(), 1, CV_64F, translationMatRightVec.data());
@@ -91,6 +90,7 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	cv::initUndistortRectifyMap(cameraMatrix[0], distorCoeff[0], R_upper, P_upper, cv::Size(2048, 2048), CV_32F, mapX[0], mapY[0]);
 	cv::initUndistortRectifyMap(cameraMatrix[1], distorCoeff[1], R_lower, P_lower, cv::Size(2048, 2048), CV_32F, mapX[1], mapY[1]);
 	
+	
 	// 计算右边一对相机的map matrix
 	//cv::Mat R_upper_, R_lower_, P_upper_, P_lower_, Q_;
 	cv::stereoRectify(cameraMatrix[2], distorCoeff[2], cameraMatrix[3], distorCoeff[3], cv::Size(2048, 2048), 
@@ -99,7 +99,41 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	std::cout << "disparity map matrix for RIGHT cameras: \n" << Q_right << std::endl;
 	cv::initUndistortRectifyMap(cameraMatrix[2], distorCoeff[2], R_upper, P_upper, cv::Size(2048, 2048), CV_32F, mapX[2], mapY[2]);
 	cv::initUndistortRectifyMap(cameraMatrix[3], distorCoeff[3], R_lower, P_lower, cv::Size(2048, 2048), CV_32F, mapX[3], mapY[3]);
+	for (int i = 0; i < numCameras; i++)
+	{
+		cv::convertMaps(mapX[i], mapY[i], map[i], cv::noArray(), CV_16SC2, true);
+	}
+	
+	for (int disparity = 0; disparity < 300; disparity+=4)
+	{
+		std::vector<cv::Vec3d> disparityVec;
+		disparityVec.push_back(cv::Vec3d(1022, 963, disparity));
+		std::vector<cv::Vec3d> pos;
+		cv::perspectiveTransform(disparityVec, pos, Q_left);
+		std::cout << "disparity : "<<disparity << " " << pos[0] << std::endl;
+	}
+	/*std::vector<double> Q_left_vec =
+	{
+		1, 0, 0, -cx_list[0], 
+		0, 1, 0, -cy_list[0],
+		0, 0, 0, fy_list[0], 
+		0, 0, -1/ translationMatLeftVec[1], -double(cy_list[0]-cy_list[1])/ translationMatLeftVec[1]
+	};
+	Q_left = cv::Mat(4, 4, CV_64F, Q_left_vec.data());
+	std::cout << "disparity map matrix for LEFT cameras original: \n" << Q_left << std::endl;*/
 
+
+	/*cv::FileStorage fs("calib.yml", cv::FileStorage::READ);
+	fs["map0"] >> map[0];
+	fs["map1"] >> map[1];
+	fs["map2"] >> map[2];
+	fs["map3"] >> map[3];
+	fs["Q0"] >> Q_left;
+	std::cout << "Q_left" << Q_left;
+	fs["Q1"] >> Q_right;
+	fs.release();*/
+	
+	
 }
 
 
@@ -117,40 +151,36 @@ void DataProcess::mapTo3D()
 	
 	cv::Point temp;
 	// 双目校正 stereo rectification
+	
 	for (int camera = 0; camera < numCameras; camera++)
 	{
 		for (int marker = 0; marker < 6; marker++)
 		{
 			temp = cv::Point(points[camera][marker]);
-			std::cout << "After adding offset: Camera " << camera << " Marker " << marker << " " << points[camera][marker] << "\t";
+			std::cout << "adding offset: Camera " << camera << " Marker " << marker << " " << points[camera][marker] << "\t";
 			// at<float>(y,x)是因为y指的是n_row, x指的是n_col
-			points[camera][marker].x = mapX[camera].at<float>(int(temp.y), int(temp.x));
-			points[camera][marker].y = mapY[camera].at<float>(int(temp.y), int(temp.x));
-			std::cout << "After mapping" << points[camera][marker] << std::endl;
+			mapped_points[camera][marker].x = mapX[camera].at < float >(int(temp.y), int(temp.x));
+			mapped_points[camera][marker].y = mapY[camera].at < float >(int(temp.y), int(temp.x));
+			std::cout << "float point mapping" << mapped_points[camera][marker] << std::endl;
 		}
-	}
-	// This is slightly quicker, but I'm not sure about the math
-	//for (int marker_set = 0; marker_set < numCameras / 2; marker_set++)
-	//{
-	//	for (int marker = 0; marker < 6; marker++)
-	//	{
-	//		MarkerPos3D[marker_set][marker].x = (double(points[2 * marker_set][marker].x) - cx) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
-	//		MarkerPos3D[marker_set][marker].y = (double(points[2 * marker_set][marker].y) - cy) * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
-	//		MarkerPos3D[marker_set][marker].z = fy * T / (double(points[2 * marker_set][marker].y) - double(points[2 * marker_set + 1][marker].y));
-	//		//std::cout << "Camera Set " << marker_set << " Marker " << marker << MarkerPos3D[marker_set][marker] << std::endl;
-	//	}
-	//}
-	
+	}	
 	std::vector<cv::Vec3d> disparityVecLeft, disparityVecRight;
 
+	/*for (int marker = 0; marker < 6; marker++)
+	{
+		disparityVecLeft.push_back(cv::Vec3d(double(mapped_points[0][marker].x),
+			double(mapped_points[0][marker].y), double(mapped_points[0][marker].y) - double(mapped_points[1][marker].y)));
+		disparityVecRight.push_back(cv::Vec3d(double(mapped_points[2][marker].x),
+			double(mapped_points[2][marker].y), double(mapped_points[2][marker].y) - double(mapped_points[3][marker].y)));
+	}*/
 	for (int marker = 0; marker < 6; marker++)
 	{
-
 		disparityVecLeft.push_back(cv::Vec3d(double(points[0][marker].x),
 			double(points[0][marker].y), double(points[0][marker].y) - double(points[1][marker].y)));
 		disparityVecRight.push_back(cv::Vec3d(double(points[2][marker].x),
 			double(points[2][marker].y), double(points[2][marker].y) - double(points[3][marker].y)));
 	}
+	std::cout << "Disparity Vec 0" << disparityVecLeft[0] << std::endl;
 	std::vector<cv::Vec3d> MarkerPosVecL, MarkerPosVecR;
 	cv::perspectiveTransform(disparityVecLeft, MarkerPosVecL, Q_left);
 	cv::perspectiveTransform(disparityVecRight, MarkerPosVecR, Q_right);
@@ -164,32 +194,39 @@ void DataProcess::mapTo3D()
 	}
 	
 }
-
+void DataProcess::mapImages(cv::Mat images[4])
+{
+	for (int i = 0; i < 4; i++)
+	{
+		cv::remap(images[i], images[i], map[i], cv::noArray(), 1);
+	}
+}
 cv::Point3d DataProcess::mapTo3D(int camera_set, cv::Point upper_point, cv::Point lower_point)
 {
-	cv::Point temp;
-	// 双目校正 stereo rectification
-	
-	temp = cv::Point(upper_point);
-	// at<float>(y,x)是因为y指的是n_row, x指的是n_col
-	upper_point.x = mapX[camera_set].at<float>(int(temp.y), int(temp.x));
-	upper_point.y = mapY[camera_set].at<float>(int(temp.y), int(temp.x));
-	temp = cv::Point(lower_point);
-	lower_point.x = mapX[camera_set].at<float>(int(temp.y), int(temp.x));
-	lower_point.y = mapY[camera_set].at<float>(int(temp.y), int(temp.x));
+	//cv::Point temp;
+	//// 双目校正 stereo rectification
+	//
+	//temp = cv::Point(upper_point);
+	//// at<float>(y,x)是因为y指的是n_row, x指的是n_col
+	//upper_point.x = mapX[camera_set].at<float>(int(temp.y), int(temp.x));
+	//upper_point.y = mapY[camera_set].at<float>(int(temp.y), int(temp.x));
+	//temp = cv::Point(lower_point);
+	//lower_point.x = mapX[camera_set].at<float>(int(temp.y), int(temp.x));
+	//lower_point.y = mapY[camera_set].at<float>(int(temp.y), int(temp.x));
 
-	cv::Vec3d disparityVec = cv::Vec3d(upper_point.x, upper_point.y, double(upper_point.y)-double(lower_point.y));
-	cv::Vec3d MarkerPosVec;
-	if (camera_set == 0)
-	{
-		cv::perspectiveTransform(disparityVec, MarkerPosVec, Q_left);
+	//cv::Vec3d disparityVec = cv::Vec3d(upper_point.x, upper_point.y, double(upper_point.y)-double(lower_point.y));
+	//cv::Vec3d MarkerPosVec;
+	//if (camera_set == 0)
+	//{
+	//	cv::perspectiveTransform(disparityVec, MarkerPosVec, Q_left);
 
-	}
-	else
-	{
-		cv::perspectiveTransform(disparityVec, MarkerPosVec, Q_right);
-	}
-	return cv::Point3d(MarkerPosVec);
+	//}
+	//else
+	//{
+	//	cv::perspectiveTransform(disparityVec, MarkerPosVec, Q_right);
+	//}
+	//return cv::Point3d(MarkerPosVec);
+	return cv::Point3d();
 }
 
 

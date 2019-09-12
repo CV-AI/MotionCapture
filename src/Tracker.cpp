@@ -148,9 +148,9 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 			currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
 		}
 		// cv::drawContours(ReceivedImages[camera_index], contours, -1, cv::Scalar(0, 255, 0), 5);//-1 means draw all contours
-		cv::namedWindow("detectwindow", 0);
 		cv::imshow("detectwindow", masked_window);
 		cv::waitKey(0);
+		cv::destroyWindow("detectwindow");
 		return true;
 	}
 	

@@ -28,15 +28,17 @@ public:
 	std::ofstream knee_file;
 	std::ofstream hip_file;
 	std::ofstream ankle_file;
-	int numCameras;
+	const int numCameras = 4;
 	//void getTime();
 	void mapTo3D();
+	void mapImages(cv::Mat[]);
 	cv::Point3d mapTo3D(int, cv::Point, cv::Point);
 	void getJointAngle();
 	bool exportGaitData();
 	bool FrameTransform();
 	bool DataProcess::FindWorldFrame(int, cv::Mat, cv::Mat);
 	cv::Point points[4][6];
+	cv::Point2f mapped_points[4][6];
 	cv::Point3d MarkerPos3D[2][6];
 	// create exponential average object
 	EMA ema;
@@ -58,12 +60,14 @@ public:
 	cv::Mat distorCoeff[4];
 	// 4×4  disparity-to-depth mapping matrix (see reprojectImageTo3D ).
 	cv::Matx44d Q_left, Q_right;
-	float cx_list[4] = { 1046.92375976191, 1041.89426802427, 1007.84085826947, 994.129452585946 };
-	float cy_list[4] = { 980.693531344468, 1000.16926119558, 1003.98231530614, 986.114887210247 };
-	float fx_list[4] = { 1096.29367295368, 1082.33625374248, 1112.59791828538, 1088.30019163465 };
-	float fy_list[4] = { 1090.47643900486, 1078.55282358608, 1113.62453563407, 1088.07141733886 };
+	float cx_list[4] = { 1028.86793241869, 1025.25190697668, 1064.17248516588, 1057.75116447966 };
+	float cy_list[4] = { 998.503330516640, 992.096216270560, 1010.52956670735, 1009.38127702806 };
+	float fx_list[4] = { 1102.37337240957, 1109.92089040731, 1158.42318268710, 1138.43655571807 };
+	float fy_list[4] = { 1102.26282215247, 1108.12606534582, 1170.73160163419, 1150.35306687457 };
 	cv::Mat rotationMatLeft, rotationMatRight;
 	cv::Mat translationMatLeft, translationMatRight;
+	cv::Mat map[4];
+
 	cv::Mat mapX[4];
 	cv::Mat mapY[4];
 	const double delta_cy = 6.222484902473; // cy_lower - cy
