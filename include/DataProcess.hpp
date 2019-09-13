@@ -10,9 +10,12 @@
 #include "TcAdsDef.h"
 #include "TcAdsAPI.h"
 
-cv::Point3d crossing(cv::Point3d u, cv::Point3d v);
-cv::Point3d scale(cv::Point3d u);
-cv::Point3d operator*(cv::Mat M, cv::Point3d p);
+cv::Point3f crossing(cv::Point3f u, cv::Point3f v);
+cv::Point3f scale(cv::Point3f u);
+cv::Point3f operator*(cv::Mat M, cv::Point3f p);
+void sortChessboardCorners(std::vector<cv::Point2f> &corners);
+bool comparePointY(cv::Point2f pnt0, cv::Point2f pnt1);
+bool comparePointX(cv::Point2f pnt0, cv::Point2f pnt1);
 class DataProcess
 {
 
@@ -31,15 +34,15 @@ public:
 	const int numCameras = 4;
 	//void getTime();
 	void mapTo3D();
-	void mapImages(cv::Mat[]);
-	cv::Point3d mapTo3D(int, cv::Point, cv::Point);
+	cv::Point3f mapTo3D(int, cv::Point, cv::Point);
 	void getJointAngle();
 	bool exportGaitData();
 	bool FrameTransform();
-	bool DataProcess::FindWorldFrame(int, cv::Mat, cv::Mat);
-	cv::Point points[4][6];
+	bool DataProcess::FindWorldFrame(cv::Mat[4]);
+	cv::Point2i points[4][6];
 	cv::Point2f mapped_points[4][6];
-	cv::Point3d MarkerPos3D[2][6];
+	cv::Point3f MarkerPos3D[2][6];
+
 	// create exponential average object
 	EMA ema;
 	cv::Mat image;
@@ -51,11 +54,7 @@ public:
 	bool GotWorldFrame;
 	bool gettime = false;
 	cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,200), cv::Point(750,500), cv::Point(800,200) };
-	const double cx = 1010.13238776137;
-	const double cy = 991.338656997527;
-	const double fx = 1121.56188766987;
-	const double fy = 1120.60483176776;
-	const double cy_lower = 997.561141920296;
+	
 	cv::Mat cameraMatrix[4];
 	cv::Mat distorCoeff[4];
 	// 4×4  disparity-to-depth mapping matrix (see reprojectImageTo3D ).
@@ -66,14 +65,10 @@ public:
 	float fy_list[4] = { 1102.26282215247, 1108.12606534582, 1170.73160163419, 1150.35306687457 };
 	cv::Mat rotationMatLeft, rotationMatRight;
 	cv::Mat translationMatLeft, translationMatRight;
-	cv::Mat map[4];
 
-	cv::Mat mapX[4];
-	cv::Mat mapY[4];
-	const double delta_cy = 6.222484902473; // cy_lower - cy
-	const double T = 244.628114017665;
+	cv::Mat Rectify[4], Projection[4]; // will be computed by cv::stereoRectify()
 	cv::Mat Rotation[2];
-	cv::Point3d Transform[2];
+	cv::Point3f Transform[2];
 
 	long      nErr, nPort;	//定义端口变量
 	AmsAddr   Addr;		//定义AMS地址变量

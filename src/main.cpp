@@ -11,7 +11,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-//#define TRANS_FRAME
+#define TRANS_FRAME
 
 using namespace Spinnaker;
 using namespace Spinnaker::GenApi;
@@ -285,8 +285,7 @@ int main(int /*argc*/, char** /*argv*/)
 					//dataProcess.GotWorldFrame = true;
 					try
 					{
-						bool found = dataProcess.FindWorldFrame(tracker.ReceivedImages[0], tracker.ReceivedImages[1]);
-						found = dataProcess.FindWorldFrame(tracker.ReceivedImages[2], tracker.ReceivedImages[3]) && found;
+						bool found = dataProcess.FindWorldFrame(tracker.ReceivedImages);
 						if (found)
 						{
 							dataProcess.GotWorldFrame = true;
@@ -304,10 +303,6 @@ int main(int /*argc*/, char** /*argv*/)
 					}
 				}
 #endif
-				/*cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
-				cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
-				cv::imshow("Right_Upper", tracker.ReceivedImages[2]);
-				cv::imshow("Right_Lower", tracker.ReceivedImages[3]);*/
 				cv::Mat combine, combine1, combine2, combine3;
 				cv::hconcat(tracker.ReceivedImages[2], tracker.ReceivedImages[0], combine1);
 				cv::hconcat(tracker.ReceivedImages[3], tracker.ReceivedImages[1], combine2);

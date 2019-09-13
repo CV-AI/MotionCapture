@@ -76,52 +76,33 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	//  Q 为像素坐标系与相机坐标系之间的重投影矩阵；
 	
 	cv::Rect validROIL, validROIR;
-	cv::Mat R_upper, P_upper, R_lower, P_lower;
+	
 
 	
 	cv::stereoRectify(cameraMatrix[0], distorCoeff[0], cameraMatrix[1], distorCoeff[1], cv::Size(2048, 2048), 
-		rotationMatLeft, translationMatLeft, R_upper, R_lower, P_upper, P_lower, Q_left, 
+		rotationMatLeft, translationMatLeft, Rectify[0], Rectify[1], Projection[0], Projection[1], Q_left,
 		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
 	std::cout << "disparity map matrix for LEFT cameras: \n" << Q_left << std::endl;
 	// 根据stereoRectify 计算出来的R 和 P 来计算图像的映射表 mapx, mapy
 	// mapx, mapy这两个映射表接下来可以给remap()函数调用，来校正图像，
 	// 使得两幅图像共面并且行对准
 	// use CV_32F for function initUndistortRectifyMap
-	cv::initUndistortRectifyMap(cameraMatrix[0], distorCoeff[0], R_upper, P_upper, cv::Size(2048, 2048), CV_32F, mapX[0], mapY[0]);
-	cv::initUndistortRectifyMap(cameraMatrix[1], distorCoeff[1], R_lower, P_lower, cv::Size(2048, 2048), CV_32F, mapX[1], mapY[1]);
+	/*cv::initUndistortRectifyMap(cameraMatrix[0], distorCoeff[0], R_upper, P_upper, cv::Size(2048, 2048), CV_32F, mapX[0], mapY[0]);
+	cv::initUndistortRectifyMap(cameraMatrix[1], distorCoeff[1], R_lower, P_lower, cv::Size(2048, 2048), CV_32F, mapX[1], mapY[1]);*/
 	
 	
 	// 计算右边一对相机的map matrix
 	//cv::Mat R_upper_, R_lower_, P_upper_, P_lower_, Q_;
 	cv::stereoRectify(cameraMatrix[2], distorCoeff[2], cameraMatrix[3], distorCoeff[3], cv::Size(2048, 2048), 
-		rotationMatRight, translationMatRight, R_upper, R_lower, P_upper, P_lower, Q_right, 
+		rotationMatRight, translationMatRight, Rectify[2], Rectify[3], Projection[2], Projection[3], Q_right,
 		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
 	std::cout << "disparity map matrix for RIGHT cameras: \n" << Q_right << std::endl;
-	cv::initUndistortRectifyMap(cameraMatrix[2], distorCoeff[2], R_upper, P_upper, cv::Size(2048, 2048), CV_32F, mapX[2], mapY[2]);
+	/*cv::initUndistortRectifyMap(cameraMatrix[2], distorCoeff[2], R_upper, P_upper, cv::Size(2048, 2048), CV_32F, mapX[2], mapY[2]);
 	cv::initUndistortRectifyMap(cameraMatrix[3], distorCoeff[3], R_lower, P_lower, cv::Size(2048, 2048), CV_32F, mapX[3], mapY[3]);
 	for (int i = 0; i < numCameras; i++)
 	{
 		cv::convertMaps(mapX[i], mapY[i], map[i], cv::noArray(), CV_16SC2, true);
-	}
-	
-	for (int disparity = 0; disparity < 300; disparity+=4)
-	{
-		std::vector<cv::Vec3d> disparityVec;
-		disparityVec.push_back(cv::Vec3d(1022, 963, disparity));
-		std::vector<cv::Vec3d> pos;
-		cv::perspectiveTransform(disparityVec, pos, Q_left);
-		std::cout << "disparity : "<<disparity << " " << pos[0] << std::endl;
-	}
-	/*std::vector<double> Q_left_vec =
-	{
-		1, 0, 0, -cx_list[0], 
-		0, 1, 0, -cy_list[0],
-		0, 0, 0, fy_list[0], 
-		0, 0, -1/ translationMatLeftVec[1], -double(cy_list[0]-cy_list[1])/ translationMatLeftVec[1]
-	};
-	Q_left = cv::Mat(4, 4, CV_64F, Q_left_vec.data());
-	std::cout << "disparity map matrix for LEFT cameras original: \n" << Q_left << std::endl;*/
-
+	}*/
 
 	/*cv::FileStorage fs("calib.yml", cv::FileStorage::READ);
 	fs["map0"] >> map[0];
@@ -148,85 +129,68 @@ DataProcess::~DataProcess()
 void DataProcess::mapTo3D()
 {
 
-	
-	cv::Point temp;
+
 	// 双目校正 stereo rectification
-	
+	std::vector<cv::Point2f> centerPnt, undistortedPnt;
 	for (int camera = 0; camera < numCameras; camera++)
 	{
 		for (int marker = 0; marker < 6; marker++)
 		{
-			temp = cv::Point(points[camera][marker]);
-			std::cout << "adding offset: Camera " << camera << " Marker " << marker << " " << points[camera][marker] << "\t";
-			// at<float>(y,x)是因为y指的是n_row, x指的是n_col
-			mapped_points[camera][marker].x = mapX[camera].at < float >(int(temp.y), int(temp.x));
-			mapped_points[camera][marker].y = mapY[camera].at < float >(int(temp.y), int(temp.x));
-			std::cout << "float point mapping" << mapped_points[camera][marker] << std::endl;
+			centerPnt.push_back(points[camera][marker]);
+		}
+		cv::undistortPoints(centerPnt, undistortedPnt, cameraMatrix[camera], distorCoeff[camera], Rectify[camera], Projection[camera]);
+		centerPnt.clear();
+		for (int marker = 0; marker < 6; marker++)
+		{
+			mapped_points[camera][marker] = undistortedPnt[marker];
+			/*std::cout << "adding offset: Camera " << camera << " Marker " << marker << " " << points[camera][marker] << "\t";
+			std::cout << "float point mapping" << mapped_points[camera][marker] << std::endl;*/
 		}
 	}	
-	std::vector<cv::Vec3d> disparityVecLeft, disparityVecRight;
+	
+	std::vector<cv::Vec3f> disparityVecLeft, disparityVecRight;
 
-	/*for (int marker = 0; marker < 6; marker++)
-	{
-		disparityVecLeft.push_back(cv::Vec3d(double(mapped_points[0][marker].x),
-			double(mapped_points[0][marker].y), double(mapped_points[0][marker].y) - double(mapped_points[1][marker].y)));
-		disparityVecRight.push_back(cv::Vec3d(double(mapped_points[2][marker].x),
-			double(mapped_points[2][marker].y), double(mapped_points[2][marker].y) - double(mapped_points[3][marker].y)));
-	}*/
 	for (int marker = 0; marker < 6; marker++)
 	{
-		disparityVecLeft.push_back(cv::Vec3d(double(points[0][marker].x),
-			double(points[0][marker].y), double(points[0][marker].y) - double(points[1][marker].y)));
-		disparityVecRight.push_back(cv::Vec3d(double(points[2][marker].x),
-			double(points[2][marker].y), double(points[2][marker].y) - double(points[3][marker].y)));
+		disparityVecLeft.push_back(cv::Vec3f(mapped_points[0][marker].x,
+			mapped_points[0][marker].y, mapped_points[0][marker].y - mapped_points[1][marker].y));
+		disparityVecRight.push_back(cv::Vec3f(mapped_points[2][marker].x,
+			mapped_points[2][marker].y, mapped_points[2][marker].y - mapped_points[3][marker].y));
 	}
-	std::cout << "Disparity Vec 0" << disparityVecLeft[0] << std::endl;
-	std::vector<cv::Vec3d> MarkerPosVecL, MarkerPosVecR;
+	std::vector<cv::Vec3f> MarkerPosVecL, MarkerPosVecR;
 	cv::perspectiveTransform(disparityVecLeft, MarkerPosVecL, Q_left);
 	cv::perspectiveTransform(disparityVecRight, MarkerPosVecR, Q_right);
 	
 	for (int marker = 0; marker < 6; marker++)
 	{
-		MarkerPos3D[0][marker] = cv::Point3d(MarkerPosVecL[marker]);
-		MarkerPos3D[1][marker] = cv::Point3d(MarkerPosVecR[marker]);
+		MarkerPos3D[0][marker] = cv::Point3f(MarkerPosVecL[marker]);
+		MarkerPos3D[1][marker] = cv::Point3f(MarkerPosVecR[marker]);
+		MarkerPos3D[0][marker] = Rotation[0] * (MarkerPos3D[0][marker] + Transform[0]);
 		std::cout << "Camera 0, Marker " << marker << " : " << MarkerPos3D[0][marker] <<"\t";
 		std::cout << "Camera 1, Marker " << marker << " : " << MarkerPos3D[1][marker] << std::endl;
 	}
 	
 }
-void DataProcess::mapImages(cv::Mat images[4])
+
+cv::Point3f DataProcess::mapTo3D(int camera_set, cv::Point upper_point, cv::Point lower_point)
 {
-	for (int i = 0; i < 4; i++)
+	std::vector<cv::Point2f> temp_u;
+	std::vector<cv::Point2f> temp_l;
+	std::vector<cv::Point3f> disparityVec, MarkerPosVec;
+	temp_u.push_back(cv::Point2f(upper_point + offset[2*camera_set]));
+	temp_l.push_back(cv::Point2f(lower_point+ offset[2 * camera_set+1]));
+	cv::undistortPoints(temp_u, temp_u, cameraMatrix[2 * camera_set], distorCoeff[2 * camera_set], Rectify[2 * camera_set], Projection[2 * camera_set]);
+	cv::undistortPoints(temp_l, temp_l, cameraMatrix[2 * camera_set+1], distorCoeff[2 * camera_set + 1], Rectify[2 * camera_set + 1], Projection[2 * camera_set + 1]);
+	disparityVec.push_back(cv::Point3f(temp_u[0].x, temp_u[0].y, temp_u[0].y - temp_l[0].y));
+	if (camera_set == 0)
 	{
-		cv::remap(images[i], images[i], map[i], cv::noArray(), 1);
+		cv::perspectiveTransform(disparityVec, MarkerPosVec, Q_left);
 	}
-}
-cv::Point3d DataProcess::mapTo3D(int camera_set, cv::Point upper_point, cv::Point lower_point)
-{
-	//cv::Point temp;
-	//// 双目校正 stereo rectification
-	//
-	//temp = cv::Point(upper_point);
-	//// at<float>(y,x)是因为y指的是n_row, x指的是n_col
-	//upper_point.x = mapX[camera_set].at<float>(int(temp.y), int(temp.x));
-	//upper_point.y = mapY[camera_set].at<float>(int(temp.y), int(temp.x));
-	//temp = cv::Point(lower_point);
-	//lower_point.x = mapX[camera_set].at<float>(int(temp.y), int(temp.x));
-	//lower_point.y = mapY[camera_set].at<float>(int(temp.y), int(temp.x));
-
-	//cv::Vec3d disparityVec = cv::Vec3d(upper_point.x, upper_point.y, double(upper_point.y)-double(lower_point.y));
-	//cv::Vec3d MarkerPosVec;
-	//if (camera_set == 0)
-	//{
-	//	cv::perspectiveTransform(disparityVec, MarkerPosVec, Q_left);
-
-	//}
-	//else
-	//{
-	//	cv::perspectiveTransform(disparityVec, MarkerPosVec, Q_right);
-	//}
-	//return cv::Point3d(MarkerPosVec);
-	return cv::Point3d();
+	else
+	{
+		cv::perspectiveTransform(disparityVec, MarkerPosVec, Q_right);
+	}
+	return cv::Point3f(MarkerPosVec[0]);
 }
 
 
@@ -280,28 +244,36 @@ bool DataProcess::FrameTransform()
 	return false;
 } 
 
-bool DataProcess::FindWorldFrame(int camera_set, cv::Mat upper,cv::Mat lower)
+bool DataProcess::FindWorldFrame(cv::Mat images[4])
 {
-	cv::Mat upper_bgr,lower_bgr;
-	cv::cvtColor(upper, upper_bgr, CV_RGB2BGR);
-	cv::cvtColor(lower, lower_bgr, CV_RGB2BGR);
 	cv::Size boardsize(3, 3);
-	cv::Point3d vector_x, vector_y, vector_z, p0, p1,p2;
-	std::vector<cv::Point3d> vectors(3);
-	std::vector<cv::Point2d> corners_upper, corners_lower;
+	cv::Point3f vector_x, vector_y, vector_z, p0, p1,p2;
 	
-	bool found = cv::findChessboardCorners(upper_bgr, boardsize, corners_upper);
-	std::cout << "found" << found << std::endl;
-	//cv::drawChessboardCorners(upper_bgr, boardsize, corners_upper, found);
-	found  = cv::findChessboardCorners(lower_bgr, boardsize, corners_lower) && found;
-	if (found)
+	for (int camera_set = 0; camera_set < numCameras / 2; camera_set++)
 	{
-		std::cout << corners_upper << std::endl;
+		std::vector<cv::Point3f> vectors(3);
+		std::vector<cv::Point2f> corners_upper, corners_lower;
+		bool found = cv::findChessboardCorners(images[2 * camera_set], boardsize, corners_upper);
+		found = cv::findChessboardCorners(images[2 * camera_set + 1], boardsize, corners_lower) && found;
+		if (!found)
+		{
+			return false;
+		}
+		sortChessboardCorners(corners_lower);
+		/*for (int i = 0; i < corners_lower.size(); i++)
+		{
+			std::cout << corners_lower[i] << "\t";
+		}
+		std::cout << std::endl;*/
+		sortChessboardCorners(corners_upper);
+		cv::drawChessboardCorners(images[camera_set * 2], boardsize, corners_upper, found);
+		cv::drawChessboardCorners(images[camera_set * 2+1], boardsize, corners_lower, found);
 		p0 = mapTo3D(camera_set, corners_upper[0], corners_lower[0]);
+		std::cout << "p0 " << p0 << std::endl;
 		p1 = mapTo3D(camera_set, corners_upper[2], corners_lower[2]);
-		p2 = mapTo3D(camera_set, corners_upper[7], corners_lower[7]);
+		p2 = mapTo3D(camera_set, corners_upper[6], corners_lower[6]);
 		vectors[1] = p1 - p0;
-		cv::Point3d transform = -p0;
+		cv::Point3f transform = -p0;
 		vectors[2] = p2 - p0;
 		vectors[0] = crossing(vectors[2], vectors[1]);
 		vectors[2] = crossing(vectors[0], vectors[1]);
@@ -310,35 +282,40 @@ bool DataProcess::FindWorldFrame(int camera_set, cv::Mat upper,cv::Mat lower)
 			vectors[i] = scale(vectors[i]);
 		}
 		// 相机坐标系到自定义坐标系的转换矩阵
-		cv::Mat rotation = cv::Mat(3, 3, CV_64FC1, vectors.data()); // 应该是转置后求逆的，但是他是正交矩阵所以不需
+		std::cout << "vectors0" << vectors[0] << std::endl;
+		cv::Mat rotation = cv::Mat(3, 3, CV_32FC1, vectors.data()); // 应该是转置后求逆的，但是他是正交矩阵所以不需
 		//std::cout << vectors[0] << std::endl;
-		std::cout << "rotation matrix:\n"<<rotation << std::endl;
+		std::cout << "rotation matrix:\n" << rotation << std::endl;
 		std::cout << "transform matrix:\n" << transform << std::endl;
 		Rotation[camera_set] = rotation;
-		Transform[camera_set] = transform;
-		GotWorldFrame = true;
-		return true;
+		Transform[camera_set] = cv::Point3f(transform);
 	}
-	else
-	{
-		GotWorldFrame = false;
-		return false;
-	}
+	cv::namedWindow("corners", 0);
+	cv::Mat combine, combine1, combine2;
+	cv::hconcat(images[2], images[0], combine1);
+	cv::hconcat(images[3], images[1], combine2);
+	cv::vconcat(combine1, combine2, combine);
+	cv::resize(combine, combine, cv::Size(1024, 1024));
+	cv::imshow("corners", combine);
+	cv::waitKey(0);
+	GotWorldFrame = true;
+	return true;
+	
 }
 
 // 计算叉乘
-cv::Point3d crossing(cv::Point3d u, cv::Point3d v)
+cv::Point3f crossing(cv::Point3f u, cv::Point3f v)
 {
-	return cv::Point3d(u.y * v.z - v.y * u.z, u.z * v.x - v.z * u.x, u.x * v.y - u.y * v.x);
+	return cv::Point3f(u.y * v.z - v.y * u.z, u.z * v.x - v.z * u.x, u.x * v.y - u.y * v.x);
 }
 // 归一化
-cv::Point3d scale(cv::Point3d u)
+cv::Point3f scale(cv::Point3f u)
 {
 	float length = std::sqrt(pow(u.x, 2)+ pow(u.y,2)+pow(u.z,2));
 	return u/length;
 }
 
-cv::Point3d operator*(cv::Mat M, cv::Point3d p)
+cv::Point3f operator*(cv::Mat M, cv::Point3f p)
 {
 	assert(M.cols == 3); // "Matrix must have the same col number as point's row number");
 	cv::Mat_<float> src(3/*rows*/, 1 /* cols */);
@@ -348,5 +325,24 @@ cv::Point3d operator*(cv::Mat M, cv::Point3d p)
 	src(2, 0) = p.z;
 
 	cv::Mat_<float> dst = M * src; //USE MATRIX ALGEBRA 
-	return cv::Point3d(dst(0, 0), dst(1, 0), dst(2,0));
+	return cv::Point3f(dst(0, 0), dst(1, 0), dst(2,0));
+}
+
+void sortChessboardCorners(std::vector<cv::Point2f> &corners)
+{	
+
+	std::sort(corners.begin(), corners.end(), comparePointY);
+	for (unsigned int i = 0; i < 3; i++)
+	{
+		std::sort(corners.begin() + i*3, corners.begin() + i*3 + 3, comparePointX);
+	}
+}
+
+bool comparePointY(cv::Point2f pnt0, cv::Point2f pnt1)
+{
+	return pnt0.y > pnt1.y;
+}
+bool comparePointX(cv::Point2f pnt0, cv::Point2f pnt1)
+{
+	return pnt0.x > pnt1.x;
 }
