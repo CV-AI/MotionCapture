@@ -1,25 +1,13 @@
 #include "moving_average.hpp"
 
-double* EMA::filter(std::vector<double> angles)
+std::vector<double> EMA::filter(std::vector<double> angles)
 {
 	// eura angles指欧拉角，即当前时刻的角度减去上次的角度
 	
-	for (int i = 0; i < angles.size(); i++)
+	if (num_terms < 2)
 	{
-		eura_angles[i] = weight * angles[i] - weight * S_pre[i];
-		S_pre[i] = weight * angles[i] + (1 - weight) * S_pre[i];
-	}
-	return eura_angles;
-}
-
-void EMA::feed(std::vector<double> angles) // feed numbers to establish EMA
-{
-	if (num_terms == 0)
-	{
-		for (int i = 0; i < angles.size(); i++)
-		{
-			S_pre.push_back(angles[i]);
-		}
+		S_pre = angles;
+		num_terms++;
 	}
 	else
 	{
@@ -28,10 +16,25 @@ void EMA::feed(std::vector<double> angles) // feed numbers to establish EMA
 			S_pre[i] = weight * angles[i] + (1 - weight) * S_pre[i];
 		}
 	}
-	num_terms++;
-	if (num_terms >= INIT_NUM)
+	return S_pre;
+}
+
+// 如果已经初始化了就直接返回滤波值
+// 否则就返回初始值
+std::vector<cv::Vec3f> EMA::filter(std::vector<cv::Vec3f> pnts)
+{
+	if (num_terms == 0)
 	{
-		EMA_established = true; // after INIT_NUM numbers are input, EMA are established
-		std::cout << "---------------------------EMA now established-------------------------------- \n\n\a\a" << std::endl;
+		
+		Points_pre = pnts;
+		num_terms++;
 	}
+	else
+	{
+		for (int i = 0; i < pnts.size(); i++)
+		{
+			Points_pre[i] = weight * pnts[i] + (1 - weight) * Points_pre[i];
+		}
+	}
+	return Points_pre;
 }
