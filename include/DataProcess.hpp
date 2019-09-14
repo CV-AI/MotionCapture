@@ -65,9 +65,8 @@ public:
 	float fy_list[4] = { 1102.26282215247, 1108.12606534582, 1170.73160163419, 1150.35306687457 };
 	cv::Mat rotationMatLeft, rotationMatRight;
 	cv::Mat translationMatLeft, translationMatRight;
-
 	cv::Mat Rectify[4], Projection[4]; // will be computed by cv::stereoRectify()
-	cv::Mat Rotation[2];
+	cv::Matx44f Rotation[2];
 	cv::Point3f Transform[2];
 
 	long      nErr, nPort;	//定义端口变量
@@ -77,4 +76,3 @@ public:
 	char szVar2[20] = { "MAIN.Array1" };
 };
 #endif // !DATA_PROCESS_HEADER
-

@@ -163,13 +163,18 @@ void DataProcess::mapTo3D()
 	
 	for (int marker = 0; marker < 6; marker++)
 	{
+		MarkerPosVecL[marker] += cv::Vec3f(Transform[0]);
+		MarkerPosVecR[marker] += cv::Vec3f(Transform[1]);
+	}
+	cv::perspectiveTransform(MarkerPosVecL, MarkerPosVecL, Rotation[0]);
+	cv::perspectiveTransform(MarkerPosVecR, MarkerPosVecR, Rotation[1]);
+	for (int marker = 0; marker < 6; marker++)
+	{
 		MarkerPos3D[0][marker] = cv::Point3f(MarkerPosVecL[marker]);
 		MarkerPos3D[1][marker] = cv::Point3f(MarkerPosVecR[marker]);
-		MarkerPos3D[0][marker] = Rotation[0] * (MarkerPos3D[0][marker] + Transform[0]);
-		std::cout << "Camera 0, Marker " << marker << " : " << MarkerPos3D[0][marker] <<"\t";
+		std::cout << "Camera 0, Marker " << marker << " : " << MarkerPos3D[0][marker] << "\t";
 		std::cout << "Camera 1, Marker " << marker << " : " << MarkerPos3D[1][marker] << std::endl;
 	}
-	
 }
 
 cv::Point3f DataProcess::mapTo3D(int camera_set, cv::Point upper_point, cv::Point lower_point)
@@ -269,7 +274,6 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		cv::drawChessboardCorners(images[camera_set * 2], boardsize, corners_upper, found);
 		cv::drawChessboardCorners(images[camera_set * 2+1], boardsize, corners_lower, found);
 		p0 = mapTo3D(camera_set, corners_upper[0], corners_lower[0]);
-		std::cout << "p0 " << p0 << std::endl;
 		p1 = mapTo3D(camera_set, corners_upper[2], corners_lower[2]);
 		p2 = mapTo3D(camera_set, corners_upper[6], corners_lower[6]);
 		vectors[1] = p1 - p0;
@@ -282,12 +286,29 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 			vectors[i] = scale(vectors[i]);
 		}
 		// 相机坐标系到自定义坐标系的转换矩阵
-		std::cout << "vectors0" << vectors[0] << std::endl;
 		cv::Mat rotation = cv::Mat(3, 3, CV_32FC1, vectors.data()); // 应该是转置后求逆的，但是他是正交矩阵所以不需
 		//std::cout << vectors[0] << std::endl;
-		std::cout << "rotation matrix:\n" << rotation << std::endl;
+		
 		std::cout << "transform matrix:\n" << transform << std::endl;
-		Rotation[camera_set] = rotation;
+		for (int row = 0; row < 4; row++)
+		{
+			for (int col = 0; col < 4; col++)
+			{
+				if (row < 3 && col < 3)
+				{
+					Rotation[camera_set](row, col) = rotation.at<float>(row, col);
+				}
+				else if (row == 3 && col == 3)
+				{
+					Rotation[camera_set](row, col) = 1;
+				}
+				else
+				{
+					Rotation[camera_set](row, col) = 0;
+				}
+			}
+		}
+		std::cout << "rotation matrix:\n" << Rotation[camera_set] << std::endl;
 		Transform[camera_set] = cv::Point3f(transform);
 	}
 	cv::namedWindow("corners", 0);
