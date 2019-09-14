@@ -12,7 +12,6 @@
 
 cv::Point3f crossing(cv::Point3f u, cv::Point3f v);
 cv::Point3f scale(cv::Point3f u);
-cv::Point3f operator*(cv::Mat M, cv::Point3f p);
 void sortChessboardCorners(std::vector<cv::Point2f> &corners);
 bool comparePointY(cv::Point2f pnt0, cv::Point2f pnt1);
 bool comparePointX(cv::Point2f pnt0, cv::Point2f pnt1);
@@ -28,29 +27,32 @@ public:
 	cv::Point3d thigh[2]; // 0 for left, 1 for right
 	cv::Point3d shank[2];
 	cv::Point3d foot[2];
-	std::ofstream knee_file;
-	std::ofstream hip_file;
-	std::ofstream ankle_file;
+	// absolute angles
+	std::ofstream angles_file;
+	// eura angles
+	std::ofstream eura_file;
 	const int numCameras = 4;
 	//void getTime();
 	void mapTo3D();
 	cv::Point3f mapTo3D(int, cv::Point, cv::Point);
 	void getJointAngle();
 	bool exportGaitData();
-	bool FrameTransform();
 	bool DataProcess::FindWorldFrame(cv::Mat[4]);
 	cv::Point2i points[4][6];
 	cv::Point2f mapped_points[4][6];
 	cv::Point3f MarkerPos3D[2][6];
 
 	// create exponential average object
-	EMA ema;
+	EMA ema_left; // ema for left camera set marker pos 3d and angles
+	EMA ema_right; // ema for right camera set marker pos 3d 
 	cv::Mat image;
 	double time = 0;
 	double hip[2]; // 0 for left, 1 for right
 	double knee[2];
 	double ankle[2];
-	double* eura_angles;
+	double eura_angles[6];
+	std::vector<double> joint_angles;
+	std::vector<double> joint_angles_pre;
 	bool GotWorldFrame;
 	bool gettime = false;
 	cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,200), cv::Point(750,500), cv::Point(800,200) };

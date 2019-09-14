@@ -249,16 +249,13 @@ int main(int /*argc*/, char** /*argv*/)
 					{
 						for (int marker_inex = 0; marker_inex < NUM_MARKERS; marker_inex++)
 						{
+							//std::cout << "Tracker points Camera " << camera_index << " marker " << marker_inex << tracker.currentPos[camera_index][marker_inex] << std::endl;
 							// 因为我们截取了一部分图像，所以计算位置之前要还原到原来的2048*2048的像素坐标系下的坐标
 							dataProcess.points[camera_index][marker_inex] = tracker.currentPos[camera_index][marker_inex]
 								+ dataProcess.offset[camera_index];
-							/*cout << "offset" << dataProcess.offset[camera_index]<<endl;
-							cout << "tracker pos" << tracker.currentPos[camera_index][marker_inex] << endl;
-							cout << "dataprocess pos" << dataProcess.points[camera_index][marker_inex] << endl;*/
 						}
 					}
 					dataProcess.exportGaitData();
-					//Sleep(15); // sleep for milliseconds
 					stop_export = std::chrono::high_resolution_clock::now();
 					std::chrono::duration<double> time_export = stop_export - finish_tracking;
 					std::cout << "Time on export gait data: " << time_export.count() << std::endl;
@@ -276,7 +273,10 @@ int main(int /*argc*/, char** /*argv*/)
 					cv::imshow("Right_Upper", tracker.ReceivedImages[2]);
 					cv::imshow("Right_Lower", tracker.ReceivedImages[3]);
 					tracker.InitTracker(ByDetection);
-					//getchar();
+					cv::destroyWindow("Left_Upper");
+					cv::destroyWindow("Left_Lower");
+					cv::destroyWindow("Right_Upper");
+					cv::destroyWindow("Right_Lower");
 				}
 #ifdef TRANS_FRAME
 
@@ -288,12 +288,10 @@ int main(int /*argc*/, char** /*argv*/)
 						bool found = dataProcess.FindWorldFrame(tracker.ReceivedImages);
 						if (found)
 						{
-							dataProcess.GotWorldFrame = true;
 							cout << "Find world coordinate system succeed!" << endl;
 						}
 						else
 						{
-							dataProcess.GotWorldFrame = false;
 							cout << "Faild find world coordinate system!\a\a\a" << endl;
 						}
 					}
@@ -315,11 +313,8 @@ int main(int /*argc*/, char** /*argv*/)
 				}
 				num_Acquisition += 1;
 				stop_drawing = std::chrono::high_resolution_clock::now();
-				std::chrono::duration<double> time_showing = stop_drawing - stop_export;
-				std::cout << "Time on showing images: " << time_showing.count() << std::endl;
 				std::chrono::duration<double> time_total = stop_drawing - start_acquiring;
 				std::cout << "Total time: " << time_total.count() << std::endl;
-				
 			}
 		}
 		catch (Spinnaker::Exception& e)
