@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <iostream>
 
-
 DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 {
 	GotWorldFrame = false;
@@ -10,9 +9,9 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	hip[0] = 0; hip[1] = 0;
 	ankle[0] = 0; ankle[1] = 0;
 	knee[0] = 0; knee[1] = 0;
-	std::vector<double> joint_angles = { 0,0,0,0,0,0 };
-	std::vector<double> joint_angles_pre = { 0,0,0,0,0,0 };
-	double eura_angles[6] = { 0,0,0,0,0,0 };
+	joint_angles = { 0,0,0,0,0,0 };
+	joint_angles_pre = { 0,0,0,0,0,0 };
+	
 	angles_file.open("angles.csv");
 	eura_file.open("eura.csv");
 	// OpenCV's distortion coefficient vector:  the radial parameters come first; these are followed by the
@@ -225,9 +224,9 @@ void DataProcess::getJointAngle()
 		shank[i] = MarkerPos3D[i][3] - MarkerPos3D[i][2];
 		foot[i] = MarkerPos3D[i][5] - MarkerPos3D[i][4];
 
-		hip[i] = ((atan2(thigh[i].x, abs(thigh[i].z))) / pi) * 180;
-		knee[i] = ((acos((thigh[i].x * shank[i].x + thigh[i].z * shank[i].z) / (sqrt(thigh[i].x * thigh[i].x + thigh[i].z * thigh[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
-		ankle[i] = ((acos((foot[i].x * shank[i].x + foot[i].z * shank[i].z) / (sqrt(foot[i].x * foot[i].x + foot[i].z * foot[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
+		eura_angles[3*i] = ((atan2(thigh[i].x, abs(thigh[i].z))) / pi) * 180;
+		eura_angles[3*i+1] = ((acos((thigh[i].x * shank[i].x + thigh[i].z * shank[i].z) / (sqrt(thigh[i].x * thigh[i].x + thigh[i].z * thigh[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
+		eura_angles[3*i+2] = ((acos((foot[i].x * shank[i].x + foot[i].z * shank[i].z) / (sqrt(foot[i].x * foot[i].x + foot[i].z * foot[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
 		//std::cout <<"Camera Set: "<<i<< " hip:   " << hip[i] << "   " << "knee:   " << knee[i] << "   " << "ankle:   " << ankle[i] << std::endl;
 	}
 	
@@ -237,17 +236,27 @@ bool DataProcess::exportGaitData()
 {
 	
 	mapTo3D(); // 
-	getJointAngle(); // 约4ms
 	joint_angles_pre = joint_angles;
-	angles_file << hip[0] << "," << hip[1] << "," << knee[0] << "," << knee[1] << "," << ankle[0] << "," << ankle[1]<<",";
-	joint_angles = { hip[0], hip[1], knee[0], knee[1], ankle[0], ankle[1] };
-	joint_angles = ema_left.filter(joint_angles);
-	for (int i = 0; i < 6; i++)
-	{	
-		angles_file << joint_angles[i] << ",";
-		/*eura_angles[i] = joint_angles[i] - joint_angles_pre[i];
-		eura_file << eura_angles[i] << ",";*/
+	getJointAngle(); // 约4ms
+	// 滤波后存放到joint_angles
+	joint_angles[0] = lpf0.update(eura_angles[0]);
+	joint_angles[1]= lpf1.update(eura_angles[1]);
+	joint_angles[2] = lpf2.update(eura_angles[2]);
+	joint_angles[3] = lpf3.update(eura_angles[3]);
+	joint_angles[4] = lpf4.update(eura_angles[4]);
+	joint_angles[5] = lpf5.update(eura_angles[5]);
+	for (int angle = 0; angle < 6; angle++)
+	{
+		// 输出未经滤波的真实角度
+		angles_file << eura_angles[angle] << ",";
+		// 输出滤波后的数据
+		angles_file << joint_angles[angle] << ",";
+		// 更正欧拉角为两帧之间的差值，之前使用了eura_angles做他用，只是为了节省内存
+		eura_angles[angle] = joint_angles[angle] - joint_angles_pre[angle];
+		// 输出欧拉角度到文件
+		eura_file << eura_angles[angle] << ",";
 	}
+
 	angles_file << "\n";
 	eura_file << "\n";
 	//通过句柄向PLC写入数组
@@ -339,6 +348,7 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 	}
 	return true;
 }
+
 
 // 计算叉乘
 cv::Point3f crossing(cv::Point3f u, cv::Point3f v)
