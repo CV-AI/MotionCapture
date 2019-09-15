@@ -191,22 +191,11 @@ bool Tracker::getContoursAndMoment(int camera_index, int marker_set)
 	if (contours.size() >=2)
 	{
 		cv::Rect br_u = cv::boundingRect(contours[0]);
-		int cx_u = br_u.x + br_u.width * 0.5; 
-		int cy_u = br_u.y + br_u.height * 0.5;
+		int cx_u = cvRound( br_u.x + br_u.width * 0.5); 
+		int cy_u = cvRound(br_u.y + br_u.height * 0.5);
 		cv::Rect br_l = cv::boundingRect(contours[1]);
-		int cx_l = br_l.x + br_l.width * 0.5;
-		int cy_l = br_l.y + br_l.height * 0.5;
-		/*if (br_u.y < br_l.y)
-		{
-			currentPos[camera_index][2 * marker_set] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y)+offset[camera_index];
-			currentPos[camera_index][2 * marker_set+1] = cv::Point(cx_l + detectPosition.x, cy_l + detectPosition.y) + offset[camera_index];
-			
-		}
-		else
-		{
-			currentPos[camera_index][2 * marker_set+1] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y) + offset[camera_index];
-			currentPos[camera_index][2 * marker_set] = cv::Point(cx_l + detectPosition.x, cy_l + detectPosition.y) + offset[camera_index];
-		}*/
+		int cx_l = cvRound(br_l.x + br_l.width * 0.5);
+		int cy_l = cvRound(br_l.y + br_l.height * 0.5);
 		if (br_u.y < br_l.y)
 		{
 			currentPos[camera_index][2 * marker_set] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y);

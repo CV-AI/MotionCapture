@@ -37,7 +37,7 @@ enum triggerType
 	HARDWARE
 };
 const triggerType chosenTrigger = HARDWARE;
-cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,200), cv::Point(750,500), cv::Point(800,200) };
+cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,200), cv::Point(600,500), cv::Point(650,200) };
 const int64_t numBuffers = 3;
 const float frameRate = 50.0f;
 float exposureTimeToSet = 10000.0f;

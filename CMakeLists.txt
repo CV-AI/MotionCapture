@@ -29,7 +29,6 @@ set(MY_HEADER_FILES
         include/CircularDelay.hpp
         include/Tracker.hpp
         include/DataProcess.hpp
-	include/moving_average.hpp
 	include/TcAdsDef.h
 	include/TcAdsAPI.h
         include/DigitalFilters.h
@@ -39,7 +38,6 @@ set(MY_SOURCE_FILES
         src/main.cpp
         src/DataProcess.cpp
         src/Tracker.cpp
-        src/moving_average.cpp
         )
 
 

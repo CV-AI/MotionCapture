@@ -5,7 +5,6 @@
 #include <fstream>
 #include <opencv2/imgproc/types_c.h>
 #include <sstream>
-#include "moving_average.hpp"
 //TwinCAT需要的两个头文件
 #include "TcAdsDef.h"
 #include "TcAdsAPI.h"
@@ -43,9 +42,6 @@ public:
 	cv::Point2i points[4][6];
 	cv::Point2f mapped_points[4][6];
 	cv::Point3f MarkerPos3D[2][6];
-	// create exponential average object
-	EMA ema_left; // ema for left camera set marker pos 3d and angles
-	EMA ema_right; // ema for right camera set marker pos 3d
 	cv::Mat image;
 	double time = 0;
 	double hip[2]; // 0 for left, 1 for right
@@ -58,9 +54,9 @@ public:
 	std::vector<double> joint_angles_pre;
 	bool GotWorldFrame;
 	bool gettime = false;
-	cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,200), cv::Point(750,500), cv::Point(800,200) };
+	cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,200), cv::Point(600,500), cv::Point(650,200) };
 	
-	cv::Mat cameraMatrix[4];
+	cv::Matx33d cameraMatrix[4];
 	cv::Mat distorCoeff[4];
 	// 4×4  disparity-to-depth mapping matrix (see reprojectImageTo3D ).
 	cv::Matx44d Q_left, Q_right;
@@ -80,7 +76,7 @@ public:
 	char szVar2[20] = { "MAIN.Array1" };
 };
 constexpr float dtUsed = 0.025;
-double tau = 0.8*pi;
+constexpr double tau = 3; // 滤波器的时间常数
 // Construct various filter with cutoff frequency of 0.5 Hz.
 // 无论是写成vector还是[]，最终会因为Filter对象没有被初始化而出错
 // 只有这种方式能初始化对象（可能是因为Filter的作者没有实现其他的初始化方式）

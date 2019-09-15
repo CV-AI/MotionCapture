@@ -262,7 +262,7 @@ int main(int /*argc*/, char** /*argv*/)
 					
 				}
 
-				if (/*tracker.getColors && */!tracker.TrackerAutoIntialized && num_Acquisition > 30
+				if (/*tracker.getColors && */!tracker.TrackerAutoIntialized
 #ifdef TRANS_FRAME 
 					&& dataProcess.GotWorldFrame
 #endif
@@ -280,7 +280,7 @@ int main(int /*argc*/, char** /*argv*/)
 				}
 #ifdef TRANS_FRAME
 
-				if (!dataProcess.GotWorldFrame && num_Acquisition > 15)
+				if (!dataProcess.GotWorldFrame && num_Acquisition > 40)
 				{
 					//dataProcess.GotWorldFrame = true;
 					try
@@ -313,7 +313,7 @@ int main(int /*argc*/, char** /*argv*/)
 				}
 				if (num_Acquisition < 100)
 				{
-					num_Acquisition += 1;
+					num_Acquisition ++;
 				}
 				stop_drawing = std::chrono::high_resolution_clock::now();
 				std::chrono::duration<double> time_total = stop_drawing - start_acquiring;
