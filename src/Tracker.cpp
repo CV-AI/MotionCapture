@@ -297,7 +297,7 @@ bool Tracker::RectifyMarkerPos(int camera_index)
 	if (camera_index < 2)
 	{
 		if ((currentPos[camera_index][4].x < currentPos[camera_index][5].x) 
-					&& (currentPos[camera_index][4].y > currentPos[camera_index][5].y))
+					/*&& (currentPos[camera_index][4].y > currentPos[camera_index][5].y)*/)
 		{
 			std::swap(currentPos[camera_index][4], currentPos[camera_index][5]);
 		}
@@ -305,7 +305,7 @@ bool Tracker::RectifyMarkerPos(int camera_index)
 	// 对于2，3号相机来说
 	else
 	{
-		if (currentPos[camera_index][4].x > currentPos[camera_index][5].x && currentPos[camera_index][4].y > currentPos[camera_index][5].y)
+		if (currentPos[camera_index][4].x > currentPos[camera_index][5].x /*&& currentPos[camera_index][4].y > currentPos[camera_index][5].y*/)
 		{
 			std::swap(currentPos[camera_index][4], currentPos[camera_index][5]);
 		}

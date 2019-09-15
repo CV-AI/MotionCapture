@@ -79,15 +79,16 @@ public:
 	unsigned long lHdlVar2;   	//创建句柄
 	char szVar2[20] = { "MAIN.Array1" };
 };
-constexpr float dtUsed = 0.02;
+constexpr float dtUsed = 0.025;
+double tau = 0.8*pi;
 // Construct various filter with cutoff frequency of 0.5 Hz.
 // 无论是写成vector还是[]，最终会因为Filter对象没有被初始化而出错
 // 只有这种方式能初始化对象（可能是因为Filter的作者没有实现其他的初始化方式）
-static LowPassFilter3 lpf0(dtUsed, pi);
-static LowPassFilter3 lpf1(dtUsed, pi);
-static LowPassFilter3 lpf2(dtUsed, pi);
-static LowPassFilter3 lpf3(dtUsed, pi);
-static LowPassFilter3 lpf4(dtUsed, pi);
-static LowPassFilter3 lpf5(dtUsed, pi);
+static LowPassFilter3 lpf0(dtUsed, tau);
+static LowPassFilter3 lpf1(dtUsed, tau);
+static LowPassFilter3 lpf2(dtUsed, tau);
+static LowPassFilter3 lpf3(dtUsed, tau);
+static LowPassFilter3 lpf4(dtUsed, tau);
+static LowPassFilter3 lpf5(dtUsed, tau);
 #endif // !DATA_PROCESS_HEADER
 
