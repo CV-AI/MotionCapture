@@ -85,7 +85,7 @@ constexpr float dtUsed = 0.02;
 // 只有这种方式能初始化对象（可能是因为Filter的作者没有实现其他的初始化方式）
 static LowPassFilter3 lpf0(dtUsed, pi);
 static LowPassFilter3 lpf1(dtUsed, pi);
-static LowPassFilter2 lpf2(dtUsed, pi);
+static LowPassFilter3 lpf2(dtUsed, pi);
 static LowPassFilter3 lpf3(dtUsed, pi);
 static LowPassFilter3 lpf4(dtUsed, pi);
 static LowPassFilter3 lpf5(dtUsed, pi);

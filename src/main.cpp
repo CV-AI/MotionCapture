@@ -311,7 +311,10 @@ int main(int /*argc*/, char** /*argv*/)
 				{
 					status = false;
 				}
-				num_Acquisition += 1;
+				if (num_Acquisition < 100)
+				{
+					num_Acquisition += 1;
+				}
 				stop_drawing = std::chrono::high_resolution_clock::now();
 				std::chrono::duration<double> time_total = stop_drawing - start_acquiring;
 				std::cout << "Total time: " << time_total.count() << std::endl;
