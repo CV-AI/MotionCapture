@@ -1,6 +1,7 @@
 #pragma once
 
-#include <opencv2/opencv.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 #include <opencv2/imgproc/types_c.h>
 #include<iostream>
 #include <opencv2/highgui/highgui_c.h>
@@ -28,17 +29,18 @@ class Tracker
 public:
 	Tracker();
 	~Tracker();
+
 	void ColorThresholding(int);
 	void ColorThresholding();
-	static int CorlorsChosen[3];
+	static cv::Scalar CorlorsChosen;
 
 	// enable different tracker 
 	
 	static void Mouse_getColor(int event, int x, int y, int, void*);
 	static void Mouse_getRegion(int event, int x, int y, int, void*);
 	static cv::Rect calibration_region;
-	bool getContoursAndMoment(int camera_index);
-	bool getContoursAndMoment(int camera_index, int marker_index);
+	bool initMarkerPosition(int camera_index);
+	bool updateMarkerPosition(int camera_index, int marker_set);
 	//void patternMatch();
 	
 	static cv::Mat image;

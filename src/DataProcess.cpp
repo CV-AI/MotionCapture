@@ -5,10 +5,6 @@
 DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 {
 	GotWorldFrame = false;
-	time = 0;
-	hip[0] = 0; hip[1] = 0;
-	ankle[0] = 0; ankle[1] = 0;
-	knee[0] = 0; knee[1] = 0;
 	joint_angles = { 0,0,0,0,0,0 };
 	joint_angles_pre = { 0,0,0,0,0,0 };
 	
@@ -79,7 +75,7 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	cv::Rect validROIL, validROIR;
 
 
-
+	// 双目标定
 	cv::stereoRectify(cameraMatrix[0], distorCoeff[0], cameraMatrix[1], distorCoeff[1], cv::Size(2048, 2048),
 		rotationMatLeft, translationMatLeft, Rectify[0], Rectify[1], Projection[0], Projection[1], Q_left,
 		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
@@ -99,11 +95,8 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 		GotWorldFrame = true;
 		std::cout << "----!!!!! Use file to initialize Rotation and Transform matrix -----!!!!!" << std::endl;
 	}
+	// 可以从文件里读取相机标定文件，但是OpenCV的标定很不流畅，目前还是使用Matlab标定
 	/*cv::FileStorage fs("calib.yml", cv::FileStorage::READ);
-	fs["map0"] >> map[0];
-	fs["map1"] >> map[1];
-	fs["map2"] >> map[2];
-	fs["map3"] >> map[3];
 	fs["Q0"] >> Q_left;
 	std::cout << "Q_left" << Q_left;
 	fs["Q1"] >> Q_right;
@@ -115,11 +108,12 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 
 DataProcess::~DataProcess()
 {
+	// 打开的文件一定要关闭
 	angles_file.close();
 	eura_file.close();
 }
 
-
+// 将捕捉到的标记点从图像坐标系转换到相机坐标系
 void DataProcess::mapTo3D()
 {
 
@@ -167,11 +161,12 @@ void DataProcess::mapTo3D()
 	{
 		MarkerPos3D[0][marker] = cv::Point3f(MarkerPosVecL[marker]);
 		MarkerPos3D[1][marker] = cv::Point3f(MarkerPosVecR[marker]);
-		std::cout << "Camera 0, Marker " << marker << " : " << MarkerPos3D[0][marker] << std::endl;
+		//std::cout << "Camera 0, Marker " << marker << " : " << MarkerPos3D[0][marker] << std::endl;
 		//std::cout << "Camera 1, Marker " << marker << " : " << MarkerPos3D[1][marker] << std::endl;
 	}
 }
 
+// 将上下相机看到的两个点从图像坐标系转换到相机坐标系，并返回
 cv::Point3f DataProcess::mapTo3D(int camera_set, cv::Point upper_point, cv::Point lower_point)
 {
 	std::vector<cv::Point2f> temp_u;
@@ -193,7 +188,7 @@ cv::Point3f DataProcess::mapTo3D(int camera_set, cv::Point upper_point, cv::Poin
 	return cv::Point3f(MarkerPosVec[0]);
 }
 
-
+// 获取关节角度
 void DataProcess::getJointAngle()
 {
 	
@@ -214,6 +209,7 @@ void DataProcess::getJointAngle()
 	
 }
 
+// 输出角度信息到文件，通过Ads向PLC发送步态角
 bool DataProcess::exportGaitData()
 {
 	
@@ -248,7 +244,7 @@ bool DataProcess::exportGaitData()
 	return true;
 }
 
-
+// 为左右两个相机坐标系找到从相机坐标系到世界坐标系的转换矩阵
 bool DataProcess::FindWorldFrame(cv::Mat images[4])
 {
 	cv::Size boardsize(3, 3);
@@ -344,7 +340,7 @@ cv::Point3f crossing(cv::Point3f u, cv::Point3f v)
 	return cv::Point3f(result(0,0), result(1,0), result(2,0));
 	//return cv::Point3f(u.y * v.z - v.y * u.z, u.z * v.x - v.z * u.x, u.x * v.y - u.y * v.x);
 }
-// 归一化
+// 归一化向量
 cv::Point3f scale(cv::Point3f u)
 {
 	float length = std::sqrt(pow(u.x, 2)+ pow(u.y,2)+pow(u.z,2));
@@ -361,6 +357,7 @@ void sortChessboardCorners(std::vector<cv::Point2f> &corners)
 		std::sort(corners.begin() + i*3, corners.begin() + i*3 + 3, comparePointX);
 	}
 }
+
 
 bool comparePointY(cv::Point2f pnt0, cv::Point2f pnt1)
 {

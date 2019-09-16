@@ -14,7 +14,7 @@ Tracker::~Tracker()
 {
 }
 cv::Mat Tracker:: image;
-int Tracker::CorlorsChosen[3];
+cv::Scalar Tracker::CorlorsChosen(0,0,0);
 bool Tracker::getColors = false;
 cv::Rect Tracker::calibration_region;
 cv::Mat Tracker::ReceivedImages[NUM_CAMERAS];
@@ -22,14 +22,15 @@ cv::Point Tracker::currentPos[NUM_CAMERAS][NUM_MARKERS];
 cv::Point Tracker::previousPos[NUM_CAMERAS][NUM_MARKERS];
 cv::Point Tracker::currentPosSet[NUM_CAMERAS][NUM_MARKER_SET];
 cv::Point Tracker::previousPosSet[NUM_CAMERAS][NUM_MARKER_SET];
-// this function compare the areas of two contours
+
+// 比较两个coutour的面积（用于contour的排序算法）
 bool compareContourAreas(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2) {
 	double i = fabs(cv::contourArea(cv::Mat(contour1)));
 	double j = fabs(cv::contourArea(cv::Mat(contour2)));
 	return (i > j); // 从大到小排序
 }
 
-// This function get the color of the marker
+// 获取鼠标划过区域的平均颜色
 void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
 {
 	static cv::Point origin;
@@ -47,16 +48,14 @@ void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
 		std::cout << "Color area has been selected!" << std::endl;
 		std::cout << "Color has been selected" << std::endl;
 		image = image(selection);
-		cv::Scalar meanScalar = cv::mean(image);
-		CorlorsChosen[0] = static_cast<int>(meanScalar.val[0]);
-		CorlorsChosen[1] = static_cast<int>(meanScalar.val[1]);
-		CorlorsChosen[2] = static_cast<int>(meanScalar.val[2]);
+		assert(image.channels == 3); // image must be three channels
+		CorlorsChosen = cv::mean(image);
 		getColors = true;
-		std::cout << "blue green red: " << CorlorsChosen[0] << " " << CorlorsChosen[1] << " " << CorlorsChosen[2] << std::endl;
+		std::cout << "blue green red: " << CorlorsChosen << std::endl;
 	}
 }
 
-// this function get the region where lies the markers(to exclude noise)
+// 获取六个标记点所在区域（以排除其他噪声点的干扰）
 void Tracker::Mouse_getRegion(int event, int x, int y, int, void*)
 {
 	static cv::Point origin;
@@ -73,30 +72,16 @@ void Tracker::Mouse_getRegion(int event, int x, int y, int, void*)
 	}
 }
 
+// 通过HSV颜色空间进行阈值化处理，能较好地避免光照影响
 void Tracker::ColorThresholding(int marker_index)
 {
 	cv::cvtColor(detectWindow, detectWindow, CV_RGB2HSV);
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
 	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED, MIN_SATURATION, MIN_VALUE), cv::Scalar(MAX_H_RED, MAX_SATURATION, MAX_VALUE), rangeRes);
 	detectWindow = rangeRes;
-
-	/*for (int j = 0; j < detectWindow.rows; j++)
-	{
-		uchar*data = detectWindow.ptr<uchar>(j);
-		
-		for (int i = 0; i< detectWindow.cols; i++)
-		{
-			
-			if ((abs(data[3 * i] - CorlorsChosen[0]) + abs(data[3 * i + 1] - CorlorsChosen[1]) +
-					abs(data[3 * i + 2] - CorlorsChosen[2]))< threshold)
-			{
-				data[3 * i] = data[3 * i + 1] = data[3 * i + 2] = 255;
-			}
-			else data[3 * i] = data[3 * i + 1] = data[3 * i + 2] = 0;
-		}
-	}*/
 }
 
+// 通过HSV颜色空间进行阈值化处理，能较好地避免光照影响
 void Tracker::ColorThresholding()
 {
 	cv::cvtColor(detectWindow_Initial, detectWindow_Initial, CV_RGB2HSV);
@@ -105,14 +90,11 @@ void Tracker::ColorThresholding()
 	detectWindow_Initial = rangeRes;
 }
 
-// This function using contours to get all of six marker positions for one camera
-bool Tracker:: getContoursAndMoment(int camera_index)
+// 通过contour获取六个标记点的起始位置
+bool Tracker:: initMarkerPosition(int camera_index)
 {	
 	ColorThresholding();
 	
-	//cv::fastNlMeansDenoising(detectWindow_Initial, detectWindow_Initial);
-	//cv::Mat detectCopy = detectWindow_Initial.clone();
-	//cv::cvtColor(detectWindow_Initial, detectWindow_Initial, CV_BGRA2GRAY);
 	cv::Mat mask(5, 5, CV_8U, cv::Scalar(1));
 	cv::morphologyEx(detectWindow_Initial, detectWindow_Initial, cv::MORPH_CLOSE, mask);
 	cv::namedWindow("detectwindow", 0);
@@ -161,33 +143,18 @@ bool Tracker:: getContoursAndMoment(int camera_index)
 	}
 }
 
-// This function get the marker point for specific marker in a specific camera
-bool Tracker::getContoursAndMoment(int camera_index, int marker_set)
+//获取标记点、标记点对的位置
+bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 {
 	ColorThresholding(camera_index);
-	//cv::Mat detectCopy = detectWindow_Initial.clone();
-	//cv::cvtColor(detectWindow_Initial, detectWindow_Initial, CV_BGRA2GRAY);
 	cv::Mat mask(5, 5, CV_8U, cv::Scalar(1));
 	cv::morphologyEx(detectWindow, detectWindow, cv::MORPH_CLOSE, mask);
 	std::vector<std::vector<cv::Point>>contours;
 	cv::findContours(detectWindow, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
-	//std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
-	// remove contours that are too small or large
-	//while (itc != contours.end())
-	//{
-	//	std::cout << itc->size() << std::endl;
-	//	//std::cout << "size: " << itc->size() << std::endl;
-	//	if (itc->size() < cmin || itc->size() > cmax)
-	//	{
-	//		itc = contours.erase(itc);
-	//	}
-	//	else itc++;
-	//}
 	/*cv::namedWindow("detectWindow", 0);
 	cv::imshow("detectWindow", detectCopy);
 	cv::waitKey(1);*/
 	std::sort(contours.begin(), contours.end(), compareContourAreas);
-	//contours = std::vector<std::vector<cv::Point>>(contours.begin(), contours.begin() + 1);
 	if (contours.size() >=2)
 	{
 		cv::Rect br_u = cv::boundingRect(contours[0]);
@@ -231,7 +198,7 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 				// i is the index of camera
 				detectWindow_Initial = ReceivedImages[i].clone();
 				// 如果把success放在前面，则success为false时，函数不会执行
-				success =  getContoursAndMoment(i) && success;
+				success =  initMarkerPosition(i) && success;
 				success =  RectifyMarkerPos(i) && success;
 				for (int j = 0; j < NUM_MARKERS; j++)
 				{
@@ -248,7 +215,7 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 		break;
 		default:break;
 	}
-	// see if data were correct
+	// 检查数据正确性
 	for (int i = 0; i < NUM_CAMERAS; i++)
 	{
 		for (int j = 0; j < NUM_MARKERS; j++)
@@ -265,8 +232,7 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 	return success;
 }
 
-// use bubble_sort to rectify Marker Position, from small to big
-// from top of image to bottom of image
+// 校正标记点的位置
 bool Tracker::RectifyMarkerPos(int camera_index)
 {
 	int i, j, change=1;
@@ -322,72 +288,49 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 	switch (tracker_type)
 	{
 	case ByDetection:
-		// using contours to update tracker 
 		for (int j = 0; j < NUM_MARKER_SET; j++)
 		{
-			// use previous position of marker as the center of detectPosition_Initial
-			// and move detectPosition_Initial to left_upper corner
+			// 将检测窗口中心的位置设为上一帧标记对位置（再加上一个动量，以模拟标记点的运动）
 			(*trackerPtr).detectPosition = (*trackerPtr).previousPosSet[camera_index][j] + (*trackerPtr).momentum[j] - cv::Point(int((*trackerPtr).detectWindowDimX*0.5), int((*trackerPtr).detectWindowDimY * 0.5));
-			// make sure ROI is in the range of image
+			// 保证ROI不超出图像范围
 			if ((*trackerPtr).detectPosition.x < 0)
 			{
 				(*trackerPtr).detectPosition.x = 0;
+				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << "\n";
+				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << std::endl;
 			}
 			if ((*trackerPtr).detectPosition.y < 0)
 			{
 				(*trackerPtr).detectPosition.y = 0;
+				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << "\n";
+				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << std::endl;
 			}
 			if ((*trackerPtr).detectPosition.x+ (*trackerPtr).detectWindowDimX > (*trackerPtr).ReceivedImages[camera_index].cols)
 			{
 				window_size_x = (*trackerPtr).ReceivedImages[camera_index].cols - (*trackerPtr).detectPosition.x;
+				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << "\n";
+				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << std::endl;
 			}
 			if ((*trackerPtr).detectPosition.y + (*trackerPtr).detectWindowDimY > (*trackerPtr).ReceivedImages[camera_index].rows)
 			{
 				window_size_y = (*trackerPtr).ReceivedImages[camera_index].rows - (*trackerPtr).detectPosition.y;
+				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << "\n";
+				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << std::endl;
 			}
 			
 			detectRect = cv::Rect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, window_size_x, window_size_y);
 			
 			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[camera_index](detectRect).clone(); 
-			success = (*trackerPtr).getContoursAndMoment(camera_index,j) && success;
+			success = (*trackerPtr).updateMarkerPosition(camera_index,j) && success;
 			(*trackerPtr).momentum[j] = weight*((*trackerPtr).currentPosSet[camera_index][j] - (*trackerPtr).previousPosSet[camera_index][j]);
 		}
 		break;
 	case CV_KCF:
 		break;
 	case ByColor:
-		// using contours to update tracker 
-		for (int i = 0; i < NUM_CAMERAS; i++)
-		{
-			// use previous position of marker as the center of detectPosition_Initial
-			// and move detectPosition_Initial to left_upper corner
-			(*trackerPtr).detectPosition = (*trackerPtr).previousPos[i][camera_index]+(*trackerPtr).momentum[i] - cv::Point(int((*trackerPtr).detectWindowDimX * 0.5), int((*trackerPtr).detectWindowDimY * 0.5));
-			// make sure ROI is in the range of image
-			if ((*trackerPtr).detectPosition.x < 0)
-			{
-				(*trackerPtr).detectPosition.x = 0;
-			}
-			if ((*trackerPtr).detectPosition.y < 0)
-			{
-				(*trackerPtr).detectPosition.y = 0;
-			}
-			if ((*trackerPtr).detectPosition.x + (*trackerPtr).detectWindowDimX > (*trackerPtr).ReceivedImages[camera_index].cols)
-			{
-				window_size_x = (*trackerPtr).ReceivedImages[camera_index].cols - (*trackerPtr).detectPosition.x;
-			}
-			if ((*trackerPtr).detectPosition.y + (*trackerPtr).detectWindowDimY > (*trackerPtr).ReceivedImages[camera_index].rows)
-			{
-				window_size_y = (*trackerPtr).ReceivedImages[camera_index].rows - (*trackerPtr).detectPosition.y;
-			}
-
-			detectRect = cv::Rect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, window_size_x, window_size_y);
-			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[i](detectRect).clone(); // 
-			(*trackerPtr).momentum[i] = weight * ((*trackerPtr).currentPos[i][camera_index] - (*trackerPtr).previousPos[i][camera_index]);
-		}
 		break;
 	default:
 		break;
 	}
-
 	return success;
 }

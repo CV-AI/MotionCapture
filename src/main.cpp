@@ -51,9 +51,10 @@ int main(int /*argc*/, char** /*argv*/)
   
     unsigned int numCameras = camList.GetSize();
 	int CameraIndex[4] = { 0,1,2,3 };
-	assert(dataProcess.numCameras == numCameras);
+	
 	std::cout << "Number of cameras detected: " << numCameras << "\n" << std::endl;
 	assert(numCameras == NUM_CAMERAS);
+	assert(dataProcess.numCameras == numCameras);
 	// set current process as high priority (second highest, the highest is Real time)
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
     CameraPtr pCam = nullptr;
@@ -120,6 +121,7 @@ int main(int /*argc*/, char** /*argv*/)
 				return -1;
 			}
 		}
+		cv::waitKey(1500); // 等待1.5s,确保相机自动白平衡已经完成
 		// Create an array of CameraPtrs. This array maintenances smart pointer's reference
 		// count when CameraPtr is passed into grab thread as void pointer
 		AcquisitionParameters* paraList = new AcquisitionParameters[NUM_CAMERAS];
@@ -138,11 +140,11 @@ int main(int /*argc*/, char** /*argv*/)
 
 
 		
-        // acquire images and do something
-        // main part of this program
+        
         //cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0); 
-		bool first_time = true;
-		int num_Acquisition = 0; // init tracker after some images to assure auto balance finished
+
+		// acquire images and do something
+		// main part of this program
 		try
 		{
 			auto start_acquiring = std::chrono::high_resolution_clock::now();
@@ -252,7 +254,7 @@ int main(int /*argc*/, char** /*argv*/)
 							//std::cout << "Tracker points Camera " << camera_index << " marker " << marker_inex << tracker.currentPos[camera_index][marker_inex] << std::endl;
 							// 因为我们截取了一部分图像，所以计算位置之前要还原到原来的2048*2048的像素坐标系下的坐标
 							dataProcess.points[camera_index][marker_inex] = tracker.currentPos[camera_index][marker_inex]
-								+ dataProcess.offset[camera_index];
+								+ offset[camera_index];
 						}
 					}
 					dataProcess.exportGaitData();
@@ -280,9 +282,8 @@ int main(int /*argc*/, char** /*argv*/)
 				}
 #ifdef TRANS_FRAME
 
-				if (!dataProcess.GotWorldFrame && num_Acquisition > 40)
+				if (!dataProcess.GotWorldFrame)
 				{
-					//dataProcess.GotWorldFrame = true;
 					try
 					{
 						bool found = dataProcess.FindWorldFrame(tracker.ReceivedImages);
@@ -307,13 +308,9 @@ int main(int /*argc*/, char** /*argv*/)
 				cv::vconcat(combine1, combine2, combine);
 				cv::imshow("CONCAT", combine);
 				int key = cv::waitKey(1);
-				if (key == 27)
+				if (key == 27) // 按下Esc键退出程序
 				{
 					status = false;
-				}
-				if (num_Acquisition < 100)
-				{
-					num_Acquisition ++;
 				}
 				stop_drawing = std::chrono::high_resolution_clock::now();
 				std::chrono::duration<double> time_total = stop_drawing - start_acquiring;
@@ -365,9 +362,8 @@ int main(int /*argc*/, char** /*argv*/)
 		ResetExposure(pCam);
 		ResetTrigger(pCam);
         pCam->DeInit();
-		pCam = nullptr; // 一定要设为nullptr, 否则在system->ReleaseInstance()时会出错
     }
-    //pCam = NULL;
+	pCam = nullptr; // 一定要设为nullptr, 否则在system->ReleaseInstance()时会出错
 
     // Clear camera list before releasing system
     camList.Clear();
