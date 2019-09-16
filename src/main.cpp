@@ -228,18 +228,15 @@ int main(int /*argc*/, char** /*argv*/)
 					for (int i = 0; i < NUM_CAMERAS; i++)
 					{
 						tracker.RectifyMarkerPos(i);
-
-						for (int marker_index = 0; marker_index < NUM_MARKERS; marker_index++)
-						{
-							//std::cout << "Camera " << i << " Marker " << marker_index << " " << tracker.currentPos[i][marker_index] << std::endl;
-							cv::putText(tracker.ReceivedImages[i], to_string(i), cv::Point(50, 50), 1, 2, cv::Scalar(0, 255, 0), 2);
-							cv::putText(tracker.ReceivedImages[i], to_string(marker_index), tracker.currentPos[i][marker_index], 1, 2, cv::Scalar(0, 255, 0), 2);
-							cv::circle(tracker.ReceivedImages[i], tracker.currentPos[i][marker_index], 3, cv::Scalar(0, 0, 255), 2);
-							// std::cout << i << marker_index << tracker.currentPos[i][marker_index] << std::endl;
-
-						}
+						cv::putText(tracker.ReceivedImages[i], to_string(i), cv::Point(50, 50), 1, 4, cv::Scalar(0, 255, 0), 2);
 						for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
 						{
+							// 写出标记点对的编号
+							cv::putText(tracker.ReceivedImages[i], to_string(marker_set), cv::Point(tracker.currentPosSet[i][marker_set].x - tracker.detectWindowDimX / 2,
+								tracker.currentPosSet[i][marker_set].y - tracker.detectWindowDimY / 2 -10), 1, 2, cv::Scalar(0, 255, 0), 2);
+							// 画出箭头
+							cv::arrowedLine(tracker.ReceivedImages[i], tracker.currentPos[i][2*marker_set], tracker.currentPos[i][2*marker_set+1], cv::Scalar(0,100,255),2, 8, 0, 0.3);
+							// 画出检测窗
 							cv::rectangle(tracker.ReceivedImages[i], cv::Rect(tracker.currentPosSet[i][marker_set].x - tracker.detectWindowDimX / 2,
 								tracker.currentPosSet[i][marker_set].y - tracker.detectWindowDimY / 2, tracker.detectWindowDimX, tracker.detectWindowDimY), cv::Scalar(255, 0, 0),2);
 						}
@@ -302,9 +299,10 @@ int main(int /*argc*/, char** /*argv*/)
 					}
 				}
 #endif
-				cv::Mat combine, combine1, combine2, combine3;
+				cv::Mat combine, combine1, combine2;
 				cv::hconcat(tracker.ReceivedImages[2], tracker.ReceivedImages[0], combine1);
 				cv::hconcat(tracker.ReceivedImages[3], tracker.ReceivedImages[1], combine2);
+				//combine1.push_back(combine2);
 				cv::vconcat(combine1, combine2, combine);
 				cv::imshow("CONCAT", combine);
 				int key = cv::waitKey(1);

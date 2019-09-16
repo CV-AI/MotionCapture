@@ -6,7 +6,6 @@
 Tracker::Tracker():detectWindowDimX(120), detectWindowDimY(120),threshold(100),TrackerAutoIntialized(false)
 {
 	cv::Point momentum[NUM_CAMERAS] = { cv::Point(0,0), cv::Point(0,0),cv::Point(0,0), cv::Point(0,0) };
-	
 }
 
 
@@ -48,7 +47,7 @@ void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
 		std::cout << "Color area has been selected!" << std::endl;
 		std::cout << "Color has been selected" << std::endl;
 		image = image(selection);
-		assert(image.channels == 3); // image must be three channels
+		assert(image.channels() == 3); // image must be three channels
 		CorlorsChosen = cv::mean(image);
 		getColors = true;
 		std::cout << "blue green red: " << CorlorsChosen << std::endl;
