@@ -44,7 +44,7 @@ public:
 	
 	bool DataProcess::FindWorldFrame(cv::Mat[4]);
 	// 标记点在全尺寸图像下的图像坐标
-	cv::Point2i points[4][6];
+	cv::Point2f points[4][6];
 	// 经过校正的图像坐标
 	cv::Point2f mapped_points[4][6];
 	// 世界坐标系坐标

@@ -17,10 +17,10 @@ cv::Scalar Tracker::CorlorsChosen(0,0,0);
 bool Tracker::getColors = false;
 cv::Rect Tracker::calibration_region;
 cv::Mat Tracker::ReceivedImages[NUM_CAMERAS];
-cv::Point Tracker::currentPos[NUM_CAMERAS][NUM_MARKERS];
-cv::Point Tracker::previousPos[NUM_CAMERAS][NUM_MARKERS];
-cv::Point Tracker::currentPosSet[NUM_CAMERAS][NUM_MARKER_SET];
-cv::Point Tracker::previousPosSet[NUM_CAMERAS][NUM_MARKER_SET];
+cv::Point2f Tracker::currentPos[NUM_CAMERAS][NUM_MARKERS];
+cv::Point2f Tracker::previousPos[NUM_CAMERAS][NUM_MARKERS];
+cv::Point2f Tracker::currentPosSet[NUM_CAMERAS][NUM_MARKER_SET];
+cv::Point2f Tracker::previousPosSet[NUM_CAMERAS][NUM_MARKER_SET];
 
 // 比较两个coutour的面积（用于contour的排序算法）
 bool compareContourAreas(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2) {
@@ -119,9 +119,7 @@ bool Tracker:: initMarkerPosition(int camera_index)
 		for (int i = 0; i < 6; i++)
 		{
 			std::cout << "contour size" << contours[i].size() << std::endl;
-			cv::Rect br = cv::boundingRect(contours[i]);
-			int cx = br.x + br.width / 2; int cy = br.y + br.height / 2;
-			currentPos[camera_index][i] = cv::Point(cx, cy);
+			currentPos[camera_index][i] = cv::minAreaRect(contours[i]).center;
 		}
 		RectifyMarkerPos(camera_index);
 		for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
@@ -156,22 +154,25 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 	std::sort(contours.begin(), contours.end(), compareContourAreas);
 	if (contours.size() >=2)
 	{
-		cv::Rect br_u = cv::boundingRect(contours[0]);
-		int cx_u = cvRound( br_u.x + br_u.width * 0.5); 
-		int cy_u = cvRound(br_u.y + br_u.height * 0.5);
+		/*cv::Rect br_u = cv::boundingRect(contours[0]);
+		int center_x_u = cvRound( br_u.x + br_u.width * 0.5); 
+		int center_y_u = cvRound(br_u.y + br_u.height * 0.5);
 		cv::Rect br_l = cv::boundingRect(contours[1]);
-		int cx_l = cvRound(br_l.x + br_l.width * 0.5);
-		int cy_l = cvRound(br_l.y + br_l.height * 0.5);
-		if (br_u.y < br_l.y)
+		int center_x_l = cvRound(br_l.x + br_l.width * 0.5);
+		int center_y_l = cvRound(br_l.y + br_l.height * 0.5);*/
+		cv::Point2f center_0 = cv::minAreaRect(contours[0]).center;
+		cv::Point2f center_1 = cv::minAreaRect(contours[1]).center;
+		
+		if (center_0.y < center_1.y)
 		{
-			currentPos[camera_index][2 * marker_set] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y);
-			currentPos[camera_index][2 * marker_set + 1] = cv::Point(cx_l + detectPosition.x, cy_l + detectPosition.y);
+			currentPos[camera_index][2 * marker_set] = center_0 + cv::Point2f(detectPosition);
+			currentPos[camera_index][2 * marker_set + 1] = center_1 + cv::Point2f(detectPosition);
 
 		}
 		else
 		{
-			currentPos[camera_index][2 * marker_set + 1] = cv::Point(cx_u + detectPosition.x, cy_u + detectPosition.y);
-			currentPos[camera_index][2 * marker_set] = cv::Point(cx_l + detectPosition.x, cy_l + detectPosition.y);
+			currentPos[camera_index][2 * marker_set + 1] = center_0 + cv::Point2f(detectPosition);
+			currentPos[camera_index][2 * marker_set] = center_1 + cv::Point2f(detectPosition);
 		}
 		currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
 		return true;
@@ -290,7 +291,7 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 		for (int j = 0; j < NUM_MARKER_SET; j++)
 		{
 			// 将检测窗口中心的位置设为上一帧标记对位置（再加上一个动量，以模拟标记点的运动）
-			(*trackerPtr).detectPosition = (*trackerPtr).previousPosSet[camera_index][j] + (*trackerPtr).momentum[j] - cv::Point(int((*trackerPtr).detectWindowDimX*0.5), int((*trackerPtr).detectWindowDimY * 0.5));
+			(*trackerPtr).detectPosition = cv::Point2i((*trackerPtr).previousPosSet[camera_index][j]) + (*trackerPtr).momentum[j] - cv::Point(int((*trackerPtr).detectWindowDimX*0.5), int((*trackerPtr).detectWindowDimY * 0.5));
 			// 保证ROI不超出图像范围
 			if ((*trackerPtr).detectPosition.x < 0)
 			{

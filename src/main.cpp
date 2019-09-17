@@ -251,7 +251,7 @@ int main(int /*argc*/, char** /*argv*/)
 							//std::cout << "Tracker points Camera " << camera_index << " marker " << marker_inex << tracker.currentPos[camera_index][marker_inex] << std::endl;
 							// 因为我们截取了一部分图像，所以计算位置之前要还原到原来的2048*2048的像素坐标系下的坐标
 							dataProcess.points[camera_index][marker_inex] = tracker.currentPos[camera_index][marker_inex]
-								+ offset[camera_index];
+								+ cv::Point2f(offset[camera_index]);
 						}
 					}
 					dataProcess.exportGaitData();

@@ -50,10 +50,10 @@ public:
 	cv::Mat detectWindow_Initial;
 	cv::Point detectPosition;
 
-	static cv::Point currentPos[NUM_CAMERAS][NUM_MARKERS]; // first entry is the index of image, second entry is the index of marker
-	static cv::Point previousPos[NUM_CAMERAS][NUM_MARKERS];// make it static to share between multiple tracker objects
-	static cv::Point currentPosSet[NUM_CAMERAS][NUM_MARKER_SET]; // current position of camera set
-	static cv::Point previousPosSet[NUM_CAMERAS][NUM_MARKER_SET];
+	static cv::Point2f currentPos[NUM_CAMERAS][NUM_MARKERS]; // first entry is the index of image, second entry is the index of marker
+	static cv::Point2f previousPos[NUM_CAMERAS][NUM_MARKERS];// make it static to share between multiple tracker objects
+	static cv::Point2f currentPosSet[NUM_CAMERAS][NUM_MARKER_SET]; // current position of camera set
+	static cv::Point2f previousPosSet[NUM_CAMERAS][NUM_MARKER_SET];
 	cv::Point momentum[NUM_MARKER_SET]; // 动量：即前两帧的位置差
 	
 	//int cmin = 80; // minimum and maximum value for contours
