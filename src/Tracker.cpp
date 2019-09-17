@@ -93,8 +93,9 @@ void Tracker::ColorThresholding()
 bool Tracker:: initMarkerPosition(int camera_index)
 {	
 	ColorThresholding();
-	
-	cv::Mat mask(5, 5, CV_8U, cv::Scalar(1));
+	cv::erode(detectWindow_Initial, detectWindow_Initial, mask_erode);
+	/*cv::namedWindow("detectwindow_erode", 0);
+	cv::imshow("detectwindow_erode", detectWindow_Initial);*/
 	cv::morphologyEx(detectWindow_Initial, detectWindow_Initial, cv::MORPH_CLOSE, mask);
 	cv::namedWindow("detectwindow", 0);
 	cv::setMouseCallback("detectwindow", Mouse_getRegion, 0);
@@ -144,13 +145,10 @@ bool Tracker:: initMarkerPosition(int camera_index)
 bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 {
 	ColorThresholding(camera_index);
-	cv::Mat mask(5, 5, CV_8U, cv::Scalar(1));
+	cv::erode(detectWindow, detectWindow, mask_erode);
 	cv::morphologyEx(detectWindow, detectWindow, cv::MORPH_CLOSE, mask);
 	std::vector<std::vector<cv::Point>>contours;
 	cv::findContours(detectWindow, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
-	/*cv::namedWindow("detectWindow", 0);
-	cv::imshow("detectWindow", detectCopy);
-	cv::waitKey(1);*/
 	std::sort(contours.begin(), contours.end(), compareContourAreas);
 	if (contours.size() >=2)
 	{
@@ -199,7 +197,6 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 				detectWindow_Initial = ReceivedImages[i].clone();
 				// 如果把success放在前面，则success为false时，函数不会执行
 				success =  initMarkerPosition(i) && success;
-				success =  RectifyMarkerPos(i) && success;
 				for (int j = 0; j < NUM_MARKERS; j++)
 				{
 					std::cout <<"Inital position: "<< i << j << currentPos[i][j] << std::endl;
@@ -291,30 +288,26 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 		for (int j = 0; j < NUM_MARKER_SET; j++)
 		{
 			// 将检测窗口中心的位置设为上一帧标记对位置（再加上一个动量，以模拟标记点的运动）
-			(*trackerPtr).detectPosition = cv::Point2i((*trackerPtr).previousPosSet[camera_index][j]) + (*trackerPtr).momentum[j] - cv::Point(int((*trackerPtr).detectWindowDimX*0.5), int((*trackerPtr).detectWindowDimY * 0.5));
+			(*trackerPtr).detectPosition = (*trackerPtr).previousPosSet[camera_index][j] + (*trackerPtr).momentum[j] - cv::Point2f(int((*trackerPtr).detectWindowDimX*0.5), int((*trackerPtr).detectWindowDimY * 0.5));
 			// 保证ROI不超出图像范围
 			if ((*trackerPtr).detectPosition.x < 0)
 			{
 				(*trackerPtr).detectPosition.x = 0;
-				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << "\n";
 				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << std::endl;
 			}
 			if ((*trackerPtr).detectPosition.y < 0)
 			{
 				(*trackerPtr).detectPosition.y = 0;
-				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << "\n";
 				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << std::endl;
 			}
 			if ((*trackerPtr).detectPosition.x+ (*trackerPtr).detectWindowDimX > (*trackerPtr).ReceivedImages[camera_index].cols)
 			{
 				window_size_x = (*trackerPtr).ReceivedImages[camera_index].cols - (*trackerPtr).detectPosition.x;
-				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << "\n";
 				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << std::endl;
 			}
 			if ((*trackerPtr).detectPosition.y + (*trackerPtr).detectWindowDimY > (*trackerPtr).ReceivedImages[camera_index].rows)
 			{
 				window_size_y = (*trackerPtr).ReceivedImages[camera_index].rows - (*trackerPtr).detectPosition.y;
-				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << "\n";
 				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << std::endl;
 			}
 			

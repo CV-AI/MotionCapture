@@ -48,13 +48,15 @@ public:
     static cv::Mat ReceivedImages[NUM_CAMERAS]; // Left_Upper, Right_Upper, Right_Lower, Left_Lower
 	cv::Mat detectWindow;
 	cv::Mat detectWindow_Initial;
+	cv::Mat mask_erode = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3,3));
+	cv::Mat mask = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
 	cv::Point detectPosition;
 
 	static cv::Point2f currentPos[NUM_CAMERAS][NUM_MARKERS]; // first entry is the index of image, second entry is the index of marker
 	static cv::Point2f previousPos[NUM_CAMERAS][NUM_MARKERS];// make it static to share between multiple tracker objects
 	static cv::Point2f currentPosSet[NUM_CAMERAS][NUM_MARKER_SET]; // current position of camera set
 	static cv::Point2f previousPosSet[NUM_CAMERAS][NUM_MARKER_SET];
-	cv::Point momentum[NUM_MARKER_SET]; // 动量：即前两帧的位置差
+	cv::Point2f momentum[NUM_MARKER_SET]; // 动量：即前两帧的位置差
 	
 	//int cmin = 80; // minimum and maximum value for contours
 	//int cmax = 140;
