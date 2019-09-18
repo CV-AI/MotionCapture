@@ -199,9 +199,12 @@ void DataProcess::getJointAngle()
 		thigh[i] = MarkerPos3D[i][1] - MarkerPos3D[i][0];
 		shank[i] = MarkerPos3D[i][3] - MarkerPos3D[i][2];
 		foot[i] = MarkerPos3D[i][5] - MarkerPos3D[i][4];
-
-		//eura_angles[3*i] = ((atan2(thigh[i].x, abs(thigh[i].z))) / pi) * 180;
-		eura_angles[3 * i] = cv::fastAtan2(thigh[i].x, thigh[i].z);
+		/*std::cout << "thigh " << i << " " << thigh[i] << std::endl;
+		std::cout << "shank " << i << " " << shank[i] << std::endl;
+		std::cout << "foot " << i << " " << foot[i] << std::endl;*/
+		// 通过这种余角的方式计算，避免角度从0跳动到360附近，而是呈现正负跳动的形式
+		eura_angles[3 * i] = cv::fastAtan2(thigh[i].z, thigh[i].x);
+		eura_angles[3 * i] = (eura_angles[3 * i] <= 90) ? 90 - eura_angles[3 * i] :-(eura_angles[3 * i]-90);
 		eura_angles[3*i+1] = ((acos((thigh[i].x * shank[i].x + thigh[i].z * shank[i].z) / (sqrt(thigh[i].x * thigh[i].x + thigh[i].z * thigh[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
 		eura_angles[3*i+2] = ((acos((foot[i].x * shank[i].x + foot[i].z * shank[i].z) / (sqrt(foot[i].x * foot[i].x + foot[i].z * foot[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
 		//std::cout <<"Camera Set: "<<i<< " hip:   " << hip[i] << "   " << "knee:   " << knee[i] << "   " << "ankle:   " << ankle[i] << std::endl;
