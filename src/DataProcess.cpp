@@ -101,8 +101,6 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	std::cout << "Q_left" << Q_left;
 	fs["Q1"] >> Q_right;
 	fs.release();*/
-	
-	
 }
 
 
@@ -242,7 +240,7 @@ bool DataProcess::exportGaitData()
 	eura_file << "\n";
 	//通过句柄向PLC写入数组
 	nErr = AdsSyncWriteReq(pAddr, ADSIGRP_SYM_VALBYHND, lHdlVar2, sizeof(eura_angles), eura_angles);
-	//if (nErr) std::cerr << "Error: AdsSyncReadReq: " << nErr << '\n';
+	if (nErr) std::cerr << "Error: AdsSyncReadReq: " << nErr << '\n';
 
 	return true;
 }
@@ -258,8 +256,10 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		std::vector<cv::Point3f> vectors(3);
 		std::vector<cv::Point2f> corners_upper, corners_lower;
 		bool found = cv::findChessboardCorners(images[2 * camera_set], boardsize, corners_upper);
+		std::cout << "found :" << found << std::endl;
 		// found 为false时， findChessboardCorners不再执行
 		found = found && cv::findChessboardCorners(images[2 * camera_set + 1], boardsize, corners_lower);
+		std::cout << "found :" << found << std::endl;
 		if (!found)
 		{
 			return false;
@@ -326,7 +326,7 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		fs<< "R0" << Rotation[0];
 		fs<<"R1"<< Rotation[1];
 		fs << "T0" << Transform[0];
-		fs << "T0" << Transform[1];
+		fs << "T1" << Transform[1];
 	}
 	return true;
 }
