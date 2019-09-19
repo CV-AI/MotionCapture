@@ -28,11 +28,18 @@ int main(int /*argc*/, char** /*argv*/)
 	DataProcess dataProcess;
 	bool status = true;
 	dataProcess.nPort = AdsPortOpen();
-	dataProcess.nErr = AdsGetLocalAddress(dataProcess.pAddr);
+	dataProcess.pAddr->netId.b[0] = 172;
+	dataProcess.pAddr->netId.b[1] = 18;
+	dataProcess.pAddr->netId.b[2] = 130;
+	dataProcess.pAddr->netId.b[3] = 124;
+	dataProcess.pAddr->netId.b[4] = 1;
+	dataProcess.pAddr->netId.b[5] = 1;
+
+	/*dataProcess.nErr = AdsGetLocalAddress(dataProcess.pAddr);
 	if (dataProcess.nErr)
 	{
 		cerr << "Error: AdsGetLocalAddress: " << dataProcess.nErr << "\n";
-	}
+	}*/
 	dataProcess.pAddr->port = 851;
 	dataProcess.nErr = AdsSyncReadWriteReq(dataProcess.pAddr, ADSIGRP_SYM_HNDBYNAME, 0x0, sizeof(dataProcess.lHdlVar2), &dataProcess.lHdlVar2, sizeof(dataProcess.szVar2), dataProcess.szVar2);
 	if (dataProcess.nErr) 

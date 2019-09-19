@@ -256,14 +256,10 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		std::vector<cv::Point3f> vectors(3);
 		std::vector<cv::Point2f> corners_upper, corners_lower;
 		bool found = cv::findChessboardCorners(images[2 * camera_set], boardsize, corners_upper);
-		std::cout << "found :" << found << std::endl;
 		// found 为false时， findChessboardCorners不再执行
 		found = found && cv::findChessboardCorners(images[2 * camera_set + 1], boardsize, corners_lower);
-		std::cout << "found :" << found << std::endl;
-		if (!found)
-		{
-			return false;
-		}
+		if (!found) return false;
+		
 		sortChessboardCorners(corners_lower);
 		/*for (int i = 0; i < corners_lower.size(); i++)
 		{
@@ -311,14 +307,14 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		std::cout << "rotation matrix:\n" << Rotation[camera_set] << std::endl;
 		Transform[camera_set] = cv::Point3f(transform);
 	}
-	/*cv::namedWindow("corners", 0);
+	cv::namedWindow("corners", 0);
 	cv::Mat combine, combine1, combine2;
 	cv::hconcat(images[2], images[0], combine1);
 	cv::hconcat(images[3], images[1], combine2);
 	cv::vconcat(combine1, combine2, combine);
 	cv::resize(combine, combine, cv::Size(1024, 1024));
 	cv::imshow("corners", combine);
-	cv::waitKey(0);*/
+	cv::waitKey(0);
 	GotWorldFrame = true;
 	cv::FileStorage fs("FrameDefine.yml", cv::FileStorage::WRITE);
 	if (fs.isOpened())

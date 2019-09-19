@@ -4,8 +4,9 @@
 #include <fstream>
 //#include <opencv2/opencv.hpp>
 #include <opencv2/calib3d.hpp>
-
+#include <opencv2/highgui.hpp>
 #include <opencv2/imgproc/types_c.h>
+#include <opencv2/imgproc.hpp>
 #include <sstream>
 //TwinCAT需要的两个头文件
 #include <Windows.h> // Ads需要Windows.h,但是不敢动ads本身的文件，所以放在这儿
