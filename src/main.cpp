@@ -27,7 +27,9 @@ int main(int /*argc*/, char** /*argv*/)
     Tracker tracker;
 	DataProcess dataProcess;
 	bool status = true;
+	// open Ads
 	dataProcess.nPort = AdsPortOpen();
+	dataProcess.AdsOpened = true;
 	dataProcess.pAddr->netId.b[0] = 172;
 	dataProcess.pAddr->netId.b[1] = 18;
 	dataProcess.pAddr->netId.b[2] = 130;
@@ -43,7 +45,8 @@ int main(int /*argc*/, char** /*argv*/)
 	dataProcess.pAddr->port = 851;
 	dataProcess.nErr = AdsSyncReadWriteReq(dataProcess.pAddr, ADSIGRP_SYM_HNDBYNAME, 0x0, sizeof(dataProcess.lHdlVar2), &dataProcess.lHdlVar2, sizeof(dataProcess.szVar2), dataProcess.szVar2);
 	if (dataProcess.nErr) 
-	{
+	{	
+		dataProcess.AdsOpened = false;
 		cerr << "Error: AdsSyncReadWriteReq: " << dataProcess.nErr << "\n"; 
 	}
     // let the program know which camera to acquire image from
@@ -240,7 +243,7 @@ int main(int /*argc*/, char** /*argv*/)
 						}
 						else if (!exitcode)
 						{
-							cout << "Grab thread for camera at index " << j << " exited with errors."
+							cout << "Tracking thread for camera at index " << j << " exited with errors."
 								"Please check onscreen print outs for error details" << endl;
 						}
 					}
@@ -385,6 +388,7 @@ int main(int /*argc*/, char** /*argv*/)
     // Clear camera list before releasing system
     camList.Clear();
     system->ReleaseInstance();
+	// close Ads
 	dataProcess.nErr = AdsPortClose();
 	if (dataProcess.nErr) cerr << "Error: AdsPortClose: " << dataProcess.nErr << "\n";
     return true;

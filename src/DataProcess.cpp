@@ -5,6 +5,7 @@
 DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 {
 	GotWorldFrame = false;
+	AdsOpened = false;
 	joint_angles = { 0,0,0,0,0,0 };
 	joint_angles_pre = { 0,0,0,0,0,0 };
 	
@@ -235,13 +236,14 @@ bool DataProcess::exportGaitData()
 		// 输出欧拉角度到文件
 		eura_file << eura_angles[angle] << ",";
 	}
-
 	angles_file << "\n";
 	eura_file << "\n";
-	//通过句柄向PLC写入数组
-	nErr = AdsSyncWriteReq(pAddr, ADSIGRP_SYM_VALBYHND, lHdlVar2, sizeof(eura_angles), eura_angles);
-	if (nErr) std::cerr << "Error: AdsSyncReadReq: " << nErr << '\n';
-
+	if (AdsOpened) // 必须作此判断，否则Ads会消耗近5秒的时间，应该是在重试
+	{
+		//通过句柄向PLC写入数组
+		nErr = AdsSyncWriteReq(pAddr, ADSIGRP_SYM_VALBYHND, lHdlVar2, sizeof(eura_angles), eura_angles);
+		if (nErr) std::cerr << "Error: AdsSyncReadReq: " << nErr << '\n';
+	}
 	return true;
 }
 

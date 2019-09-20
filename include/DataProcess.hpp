@@ -82,6 +82,7 @@ public:
 	cv::Matx44f Rotation[2];
 	// 相机坐标系到世界坐标系的位移
 	cv::Point3f Transform[2];
+	bool AdsOpened;
 	long      nErr, nPort;	//定义端口变量
 	AmsAddr   Addr;		//定义AMS地址变量
 	PAmsAddr  pAddr = &Addr;  	//定义端口地址变量
