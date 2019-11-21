@@ -130,6 +130,7 @@ int main(int /*argc*/, char** /*argv*/)
 		{
 			while (status)
 			{
+
 				// acquire images
 				for (unsigned int i = 0; i < NUM_CAMERAS; i++)
 				{

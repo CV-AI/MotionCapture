@@ -37,12 +37,12 @@ enum triggerType
 	HARDWARE
 };
 const triggerType chosenTrigger = HARDWARE;
-cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,200), cv::Point(550,500), cv::Point(600,200) };
-const int64_t numBuffers = 3;
-const float frameRate = 50.0f;
+cv::Point2i offset[4] = { cv::Point(500, 750), cv::Point(500,550), cv::Point(780,750), cv::Point(800,550) };
+const int64_t numBuffers = 2;
+const float frameRate = 80.0f;
 float exposureTimeToSet = 12000.0f;
-int64_t height[4] = { 1280, 1280, 1280, 1280 };
-int64_t width[4] = { 768, 768, 768, 768 }; // multiple of 32
+int64_t height[4] = { 900, 900, 900, 900 };
+int64_t width[4] = { 768, 768, 640, 640 }; // multiple of 32
 bool SetExposureManual = true;
 bool TRACKING = true;
 class AcquisitionParameters

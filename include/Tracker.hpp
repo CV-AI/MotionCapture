@@ -11,16 +11,16 @@
 #include<cmath>
 
 // MAX and MIN H, S, V
-const int MAX_H_RED = 50;
-const int  MIN_H_RED = 0;
-const int MAX_SATURATION = 255;
+const int MAX_H_RED = 20;
+const int MIN_H_RED = 0;
+const int MAX_SATURATION = 220;
 const int MIN_SATURATION = 120;
 const int MAX_VALUE = 255;
-const int MIN_VALUE = 120;
+const int MIN_VALUE = 90;
 const int NUM_CAMERAS = 4;
 const int NUM_MARKERS = 6;
 const int NUM_MARKER_SET = 3;
-const double weight = 0.75;
+const double weight = 0.75; 
 enum TrackerType { ByDetection, CV_KCF, ByColor };
 
 class Tracker

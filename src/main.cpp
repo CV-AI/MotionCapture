@@ -97,15 +97,15 @@ int main(int /*argc*/, char** /*argv*/)
             {
                 cout << "Error: DeviceSerialNumber unavailable" << endl;
             }
-            if (deviceSerialNumber=="18308397")
+            if (deviceSerialNumber=="18308396")
             {
                 CameraIndex[i] = 0; // Left Upper
             }
-            else if (deviceSerialNumber=="18308395")
+            else if (deviceSerialNumber=="18308397")
             {
                 CameraIndex[i] = 1; // Left Lower
             }
-            else if (deviceSerialNumber == "18308399")
+            else if (deviceSerialNumber == "18308400")
             {
                 CameraIndex[i] = 2; // Right Upper               
             }
