@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <iostream>
 
-DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
+DataProcess::DataProcess() :GotWorldFrame(false)
 {
 	GotWorldFrame = false;
 	AdsOpened = false;
@@ -14,7 +14,7 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	cv::FileStorage fs_calib("calib_params.yml", cv::FileStorage::READ);
 	if (fs_calib.isOpened())
 	{
-		for (int camera = 0; camera < numCameras; camera++)
+		for (int camera = 0; camera < NUM_CAMERAS; camera++)
 		{
 			// IntrinsicMatrix generated in matlab must be transposed to use in opencv
 			char* str = new char[strlen("cameraMatrix")+1];
@@ -94,7 +94,7 @@ void DataProcess::mapTo3D()
 
 	// 双目校正 stereo rectification
 	std::vector<cv::Point2f> centerPnt, undistortedPnt;
-	for (int camera = 0; camera < numCameras; camera++)
+	for (int camera = 0; camera < NUM_CAMERAS; camera++)
 	{
 		for (int marker = 0; marker < 6; marker++)
 		{
@@ -228,7 +228,7 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 	cv::Size boardsize(3, 3);
 	cv::Point3f vector_x, vector_y, vector_z, p0, p1,p2;
 	
-	for (int camera_set = 0; camera_set < numCameras / 2; camera_set++)
+	for (int camera_set = 0; camera_set < NUM_CAMERAS / 2; camera_set++)
 	{
 		std::vector<cv::Point3f> vectors(3);
 		std::vector<cv::Point2f> corners_upper, corners_lower;
