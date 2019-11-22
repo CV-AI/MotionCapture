@@ -76,14 +76,13 @@ int main(int /*argc*/, char** /*argv*/)
 	
 	std::cout << "Number of cameras detected: " << numCameras << "\n" << std::endl;
 	assert(numCameras == NUM_CAMERAS);
-	assert(dataProcess.numCameras == numCameras);
 	// set current process as high priority (second highest, the highest is Real time)
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
     CameraPtr pCam = nullptr;
     try 
     {
         // Give each camera index
-        for (unsigned int i = 0; i < numCameras; i++)
+        for (unsigned int i = 0; i < NUM_CAMERAS; i++)
         {
 
             // Select camera
@@ -115,7 +114,7 @@ int main(int /*argc*/, char** /*argv*/)
             }
 			cout << "Camera Index on " << i << " is " << CameraIndex[i] << endl;
         }
-		for (unsigned int i = 0; i < numCameras; i++)
+		for (unsigned int i = 0; i < NUM_CAMERAS; i++)
 		{
 			pCam = camList.GetByIndex(i);
 			std::cout << endl << "Configuring Camera " << i << "..." << endl;

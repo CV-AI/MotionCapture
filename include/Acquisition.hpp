@@ -24,6 +24,7 @@
 #include <sstream>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include "ConfigParams.hpp"
 
 
 using namespace Spinnaker;
@@ -31,20 +32,7 @@ using namespace Spinnaker::GenApi;
 using namespace Spinnaker::GenICam;
 using namespace std;
 
-enum triggerType
-{
-	SOFTWARE,
-	HARDWARE
-};
-const triggerType chosenTrigger = HARDWARE;
-cv::Point2i offset[4] = { cv::Point(500, 750), cv::Point(500,550), cv::Point(780,750), cv::Point(800,550) };
-const int64_t numBuffers = 2;
-const float frameRate = 80.0f;
-float exposureTimeToSet = 12000.0f;
-int64_t height[4] = { 900, 900, 900, 900 };
-int64_t width[4] = { 768, 768, 640, 640 }; // multiple of 32
-bool SetExposureManual = true;
-bool TRACKING = true;
+
 class AcquisitionParameters
 {
 public:

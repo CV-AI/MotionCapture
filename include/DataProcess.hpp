@@ -13,6 +13,7 @@
 #include "TcAdsDef.h"
 #include "TcAdsAPI.h"
 #include "DigitalFilters.h"
+#include "ConfigParams.hpp"
 
 cv::Point3f crossing(cv::Point3f u, cv::Point3f v);
 cv::Point3f scale(cv::Point3f u);
@@ -34,7 +35,6 @@ public:
 	// eura angles 即前后两帧之间的角度差
 	std::ofstream eura_file;
 	// 相机的数目
-	const int numCameras = 4;
 	
 	void mapTo3D();
 	
@@ -59,20 +59,12 @@ public:
 	std::vector<double> joint_angles_pre;
 	// 是否得到了相机坐标系到世界坐标系的转换矩阵
 	bool GotWorldFrame;
-	// 捕捉窗口相对全尺寸图像的偏置
-	cv::Point2i offset[4] = { cv::Point(500, 500), cv::Point(500,200), cv::Point(550,500), cv::Point(600,200) };
 	// 相机内参数
 	cv::Matx33d cameraMatrix[4];
 	// 变形参数
 	cv::Mat distorCoeff[4];
 	// 4×4  disparity-to-depth mapping matrix (see reprojectImageTo3D ).
 	cv::Matx44d Q_left, Q_right;
-	// 光心
-	float cx_list[4] = { 1028.86793241869, 1025.25190697668, 1064.17248516588, 1057.75116447966 };
-	float cy_list[4] = { 998.503330516640, 992.096216270560, 1010.52956670735, 1009.38127702806 };
-	// 焦距
-	float fx_list[4] = { 1102.37337240957, 1109.92089040731, 1158.42318268710, 1138.43655571807 };
-	float fy_list[4] = { 1102.26282215247, 1108.12606534582, 1170.73160163419, 1150.35306687457 };
 	// 左右两副相机对，下方相机相对上方相机的旋转矩阵
 	cv::Mat rotationMatLeft, rotationMatRight;
 	// 左右两副相机对，下方相机相对上方相机的位移

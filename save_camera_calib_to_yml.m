@@ -7,16 +7,19 @@ fileID = fopen('build/calib_params.yml', 'w');
 % write header
 fprintf(fileID, "%s\n%s\n", "%YAML:1.0", "---");
 % write distortion
-fprintf(fileID, "%s\n   %s\n   %s\n   %s\n   %s", "Distortion: !!opencv-matrix", "rows: 4", "cols: 4", "dt: f", "data: [");
-dist0 = [left_stereo.CameraParameters1.RadialDistortion left_stereo.CameraParameters1.TangentialDistortion];
-dist1 = [left_stereo.CameraParameters2.RadialDistortion left_stereo.CameraParameters2.TangentialDistortion];
-dist2 = [right_stereo.CameraParameters1.RadialDistortion right_stereo.CameraParameters1.TangentialDistortion];
-dist3 = [right_stereo.CameraParameters2.RadialDistortion right_stereo.CameraParameters2.TangentialDistortion];
-distortion = [dist0 dist1 dist2 dist3];
-for i=1:length(distortion)-1
-    fprintf(fileID, "%.9f, ", distortion(i));
-end
-fprintf(fileID, "%.9f]\n", distortion(16));
+dist(:,1) = [left_stereo.CameraParameters1.RadialDistortion left_stereo.CameraParameters1.TangentialDistortion];
+dist(:,2) = [left_stereo.CameraParameters2.RadialDistortion left_stereo.CameraParameters2.TangentialDistortion];
+dist(:,3) = [right_stereo.CameraParameters1.RadialDistortion right_stereo.CameraParameters1.TangentialDistortion];
+dist(:,4) = [right_stereo.CameraParameters2.RadialDistortion right_stereo.CameraParameters2.TangentialDistortion];
+for c=1:4
+    m = dist(:,c);
+    fprintf(fileID, "%s%d%s\n   %s\n   %s\n   %s\n   %s", "Distortion", c-1,": !!opencv-matrix", "rows: 4", "cols: 1", "dt: f", "data: [");
+    for i=1:3
+        fprintf(fileID, "%.9e, ", m(i));
+    end
+    fprintf(fileID, "%.9e]\n", m(4));
+end 
+
 
 % write intrinsic matrixes
 Intri(:,:,1) = left_stereo.CameraParameters1.IntrinsicMatrix;
@@ -28,7 +31,7 @@ for c=1:4
     m = Intri(:,:,c).';
     for row=1:3
         for col=1:3
-            fprintf(fileID, "%.9f", m(row,col));
+            fprintf(fileID, "%.9e", m(row,col));
             if row<3 || col<3
                 fprintf(fileID, ", "); % cannot add "," after last element
             end
@@ -43,7 +46,7 @@ for c=1:2
     fprintf(fileID, "%s%d%s\n   %s\n   %s\n   %s\n   %s", "Translation", c-1,": !!opencv-matrix", "rows: 3", "cols: 1", "dt: f", "data: [");
     m = Translation(:,:,c);
     for col=1:3
-        fprintf(fileID, "%.9f", m(col));
+        fprintf(fileID, "%.9e", m(col));
         if col<3
             fprintf(fileID, ", "); % cannot add "," after last element
         end
@@ -58,7 +61,7 @@ for c=1:2
     m = Rotation(:,:,c);
     for row=1:3
         for col=1:3
-            fprintf(fileID, "%.9f", m(row,col));
+            fprintf(fileID, "%.9e", m(row,col));
             if row<3 || col<3
                 fprintf(fileID, ", "); % cannot add "," after last element
             end

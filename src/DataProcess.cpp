@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <iostream>
 
-DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
+DataProcess::DataProcess() :GotWorldFrame(false)
 {
 	GotWorldFrame = false;
 	AdsOpened = false;
@@ -11,61 +11,48 @@ DataProcess::DataProcess() :numCameras(4), GotWorldFrame(false)
 	
 	angles_file.open("angles.csv");
 	eura_file.open("eura.csv");
-	// OpenCV's distortion coefficient vector:  the radial parameters come first; these are followed by the
-	// two tangential parameters --LearnOpenCV3 Chapter19 Page724
-	std::vector < std::vector<double>> distorCoeffList = {
-						{-0.0709573236367611, 0.0819347816184623, -0.00229710720816990,	0.00223004557805238}, // assigning vector like this requires C++11 or higher
-						{-0.0782886283658884, 0.129966473775231, -0.00447759677730269, 0.00371640574661551},
-						{-0.0637950488364343, 0.115821950263960, 0.00448871862274016, 0.00244843774244850}, // assigning vector like this requires C++11 or higher
-						{-0.0732969283921288, 0.139401736087819, 0.00608572295729794, 0.00261382520826605}
-	};
-	// initiate parameters for camera rectification
-	for (int camera = 0; camera < numCameras; camera++)
+	cv::FileStorage fs_calib("calib_params.yml", cv::FileStorage::READ);
+	if (fs_calib.isOpened())
 	{
+		for (int camera = 0; camera < NUM_CAMERAS; camera++)
+		{
+			
+			// IntrinsicMatrix generated in matlab must be transposed to use in opencv（data in yml file is already transposed)
+			char* str = new char[strlen("cameraMatrix")+1];
+			sprintf(str, "%s%d", "cameraMatrix", camera);
+			fs_calib[str] >> cameraMatrix[camera];
+			// OpenCV's distortion coefficient vector:  the radial parameters come first; these are followed by the
+			// two tangential parameters --LearnOpenCV3 Chapter19 Page724
+			// this problem is handled in matlab script "save_camera_calib_to_yml.m"
+			str = new char[strlen("Distortion") + 1];
+			sprintf(str, "%s%d", "Distortion", camera);
+			fs_calib[str] >> distorCoeff[camera];
+			// use CV_64F type for inputs of function of stereoRectify
+			distorCoeff[camera].convertTo(distorCoeff[camera], CV_64F);
+			std::cout << "Camera " << camera << " Matrix: \n" << cameraMatrix[camera] << std::endl;
+			std::cout << "Camera " << camera << " distortion vector: \n" << distorCoeff[camera] << std::endl;
+		}
+		// initialize rotation and translation matrix for left and right camera set
+		// the matlab matrix need to be transposed to fit opencv
 		// use CV_64F type for inputs of function of stereoRectify
-		cameraMatrix[camera] = cv::Matx33d::zeros();
-		cameraMatrix[camera](0, 0) = fx_list[camera];
-		cameraMatrix[camera](1, 1) = fy_list[camera];
-		cameraMatrix[camera](0, 2) = cx_list[camera];
-		cameraMatrix[camera](1, 2) = cy_list[camera];
-		cameraMatrix[camera](2, 2) = 1;
-		// 4 rows, 1 column
-		distorCoeff[camera] = cv::Mat(distorCoeffList[camera].size(), 1, CV_64F, distorCoeffList[camera].data());
-		std::cout << "Camera " << camera << " Matrix: \n" << cameraMatrix[camera] << std::endl;
-		std::cout << "Camera " << camera << " distortion vector: \n" << distorCoeff[camera] << std::endl;
+		
+		fs_calib["Rotation0"] >> rotationMatLeft;
+		fs_calib["Rotation1"] >> rotationMatRight;
+		rotationMatLeft.convertTo(rotationMatLeft, CV_64F);
+		rotationMatRight.convertTo(rotationMatRight, CV_64F);
+		std::cout << "Left Camera Set rotation Matrix: \n" << rotationMatLeft << std::endl;
+		std::cout << "Right Camera Set rotation Matrix: \n" << rotationMatRight << std::endl;
+		// use CV_64F type for inputs of function of stereoRectify
+		translationMatLeft = cv::Mat(3, 1, CV_64F);
+		translationMatRight = cv::Mat(3, 1, CV_64F);
+		fs_calib["Translation0"] >> translationMatLeft;
+		fs_calib["Translation1"] >> translationMatRight;
+		translationMatLeft.convertTo(translationMatLeft, CV_64F);
+		translationMatRight.convertTo(translationMatRight, CV_64F);
+		std::cout << "Left Camera Set translation Matrix: \n" << translationMatLeft << std::endl;
+		std::cout << "Right Camera Set translation Matrix: \n" << translationMatRight << std::endl;
 	}
-	//
-	// initialize rotation and translation matrix for left and right camera set
-	// these hard coded parameters are calculated by matlab for camera caliabration
-	// rotation matrix for camera set in left
-	// the matlab matrix need to be transposed to fit opencv
-	std::vector < double > rotationMatLeftVec = {
-						0.999950740825703, -0.00839254784768728, -0.00529915679631496,
-						0.00847312121061239,	0.999845970938895,	0.0153701208261035,
-						0.00516934609771118, -0.0154142641044920,	0.999867830427122
-	};
-	// rotation matrix for camera set in right
-	std::vector < double > rotationMatRightVec = {
-						0.999220726328862,	0.0288498130258020, -0.0269374899201554,
-						-0.0280613789593659,	0.999179560790386,	0.0292021285119807,
-						0.0277578652947424, -0.0284234689492265,	0.999210492002146
-	};
-	rotationMatLeft = cv::Mat(3, 3, CV_64F, rotationMatLeftVec.data()).t();
-	rotationMatRight = cv::Mat(3, 3, CV_64F, rotationMatRightVec.data()).t();
-	std::cout << "Left Camera Set rotation Matrix: \n" << rotationMatLeft << std::endl;
-	std::cout << "Right Camera Set rotation Matrix: \n" << rotationMatRight << std::endl;
-	// translation matrix for camera set in left
-	std::vector<double> translationMatLeftVec =
-	{ 1.09924022464804,-311.013107025229, -0.325991832090340 };
-	// translation matrix for camera set in right
-	std::vector<double> translationMatRightVec =
-	{ 10.6279676948522, -264.663517556467, -9.95862862688720 };
-
-	translationMatLeft = cv::Mat(translationMatLeftVec.size(), 1, CV_64F, translationMatLeftVec.data());
-	translationMatRight = cv::Mat(translationMatRightVec.size(), 1, CV_64F, translationMatRightVec.data());
-	std::cout << "Left Camera Set translation Matrix: \n" << translationMatLeft << std::endl;
-	std::cout << "Right Camera Set translation Matrix: \n" << translationMatRight << std::endl;
-
+	
 	// 立体校正的时候需要两幅图像共面并且行对准，以使得立体匹配更方便
 	// 使的两幅图像共面的方法就是把两个相机平面投影到一个公共的成像平面上，这样每幅图像投影到公共平面
 	//  就需要一个旋转矩阵R, stereoRectify()这个函数计算的就是从图像平面投影到公共成像平面的的旋转矩阵Rl,Rr.
@@ -119,7 +106,7 @@ void DataProcess::mapTo3D()
 
 	// 双目校正 stereo rectification
 	std::vector<cv::Point2f> centerPnt, undistortedPnt;
-	for (int camera = 0; camera < numCameras; camera++)
+	for (int camera = 0; camera < NUM_CAMERAS; camera++)
 	{
 		for (int marker = 0; marker < 6; marker++)
 		{
@@ -253,7 +240,7 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 	cv::Size boardsize(3, 3);
 	cv::Point3f vector_x, vector_y, vector_z, p0, p1,p2;
 	
-	for (int camera_set = 0; camera_set < numCameras / 2; camera_set++)
+	for (int camera_set = 0; camera_set < NUM_CAMERAS / 2; camera_set++)
 	{
 		std::vector<cv::Point3f> vectors(3);
 		std::vector<cv::Point2f> corners_upper, corners_lower;

@@ -25,12 +25,13 @@ message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 
 
 set(MY_HEADER_FILES
+	include/ConfigParams.hpp
         include/Acquisition.hpp
         include/CircularDelay.hpp
         include/Tracker.hpp
         include/DataProcess.hpp
-		include/TcAdsDef.h
-		include/TcAdsAPI.h
+        include/TcAdsDef.h
+        include/TcAdsAPI.h
         include/DigitalFilters.h
         )
 
