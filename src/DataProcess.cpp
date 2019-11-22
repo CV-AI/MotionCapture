@@ -16,7 +16,8 @@ DataProcess::DataProcess() :GotWorldFrame(false)
 	{
 		for (int camera = 0; camera < NUM_CAMERAS; camera++)
 		{
-			// IntrinsicMatrix generated in matlab must be transposed to use in opencv
+			
+			// IntrinsicMatrix generated in matlab must be transposed to use in opencv（data in yml file is already transposed)
 			char* str = new char[strlen("cameraMatrix")+1];
 			sprintf(str, "%s%d", "cameraMatrix", camera);
 			fs_calib[str] >> cameraMatrix[camera];
@@ -26,17 +27,28 @@ DataProcess::DataProcess() :GotWorldFrame(false)
 			str = new char[strlen("Distortion") + 1];
 			sprintf(str, "%s%d", "Distortion", camera);
 			fs_calib[str] >> distorCoeff[camera];
+			// use CV_64F type for inputs of function of stereoRectify
+			distorCoeff[camera].convertTo(distorCoeff[camera], CV_64F);
 			std::cout << "Camera " << camera << " Matrix: \n" << cameraMatrix[camera] << std::endl;
 			std::cout << "Camera " << camera << " distortion vector: \n" << distorCoeff[camera] << std::endl;
 		}
 		// initialize rotation and translation matrix for left and right camera set
 		// the matlab matrix need to be transposed to fit opencv
+		// use CV_64F type for inputs of function of stereoRectify
+		
 		fs_calib["Rotation0"] >> rotationMatLeft;
 		fs_calib["Rotation1"] >> rotationMatRight;
+		rotationMatLeft.convertTo(rotationMatLeft, CV_64F);
+		rotationMatRight.convertTo(rotationMatRight, CV_64F);
 		std::cout << "Left Camera Set rotation Matrix: \n" << rotationMatLeft << std::endl;
 		std::cout << "Right Camera Set rotation Matrix: \n" << rotationMatRight << std::endl;
+		// use CV_64F type for inputs of function of stereoRectify
+		translationMatLeft = cv::Mat(3, 1, CV_64F);
+		translationMatRight = cv::Mat(3, 1, CV_64F);
 		fs_calib["Translation0"] >> translationMatLeft;
 		fs_calib["Translation1"] >> translationMatRight;
+		translationMatLeft.convertTo(translationMatLeft, CV_64F);
+		translationMatRight.convertTo(translationMatRight, CV_64F);
 		std::cout << "Left Camera Set translation Matrix: \n" << translationMatLeft << std::endl;
 		std::cout << "Right Camera Set translation Matrix: \n" << translationMatRight << std::endl;
 	}
