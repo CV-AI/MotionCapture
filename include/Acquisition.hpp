@@ -123,7 +123,7 @@ DWORD WINAPI AcquireImages(LPVOID lpParam)
 		// Use trigger to capture image
 		//
 		// *** NOTES ***
-		if (chosenTrigger == SOFTWARE)
+		if (chosenTrigger == triggerType::SOFTWARE)
 		{
 			// Execute software trigger
 			if (pCam->TriggerSoftware == NULL || pCam->TriggerSoftware.GetAccessMode() != WO)
@@ -161,11 +161,6 @@ DWORD WINAPI AcquireImages(LPVOID lpParam)
         {
 			*cvImage = ConvertToCVmat(pResultImage);
             pResultImage->Release();
-            //needs to be converted into BGR(OpenCV uses RGB)
-            //cv::cvtColor(cvImage, cvImage, CV_BayerGB2BGR);
-			// 使用指针参数，直接对形参赋值
-			//cv::cvtColor(*cvImage, *cvImage, CV_RGB2BGR);
-			//cout << "Acquiring image finished" << endl;
 			return true;
         }
     }
@@ -213,8 +208,6 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 
 		if (pCam->PixelFormat != NULL && pCam->PixelFormat.GetAccessMode() == RW)
 		{
-			// RGB8 data is bigger that BayerGB8, is we use BayerGB, data transmitting will be much faster
-			// 但是这时，由于BayerGB8 模式下并不能设置相机自动白平衡，只能用opencv来做，这样又可能更慢
 			pCam->PixelFormat.SetValue(PixelFormat_RGB8);
 
 			cout << "Pixel format set to " << pCam->PixelFormat.GetCurrentEntry()->GetSymbolic() << "..." << endl;
@@ -444,7 +437,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 		
 		try
 		{
-			if (chosenTrigger == SOFTWARE)
+			if (chosenTrigger == triggerType::SOFTWARE)
 			{
 				cout << "Software trigger chosen..." << endl;
 			}
@@ -477,7 +470,7 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 			// The trigger source must be set to hardware or software while trigger 
 			// mode is off.
 			//
-			if (chosenTrigger == SOFTWARE)
+			if (chosenTrigger == triggerType::SOFTWARE)
 			{
 				// Set the trigger source to software
 				if (pCam->TriggerSource == NULL || pCam->TriggerSource.GetAccessMode() != RW)

@@ -47,9 +47,7 @@ public:
 	static cv::Point2f currentPosSet[NUM_CAMERAS][NUM_MARKER_SET]; // current position of camera set
 	static cv::Point2f previousPosSet[NUM_CAMERAS][NUM_MARKER_SET];
 	cv::Point2f momentum[NUM_MARKER_SET]; // 动量：即前两帧的位置差
-	
-	//int cmin = 80; // minimum and maximum value for contours
-	//int cmax = 140;
+
 	bool InitTracker(TrackerType);
 	bool FilterInitialImage();
 	bool RectifyMarkerPos(int);

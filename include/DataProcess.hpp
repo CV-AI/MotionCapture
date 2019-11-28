@@ -79,7 +79,7 @@ public:
 	AmsAddr   Addr;		//定义AMS地址变量
 	PAmsAddr  pAddr = &Addr;  	//定义端口地址变量
 	unsigned long lHdlVar2;   	//创建句柄
-	char szVar2[20] = { "MAIN.Array1" };
+	char szVar2[20] = { "MAIN.VisionAngle" };
 };
 constexpr float dtUsed = 0.025;
 constexpr double tau = 2; // 滤波器的时间常数

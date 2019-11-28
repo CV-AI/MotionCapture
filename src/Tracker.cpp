@@ -3,7 +3,7 @@
 #include <algorithm>
 
 
-Tracker::Tracker():detectWindowDimX(120), detectWindowDimY(120),threshold(100),TrackerAutoIntialized(false)
+Tracker::Tracker():detectWindowDimX(100), detectWindowDimY(120),threshold(100),TrackerAutoIntialized(false)
 {
 	cv::Point momentum[NUM_CAMERAS] = { cv::Point(0,0), cv::Point(0,0),cv::Point(0,0), cv::Point(0,0) };
 }
@@ -74,8 +74,8 @@ void Tracker::Mouse_getRegion(int event, int x, int y, int, void*)
 // 通过HSV颜色空间进行阈值化处理，能较好地避免光照影响
 void Tracker::ColorThresholding(int marker_index)
 {
-	cv::cvtColor(detectWindow, detectWindow, CV_RGB2HSV);
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
+	cv::cvtColor(detectWindow, detectWindow, CV_RGB2HSV);
 	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED, MIN_SATURATION, MIN_VALUE), cv::Scalar(MAX_H_RED, MAX_SATURATION, MAX_VALUE), rangeRes);
 	detectWindow = rangeRes;
 }
@@ -83,8 +83,8 @@ void Tracker::ColorThresholding(int marker_index)
 // 通过HSV颜色空间进行阈值化处理，能较好地避免光照影响
 void Tracker::ColorThresholding()
 {
-	cv::cvtColor(detectWindow_Initial, detectWindow_Initial, CV_RGB2HSV);
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow_Initial.size(), CV_8UC1);
+	cv::cvtColor(detectWindow_Initial, detectWindow_Initial, CV_RGB2HSV);
 	cv::inRange(detectWindow_Initial, cv::Scalar(MIN_H_RED, MIN_SATURATION, MIN_VALUE), cv::Scalar(MAX_H_RED, MAX_SATURATION, MAX_VALUE), rangeRes);
 	detectWindow_Initial = rangeRes;
 }
