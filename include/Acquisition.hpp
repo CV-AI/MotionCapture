@@ -104,12 +104,10 @@ int PrintDeviceInfo(INodeMap & nodeMap);
 */
 cv::Mat ConvertToCVmat(ImagePtr spinImage)
 {
-    unsigned int XPadding = spinImage->GetXPadding();
-    unsigned int YPadding = spinImage->GetYPadding();
-    unsigned int rowsize = spinImage->GetWidth();
-    unsigned int colsize = spinImage->GetHeight();
+    unsigned int row = spinImage->GetXPadding()+ spinImage->GetWidth();
+    unsigned int col = spinImage->GetYPadding() + spinImage->GetHeight();
     //image data contains padding. When allocating Mat container size, you need to account for the X,Y image data padding.
-    return cv::Mat(colsize + YPadding, rowsize + XPadding, CV_MAKETYPE(CV_8U, spinImage->GetNumChannels()), spinImage->GetData(), spinImage->GetStride());
+    return cv::Mat(col, row, CV_MAKETYPE(CV_8U, spinImage->GetNumChannels()), spinImage->GetData(), spinImage->GetStride());
 }
 // This function acquires images from a device.
 DWORD WINAPI AcquireImages(LPVOID lpParam)
@@ -155,6 +153,7 @@ DWORD WINAPI AcquireImages(LPVOID lpParam)
             std::cout << "Image incomplete: "
                     << Image::GetImageStatusDescription(pResultImage->GetImageStatus())
                     << "..." << "\n" << endl;
+			pResultImage->Release();
 			return false;
         }
         else
