@@ -1,8 +1,8 @@
 % read parameters from .mat files(left pair and right pair cameras) 
-left_params = load('Parameters.mat');
-right_params = load('Parameters.mat');
-left_stereo = left_params.stereoParams;
-right_stereo = right_params.stereoParams;
+left_params = load('left.mat');
+right_params = load('right.mat');
+left_stereo = left_params.left;
+right_stereo = right_params.right;
 fileID = fopen('build/calib_params.yml', 'w');
 % write header
 fprintf(fileID, "%s\n%s\n", "%YAML:1.0", "---");
@@ -54,8 +54,8 @@ for c=1:2
     fprintf(fileID, "]\n");
 end
 % rotation of camera2 in left and right camera pair
-Rotation(:,:,1) = left_stereo.RotationOfCamera2;
-Rotation(:,:,2) = right_stereo.RotationOfCamera2;
+Rotation(:,:,1) = left_stereo.RotationOfCamera2.';
+Rotation(:,:,2) = right_stereo.RotationOfCamera2.';
 for c=1:2
     fprintf(fileID, "%s%d%s\n   %s\n   %s\n   %s\n   %s", "Rotation", c-1,": !!opencv-matrix", "rows: 3", "cols: 3", "dt: f", "data: [");
     m = Rotation(:,:,c);
