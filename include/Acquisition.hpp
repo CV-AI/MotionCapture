@@ -287,20 +287,20 @@ bool ConfigCamera(CameraPtr pCam, int cameraIndex)
 				}
 				// turn off white balance to set balance ratio
 				pCam->BalanceWhiteAuto.SetValue(BalanceWhiteAuto_Off);
-				if (!IsReadable(pCam->BalanceRatio) || !IsWritable(pCam->BalanceRatio))
-				{
-					std::cerr << "Unable to set white balance ratio. Aborting..." << std::endl;
-					return false;
-				}
-				pCam->BalanceRatio.SetValue(1.5);
-				std::cout << "White Balance ratio: " << pCam->BalanceRatio.GetValue() << std::endl;
-				// turn White Balance back on
-				pCam->BalanceWhiteAuto.SetValue(BalanceWhiteAuto_Continuous);
-				std::cout << "White Balance status: " << pCam->BalanceWhiteAuto.GetCurrentEntry()->GetSymbolic() << std::endl;
+				//if (!IsReadable(pCam->BalanceRatio) || !IsWritable(pCam->BalanceRatio))
+				//{
+				//	std::cerr << "Unable to set white balance ratio. Aborting..." << std::endl;
+				//	return false;
+				//}
+				//pCam->BalanceRatio.SetValue(1.5);
+				//std::cout << "White Balance ratio: " << pCam->BalanceRatio.GetValue() << std::endl;
+				//// turn White Balance back on
+				//pCam->BalanceWhiteAuto.SetValue(BalanceWhiteAuto_Continuous);
+				//std::cout << "White Balance status: " << pCam->BalanceWhiteAuto.GetCurrentEntry()->GetSymbolic() << std::endl;
 			}
 			else
 			{
-				std::cout << "Pixel format is not RGB8, White Balance cannot be turn on..." << std::endl;
+				std::cout << "Pixel format is not RGB8, White Balance cannot be turned on..." << std::endl;
 			}
 		}
 		catch (Spinnaker::Exception& e)

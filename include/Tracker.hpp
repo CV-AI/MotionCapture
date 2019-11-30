@@ -48,7 +48,7 @@ public:
 	static cv::Point2f previousPosSet[NUM_CAMERAS][NUM_MARKER_SET];
 	cv::Point2f momentum[NUM_MARKER_SET]; // 动量：即前两帧的位置差
 
-	bool InitTracker(TrackerType);
+	bool InitTracker(TrackerType); 
 	bool FilterInitialImage();
 	bool RectifyMarkerPos(int);
 	int detectWindowDimX; // the dimension of detectWindow_Initial
