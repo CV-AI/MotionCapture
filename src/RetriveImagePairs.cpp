@@ -16,7 +16,6 @@ using namespace Spinnaker::GenApi;
 using namespace Spinnaker::GenICam;
 using namespace std;
 
-const int NUM_CAMERAS = 4;
 // Example entry point; please see Enumeration example for more in-depth 
 // comments on preparing and cleaning up the system.
 int main(int /*argc*/, char** /*argv*/)
@@ -27,7 +26,7 @@ int main(int /*argc*/, char** /*argv*/)
     // let the program know which camera to acquire image from
     
     cv::Mat image_LU, image_RU, image_RL, image_LL; // Left_Upper, Right_Upper, Right_Lower, Left_Lower
-	cv::WindowFlags window_type = cv::WINDOW_FULLSCREEN;
+	auto window_type = 0;
 	cv::namedWindow("CONCAT", window_type);
     // Retrieve singleton reference to system object
     SystemPtr system = System::GetInstance();
@@ -65,22 +64,22 @@ int main(int /*argc*/, char** /*argv*/)
             {
                 cout << "Error: DeviceSerialNumber unavailable" << endl;
             }
-            if (deviceSerialNumber=="18308397")
-            {
-                CameraIndex[i] = 0; // Left Upper
-            }
-            else if (deviceSerialNumber=="18308395")
-            {
-                CameraIndex[i] = 1; // Left Lower
-            }
-            else if (deviceSerialNumber == "18308399")
-            {
-                CameraIndex[i] = 2; // Right Upper               
-            }
-            else if (deviceSerialNumber == "18308393")
-            {
-                CameraIndex[i] = 3; // Right Lower
-            }
+			if (deviceSerialNumber == "18308396")
+			{
+				CameraIndex[i] = 0; // Left Upper
+			}
+			else if (deviceSerialNumber == "18308397")
+			{
+				CameraIndex[i] = 1; // Left Lower
+			}
+			else if (deviceSerialNumber == "18308400")
+			{
+				CameraIndex[i] = 2; // Right Upper               
+			}
+			else if (deviceSerialNumber == "18308393")
+			{
+				CameraIndex[i] = 3; // Right Lower
+			}
 			cout << "Camera Index on " << i << " is " << CameraIndex[i] << endl;
         }
 		for (unsigned int i = 0; i < numCameras; i++)
@@ -125,7 +124,7 @@ int main(int /*argc*/, char** /*argv*/)
         // main part of this program
         //cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0); 
 		bool first_time = true;
-		int num_Acquisition = 4; // init tracker after some images to assure auto balance finished
+		int num_Acquisition = 0; // init tracker after some images to assure auto balance finished
 		try
 		{
 			while (status)
@@ -161,6 +160,8 @@ int main(int /*argc*/, char** /*argv*/)
 					}
 				}
 				cv::Mat combine, combine1, combine2;
+				cout << images[0].size() << images[1].size() << endl;
+				cout << images[2].size() << images[3].size() << endl;
 				cv::hconcat(images[2], images[0], combine1);
 				cv::hconcat(images[3], images[1], combine2);
 				cv::vconcat(combine1, combine2, combine);
