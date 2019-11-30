@@ -52,7 +52,7 @@ int main(int /*argc*/, char** /*argv*/)
     // let the program know which camera to acquire image from
     
     cv::Mat image_LU, image_RU, image_RL, image_LL; // Left_Upper, Right_Upper, Right_Lower, Left_Lower
-	cv::WindowFlags window_type = cv::WINDOW_NORMAL;
+	auto window_type = 0; 
     cv::namedWindow("Left_Upper", window_type);
     cv::namedWindow("Right_Upper", window_type);
     cv::namedWindow("Right_Lower", window_type);
@@ -143,7 +143,7 @@ int main(int /*argc*/, char** /*argv*/)
 				return -1;
 			}
 		}
-		cv::waitKey(1500); // 等待1.5s,确保相机自动白平衡已经完成
+		//cv::waitKey(1500); // 等待1.5s,确保相机自动白平衡已经完成
 		// Create an array of CameraPtrs. This array maintenances smart pointer's reference
 		// count when CameraPtr is passed into grab thread as void pointer
 		AcquisitionParameters* paraList = new AcquisitionParameters[NUM_CAMERAS];
