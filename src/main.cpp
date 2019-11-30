@@ -270,7 +270,10 @@ int main(int /*argc*/, char** /*argv*/)
 					{
 						for (int marker_inex = 0; marker_inex < NUM_MARKERS; marker_inex++)
 						{
-							//std::cout << "Tracker points Camera " << camera_index << " marker " << marker_inex << tracker.currentPos[camera_index][marker_inex] << std::endl;
+							if (_PRINT_PROCESS)
+							{
+								std::cout << "Tracker points Camera " << camera_index << " marker " << marker_inex << tracker.currentPos[camera_index][marker_inex] << std::endl;
+							}
 							// 因为我们截取了一部分图像，所以计算位置之前要还原到原来的2048*2048的像素坐标系下的坐标
 							dataProcess.points[camera_index][marker_inex] = tracker.currentPos[camera_index][marker_inex]
 								+ cv::Point2f(offset[camera_index]);
@@ -280,7 +283,6 @@ int main(int /*argc*/, char** /*argv*/)
 					stop_export = std::chrono::high_resolution_clock::now();
 					std::chrono::duration<double> time_export = stop_export - finish_tracking;
 					std::cout << "Time on export gait data: " << time_export.count() << std::endl;
-					
 				}
 
 				if (/*tracker.getColors && */!tracker.TrackerAutoIntialized
@@ -390,5 +392,5 @@ int main(int /*argc*/, char** /*argv*/)
 	// close Ads
 	dataProcess.nErr = AdsPortClose();
 	if (dataProcess.nErr) cerr << "Error: AdsPortClose: " << dataProcess.nErr << "\n";
-    return true;
+    return 0;
 }

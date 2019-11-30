@@ -83,12 +83,6 @@ DataProcess::DataProcess() :GotWorldFrame(false)
 		GotWorldFrame = true;
 		std::cout << "----!!!!! Use file to initialize Rotation and Transform matrix -----!!!!!" << std::endl;
 	}
-	// 可以从文件里读取相机标定文件，但是OpenCV的标定很不流畅，目前还是使用Matlab标定
-	/*cv::FileStorage fs("calib.yml", cv::FileStorage::READ);
-	fs["Q0"] >> Q_left;
-	std::cout << "Q_left" << Q_left;
-	fs["Q1"] >> Q_right;
-	fs.release();*/
 }
 
 
@@ -102,8 +96,6 @@ DataProcess::~DataProcess()
 // 将捕捉到的标记点从图像坐标系转换到相机坐标系
 void DataProcess::mapTo3D()
 {
-
-
 	// 双目校正 stereo rectification
 	std::vector<cv::Point2f> centerPnt, undistortedPnt;
 	for (int camera = 0; camera < NUM_CAMERAS; camera++)
@@ -117,8 +109,14 @@ void DataProcess::mapTo3D()
 		for (int marker = 0; marker < 6; marker++)
 		{
 			mapped_points[camera][marker] = undistortedPnt[marker];
-			/*std::cout << "adding offset: Camera " << camera << " Marker " << marker << " " << points[camera][marker] << "\t";
-			std::cout << "float point mapping" << mapped_points[camera][marker] << std::endl;*/
+		}
+		if (_PRINT_PROCESS)
+		{
+			for (int marker = 0; marker < 6; marker++)
+			{
+				std::cout << "Marker Pos after adding offset " << camera << " marker " << marker << " " << points[camera][marker] << std::endl;
+				std::cout << "After undistort mapping" << mapped_points[camera][marker] << std::endl;
+			}
 		}
 	}	
 	
@@ -139,7 +137,14 @@ void DataProcess::mapTo3D()
 	{
 		MarkerPosVecL[marker] += cv::Vec3f(Transform[0]);
 		MarkerPosVecR[marker] += cv::Vec3f(Transform[1]);
-		//std::cout << "before move " << marker << " : " << MarkerPosVecL[marker] << std::endl;
+	}
+	if (_PRINT_PROCESS)
+	{
+		for (int marker = 0; marker < 6; marker++)
+		{
+			std::cout << "3D Pos before frame change:Left  " << marker << " : " << MarkerPosVecL[marker] << std::endl;
+			std::cout << "3D Pos before frame change:Right " << marker << " : " << MarkerPosVecR[marker] << std::endl;
+		}
 	}
 	cv::perspectiveTransform(MarkerPosVecL, MarkerPosVecL, Rotation[0]);
 	cv::perspectiveTransform(MarkerPosVecR, MarkerPosVecR, Rotation[1]);
@@ -147,8 +152,11 @@ void DataProcess::mapTo3D()
 	{
 		MarkerPos3D[0][marker] = cv::Point3f(MarkerPosVecL[marker]);
 		MarkerPos3D[1][marker] = cv::Point3f(MarkerPosVecR[marker]);
-		//std::cout << "Camera 0, Marker " << marker << " : " << MarkerPos3D[0][marker] << std::endl;
-		//std::cout << "Camera 1, Marker " << marker << " : " << MarkerPos3D[1][marker] << std::endl;
+		if (_PRINT_PROCESS)
+		{
+			std::cout << "3D Pos of Camera 0, Marker " << marker << " : " << MarkerPos3D[0][marker] << std::endl;
+			std::cout << "3D Pos of Camera 1, Marker " << marker << " : " << MarkerPos3D[1][marker] << std::endl;
+		}
 	}
 }
 
@@ -193,7 +201,6 @@ void DataProcess::getJointAngle()
 		eura_angles[3 * i] = (eura_angles[3 * i] <= 90) ? 90 - eura_angles[3 * i] :-(eura_angles[3 * i]-90);
 		eura_angles[3*i+1] = ((acos((thigh[i].x * shank[i].x + thigh[i].z * shank[i].z) / (sqrt(thigh[i].x * thigh[i].x + thigh[i].z * thigh[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
 		eura_angles[3*i+2] = ((acos((foot[i].x * shank[i].x + foot[i].z * shank[i].z) / (sqrt(foot[i].x * foot[i].x + foot[i].z * foot[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
-		//std::cout <<"Camera Set: "<<i<< " hip:   " << hip[i] << "   " << "knee:   " << knee[i] << "   " << "ankle:   " << ankle[i] << std::endl;
 	}
 	
 }
@@ -202,9 +209,9 @@ void DataProcess::getJointAngle()
 bool DataProcess::exportGaitData()
 {
 	
-	mapTo3D(); // 
+	mapTo3D(); 
 	joint_angles_pre = joint_angles;
-	getJointAngle(); // 约4ms
+	getJointAngle(); 
 	// 滤波后存放到joint_angles
 	joint_angles[0] = lpf0.update(eura_angles[0]);
 	joint_angles[1]= lpf1.update(eura_angles[1]);

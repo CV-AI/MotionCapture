@@ -7,17 +7,19 @@ enum class triggerType
 	HARDWARE
 };
 const triggerType chosenTrigger = triggerType::HARDWARE;
-static cv::Point2i offset[4] = { cv::Point(500, 1000), cv::Point(500,700), cv::Point(800,750), cv::Point(800,550) };
+static cv::Point2i offset[4] = { cv::Point(500, 1000), cv::Point(500,700), cv::Point(900,750), cv::Point(950,550) };
 static int64_t height[4] = { 900, 900, 900, 900 };
 static int64_t width[4] = { 768, 768, 640, 640 }; // multiple of 32
 const int64_t numBuffers = 2;
 const float frameRate = 80.0f;
-static float exposureTimeToSet = 6000.0f;
+static float exposureTimeToSet = 3000.0f;
 
 const bool SetExposureManual = true;
+// 当只需要获取图象时，设为false
 static bool TRACKING = true;
 
-
+// 是否打印中间过程信息，正式运行时设为false，运行更快
+const bool _PRINT_PROCESS = true;
 // MAX and MIN H, S, V
 const int MAX_H_RED = 10;
 const int MIN_H_RED = 0;

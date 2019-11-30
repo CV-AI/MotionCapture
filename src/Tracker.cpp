@@ -165,7 +165,6 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 		{
 			currentPos[camera_index][2 * marker_set] = center_0 + cv::Point2f(detectPosition);
 			currentPos[camera_index][2 * marker_set + 1] = center_1 + cv::Point2f(detectPosition);
-
 		}
 		else
 		{
