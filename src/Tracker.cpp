@@ -3,7 +3,7 @@
 #include <algorithm>
 
 
-Tracker::Tracker():detectWindowDimX(100), detectWindowDimY(120),threshold(100),TrackerAutoIntialized(false)
+Tracker::Tracker():threshold(100),TrackerAutoIntialized(false)
 {
 	cv::Point momentum[NUM_CAMERAS] = { cv::Point(0,0), cv::Point(0,0),cv::Point(0,0), cv::Point(0,0) };
 }
@@ -279,15 +279,16 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 	bool success = true;
 	cv::Point detectRegionPosition;
 	cv::Rect detectRect;
-	int window_size_x = (*trackerPtr).detectWindowDimX;
-	int window_size_y = (*trackerPtr).detectWindowDimY;
+	
 	switch (tracker_type)
 	{
 	case ByDetection:
 		for (int j = 0; j < NUM_MARKER_SET; j++)
 		{
+			int window_size_x = (*trackerPtr).detectWindowDim[camera_index][j].x;
+			int window_size_y = (*trackerPtr).detectWindowDim[camera_index][j].y;
 			// 将检测窗口中心的位置设为上一帧标记对位置（再加上一个动量，以模拟标记点的运动）
-			(*trackerPtr).detectPosition = (*trackerPtr).previousPosSet[camera_index][j] + (*trackerPtr).momentum[j] - cv::Point2f(int((*trackerPtr).detectWindowDimX*0.5), int((*trackerPtr).detectWindowDimY * 0.5));
+			(*trackerPtr).detectPosition = (*trackerPtr).previousPosSet[camera_index][j] + (*trackerPtr).momentum[j] - cv::Point2f(int(window_size_x*0.5), int(window_size_y * 0.5));
 			// 保证ROI不超出图像范围
 			if ((*trackerPtr).detectPosition.x < 0)
 			{
@@ -299,12 +300,12 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 				(*trackerPtr).detectPosition.y = 0;
 				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << std::endl;
 			}
-			if ((*trackerPtr).detectPosition.x+ (*trackerPtr).detectWindowDimX > (*trackerPtr).ReceivedImages[camera_index].cols)
+			if ((*trackerPtr).detectPosition.x+ window_size_x > (*trackerPtr).ReceivedImages[camera_index].cols)
 			{
 				window_size_x = (*trackerPtr).ReceivedImages[camera_index].cols - (*trackerPtr).detectPosition.x;
 				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << std::endl;
 			}
-			if ((*trackerPtr).detectPosition.y + (*trackerPtr).detectWindowDimY > (*trackerPtr).ReceivedImages[camera_index].rows)
+			if ((*trackerPtr).detectPosition.y + window_size_y > (*trackerPtr).ReceivedImages[camera_index].rows)
 			{
 				window_size_y = (*trackerPtr).ReceivedImages[camera_index].rows - (*trackerPtr).detectPosition.y;
 				std::cerr << "-----Tracker roi exceeds image limit, rectified. Please check camera orientation!!!!\a\a" << std::endl;
