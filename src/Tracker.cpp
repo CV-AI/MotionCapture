@@ -29,48 +29,6 @@ bool compareContourAreas(std::vector<cv::Point> contour1, std::vector<cv::Point>
 	return (i > j); // 从大到小排序
 }
 
-// 获取鼠标划过区域的平均颜色
-void Tracker::Mouse_getColor(int event, int x, int y, int, void*)
-{
-	static cv::Point origin;
-	static cv::Rect selection;
-	switch (event)
-	{
-	case CV_EVENT_LBUTTONDOWN:
-		origin = cv::Point(x, y);
-		break;
-	case CV_EVENT_LBUTTONUP:
-		selection.x = MIN(x, origin.x);
-		selection.y = MIN(y, origin.y);
-		selection.width = abs(x - origin.x);
-		selection.height = abs(y - origin.y);
-		std::cout << "Color area has been selected!" << std::endl;
-		std::cout << "Color has been selected" << std::endl;
-		image = image(selection);
-		assert(image.channels() == 3); // image must be three channels
-		CorlorsChosen = cv::mean(image);
-		getColors = true;
-		std::cout << "blue green red: " << CorlorsChosen << std::endl;
-	}
-}
-
-// 获取六个标记点所在区域（以排除其他噪声点的干扰）
-void Tracker::Mouse_getRegion(int event, int x, int y, int, void*)
-{
-	static cv::Point origin;
-	switch (event)
-	{
-	case CV_EVENT_LBUTTONDOWN:
-		origin = cv::Point(x, y);
-		break;
-	case CV_EVENT_LBUTTONUP:
-		calibration_region.x = MIN(x, origin.x);
-		calibration_region.y = MIN(y, origin.y);
-		calibration_region.width = abs(x - origin.x);
-		calibration_region.height = abs(y - origin.y);
-	}
-}
-
 // 通过HSV颜色空间进行阈值化处理，能较好地避免光照影响
 void Tracker::ColorThresholding(int marker_index)
 {
@@ -98,9 +56,8 @@ bool Tracker:: initMarkerPosition(int camera_index)
 	cv::imshow("detectwindow_erode", detectWindow_Initial);*/
 	cv::morphologyEx(detectWindow_Initial, detectWindow_Initial, cv::MORPH_CLOSE, mask);
 	cv::namedWindow("detectwindow", 0);
-	cv::setMouseCallback("detectwindow", Mouse_getRegion, 0);
 	cv::imshow("detectwindow", detectWindow_Initial);
-	cv::waitKey(0);
+	calibration_region = cv::selectROI("detectwindow", detectWindow_Initial);
 	cv::Mat region_mask = cv::Mat::zeros(detectWindow_Initial.size(), CV_8UC1);
 	region_mask(calibration_region).setTo(255);
 	cv::Mat masked_window;
