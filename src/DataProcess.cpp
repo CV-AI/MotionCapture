@@ -160,30 +160,48 @@ void DataProcess::mapTo3D()
 	}
 	if (vecDistInited)
 	{
-		for (size_t segment = 0; segment < NUM_MARKERS / 2; segment++)
+		for (size_t segment = 0; segment < NUM_MARKER_SET; segment++)
 		{
-			segmentModule[segment].push_back(cv::norm(MarkerPosVecL[segment] - MarkerPosVecL[segment + 3]
+			segmentModule[segment].push_back(cv::norm(MarkerPosVecL[2*segment] - MarkerPosVecL[2*segment + 1]
 									- initialVecLeft[segment]));
-			segmentModule[segment + 3].push_back(cv::norm(MarkerPosVecR[segment] - MarkerPosVecR[segment + 3]
+			segmentModule[segment + 3].push_back(cv::norm(MarkerPosVecR[2 * segment] - MarkerPosVecR[2 * segment + 1]
 									- initialVecRight[segment]));
+			
+			std::cout << "segment module " << segment << " : " << segmentModule[segment][0] << std::endl;
+			std::cout << "segment module " << segment+3 << " : " << segmentModule[segment+3][0] << std::endl;
+			
 		}
 		if (segmentModule[0].size() > lenCache)
 		{
-			for (size_t segment = 0; segment < NUM_MARKERS / 2; segment++)
+			for (size_t segment = 0; segment < NUM_MARKER_SET; segment++)
 			{
 				segmentModule[segment].pop_front();
 				segmentModule[segment + 3].pop_front();
 			}
 		}
+		
+		for (size_t segment = 0; segment < NUM_MARKERS; segment++)
+		{
+			double sum = 0;
+			for (auto ele : segmentModule[segment])
+			{
+				sum += ele;
+			}
+			if (sum / segmentModule[segment].size() > epsilon[segment])
+			{
+				anglesToADS[6] = -1;
+			}
+		}
+		
 	}
 	else
 	{
-		for (size_t segment = 0; segment < NUM_MARKERS / 2; segment++)
+		for (size_t segment = 0; segment < NUM_MARKER_SET; segment++)
 		{
-			segmentModule.push_back(std::deque<double>(cv::norm(MarkerPosVecL[segment] - MarkerPosVecL[segment + 3])));
-			segmentModule.push_back(std::deque<double>(cv::norm(MarkerPosVecL[segment] - MarkerPosVecL[segment + 3])));
-			initialVecLeft.push_back(MarkerPosVecL[segment] - MarkerPosVecL[segment + 3]);
-			initialVecRight.push_back(MarkerPosVecR[segment] - MarkerPosVecL[segment + 3]);
+			segmentModule.push_back(std::deque<double>(0));
+			segmentModule.push_back(std::deque<double>(0));
+			initialVecLeft.push_back(MarkerPosVecL[2 * segment] - MarkerPosVecL[2 * segment + 1]);
+			initialVecRight.push_back(MarkerPosVecR[2 * segment] - MarkerPosVecR[2 * segment + 1]);
 		}
 		vecDistInited = true;
 	}
@@ -261,6 +279,8 @@ bool DataProcess::exportGaitData()
 		// 注意最终输出给ads的其实是真实值
 		anglesToADS[angle] = filtedAngles[angle];
 	}
+	// 输出数据正确标志位
+	eura_file << anglesToADS[6] << ",";
 	// 将左右腿的数值交换数值，以供控制系统使用
 	for (int angle = 0; angle < 3; angle++)
 	{

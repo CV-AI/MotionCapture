@@ -9,6 +9,7 @@
 #include <opencv2/imgproc/types_c.h>
 #include <opencv2/imgproc.hpp>
 #include <sstream>
+#include <vector>
 //TwinCAT需要的两个头文件
 #include <Windows.h> // Ads需要Windows.h,但是不敢动ads本身的文件，所以放在这儿
 #include "TcAdsDef.h"
@@ -36,7 +37,7 @@ public:
 	std::vector<cv::Vec3f> initialVecLeft;
 	std::vector<cv::Vec3f> initialVecRight;
 	bool vecDistInited = false;
-	double epsilon = 0.1;
+	std::vector<double> epsilon = { 10,10,10,10,10,10 };
 	int lenCache = 5;
 	// 当前帧的角度值存放文件
 	std::ofstream angles_file;
@@ -59,7 +60,7 @@ public:
 	// 世界坐标系坐标
 	cv::Point3f MarkerPos3D[2][6];
 	// 欧拉角，由于ads只支持指针传递，所以写成数组
-	double anglesToADS[6] = { 0,0,0,0,0,0 };
+	double anglesToADS[7] = { 0,0,0,0,0,0 ,1};
 	
 	// 当前帧的关节角
 	std::vector<double> filtedAngles;
