@@ -254,13 +254,13 @@ int main(int /*argc*/, char** /*argv*/)
 						for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
 						{
 							// 写出标记点对的编号
-							cv::putText(tracker.ReceivedImages[i], to_string(marker_set), cv::Point(tracker.currentPosSet[i][marker_set].x - tracker.detectWindowDimX / 2,
-								tracker.currentPosSet[i][marker_set].y - tracker.detectWindowDimY / 2 -10), 1, 2, cv::Scalar(0, 255, 85), 2);
+							cv::putText(tracker.ReceivedImages[i], to_string(marker_set), cv::Point(tracker.currentPosSet[i][marker_set].x - tracker.detectWindowDim[i][marker_set].x / 2,
+								tracker.currentPosSet[i][marker_set].y - tracker.detectWindowDim[i][marker_set].y / 2 -10), 1, 2, cv::Scalar(0, 255, 85), 2);
 							// 画出箭头
 							cv::arrowedLine(tracker.ReceivedImages[i], tracker.currentPos[i][2*marker_set], tracker.currentPos[i][2*marker_set+1], cv::Scalar(0,100,255),2, 8, 0, 0.3);
 							// 画出检测窗
-							cv::rectangle(tracker.ReceivedImages[i], cv::Rect(tracker.currentPosSet[i][marker_set].x - tracker.detectWindowDimX / 2,
-								tracker.currentPosSet[i][marker_set].y - tracker.detectWindowDimY / 2, tracker.detectWindowDimX, tracker.detectWindowDimY), cv::Scalar(255, 102, 0),2);
+							cv::rectangle(tracker.ReceivedImages[i], cv::Rect(tracker.currentPosSet[i][marker_set].x - tracker.detectWindowDim[i][marker_set].x / 2,
+								tracker.currentPosSet[i][marker_set].y - tracker.detectWindowDim[i][marker_set].y / 2, tracker.detectWindowDim[i][marker_set].x, tracker.detectWindowDim[i][marker_set].y), cv::Scalar(255, 102, 0),2);
 						}
 					}
 					finish_tracking = std::chrono::high_resolution_clock::now();

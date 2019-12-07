@@ -2,12 +2,14 @@
 #define DATA_PROCESS_HEADER
 
 #include <fstream>
+#include <deque>
 //#include <opencv2/opencv.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc/types_c.h>
 #include <opencv2/imgproc.hpp>
 #include <sstream>
+#include <vector>
 //TwinCAT需要的两个头文件
 #include <Windows.h> // Ads需要Windows.h,但是不敢动ads本身的文件，所以放在这儿
 #include "TcAdsDef.h"
@@ -30,6 +32,13 @@ public:
 	cv::Point3d thigh[2]; // 0 for left, 1 for right
 	cv::Point3d shank[2];
 	cv::Point3d foot[2];
+	// 用于存放各个肢体向量的模，以便判断是否跟丢
+    std::vector<std::deque<double>> segmentModule;
+	std::vector<cv::Vec3f> initialVecLeft;
+	std::vector<cv::Vec3f> initialVecRight;
+	bool vecDistInited = false;
+	std::vector<double> epsilon = { 10,10,10,10,10,10 };
+	int lenCache = 5;
 	// 当前帧的角度值存放文件
 	std::ofstream angles_file;
 	// eura angles 即前后两帧之间的角度差
@@ -51,12 +60,12 @@ public:
 	// 世界坐标系坐标
 	cv::Point3f MarkerPos3D[2][6];
 	// 欧拉角，由于ads只支持指针传递，所以写成数组
-	double eura_angles[6] = { 0,0,0,0,0,0 };
+	double anglesToADS[7] = { 0,0,0,0,0,0 ,1};
 	
 	// 当前帧的关节角
-	std::vector<double> joint_angles;
+	std::vector<double> filtedAngles;
 	// 前一阵的关节角
-	std::vector<double> joint_angles_pre;
+	std::vector<double> filtedAngle_pre;
 	// 是否得到了相机坐标系到世界坐标系的转换矩阵
 	bool GotWorldFrame;
 	// 相机内参数

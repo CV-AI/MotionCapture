@@ -51,8 +51,11 @@ public:
 	bool InitTracker(TrackerType); 
 	bool FilterInitialImage();
 	bool RectifyMarkerPos(int);
-	int detectWindowDimX; // the dimension of detectWindow_Initial
-	int detectWindowDimY;
+	const cv::Point2i detectWindowDim[NUM_CAMERAS][NUM_MARKER_SET] = { 
+										{{110, 150}, {110, 110}, {130, 100} },
+										{{110, 150}, {110, 110}, {130, 100} },
+										{{110, 150}, {110, 110}, {120, 100} },
+										{{110, 150}, {110, 110}, {120, 100} } };
 	int threshold;
 	bool TrackerAutoIntialized;
 };

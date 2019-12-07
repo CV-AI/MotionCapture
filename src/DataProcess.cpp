@@ -6,8 +6,8 @@ DataProcess::DataProcess() :GotWorldFrame(false)
 {
 	GotWorldFrame = false;
 	AdsOpened = false;
-	joint_angles = { 0,0,0,0,0,0 };
-	joint_angles_pre = { 0,0,0,0,0,0 };
+	filtedAngles = { 0,0,0,0,0,0 };
+	filtedAngle_pre = { 0,0,0,0,0,0 };
 	
 	angles_file.open("angles.csv");
 	eura_file.open("eura.csv");
@@ -140,7 +140,7 @@ void DataProcess::mapTo3D()
 	}
 	if (_PRINT_PROCESS)
 	{
-		for (int marker = 0; marker < 6; marker++)
+		for (int marker = 0; marker < NUM_MARKERS; marker++)
 		{
 			std::cout << "3D Pos before frame change:Left  " << marker << " : " << MarkerPosVecL[marker] << std::endl;
 			std::cout << "3D Pos before frame change:Right " << marker << " : " << MarkerPosVecR[marker] << std::endl;
@@ -148,7 +148,7 @@ void DataProcess::mapTo3D()
 	}
 	cv::perspectiveTransform(MarkerPosVecL, MarkerPosVecL, Rotation[0]);
 	cv::perspectiveTransform(MarkerPosVecR, MarkerPosVecR, Rotation[1]);
-	for (int marker = 0; marker < 6; marker++)
+	for (int marker = 0; marker < NUM_MARKERS; marker++)
 	{
 		MarkerPos3D[0][marker] = cv::Point3f(MarkerPosVecL[marker]);
 		MarkerPos3D[1][marker] = cv::Point3f(MarkerPosVecR[marker]);
@@ -157,6 +157,53 @@ void DataProcess::mapTo3D()
 			std::cout << "3D Pos of Camera 0, Marker " << marker << " : " << MarkerPos3D[0][marker] << std::endl;
 			std::cout << "3D Pos of Camera 1, Marker " << marker << " : " << MarkerPos3D[1][marker] << std::endl;
 		}
+	}
+	if (vecDistInited)
+	{
+		for (size_t segment = 0; segment < NUM_MARKER_SET; segment++)
+		{
+			segmentModule[segment].push_back(cv::norm(MarkerPosVecL[2*segment] - MarkerPosVecL[2*segment + 1]
+									- initialVecLeft[segment]));
+			segmentModule[segment + 3].push_back(cv::norm(MarkerPosVecR[2 * segment] - MarkerPosVecR[2 * segment + 1]
+									- initialVecRight[segment]));
+			
+			std::cout << "segment module " << segment << " : " << segmentModule[segment][0] << std::endl;
+			std::cout << "segment module " << segment+3 << " : " << segmentModule[segment+3][0] << std::endl;
+			
+		}
+		if (segmentModule[0].size() > lenCache)
+		{
+			for (size_t segment = 0; segment < NUM_MARKER_SET; segment++)
+			{
+				segmentModule[segment].pop_front();
+				segmentModule[segment + 3].pop_front();
+			}
+		}
+		
+		for (size_t segment = 0; segment < NUM_MARKERS; segment++)
+		{
+			double sum = 0;
+			for (auto ele : segmentModule[segment])
+			{
+				sum += ele;
+			}
+			if (sum / segmentModule[segment].size() > epsilon[segment])
+			{
+				anglesToADS[6] = -1;
+			}
+		}
+		
+	}
+	else
+	{
+		for (size_t segment = 0; segment < NUM_MARKER_SET; segment++)
+		{
+			segmentModule.push_back(std::deque<double>(0));
+			segmentModule.push_back(std::deque<double>(0));
+			initialVecLeft.push_back(MarkerPosVecL[2 * segment] - MarkerPosVecL[2 * segment + 1]);
+			initialVecRight.push_back(MarkerPosVecR[2 * segment] - MarkerPosVecR[2 * segment + 1]);
+		}
+		vecDistInited = true;
 	}
 }
 
@@ -197,10 +244,10 @@ void DataProcess::getJointAngle()
 		std::cout << "shank " << i << " " << shank[i] << std::endl;
 		std::cout << "foot " << i << " " << foot[i] << std::endl;*/
 		// 通过这种余角的方式计算，避免角度从0跳动到360附近，而是呈现正负跳动的形式
-		eura_angles[3 * i] = cv::fastAtan2(thigh[i].z, thigh[i].x);
-		eura_angles[3 * i] = (eura_angles[3 * i] <= 90) ? 90 - eura_angles[3 * i] :-(eura_angles[3 * i]-90);
-		eura_angles[3*i+1] = ((acos((thigh[i].x * shank[i].x + thigh[i].z * shank[i].z) / (sqrt(thigh[i].x * thigh[i].x + thigh[i].z * thigh[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
-		eura_angles[3*i+2] = ((acos((foot[i].x * shank[i].x + foot[i].z * shank[i].z) / (sqrt(foot[i].x * foot[i].x + foot[i].z * foot[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
+		anglesToADS[3 * i] = cv::fastAtan2(thigh[i].z, thigh[i].x);
+		anglesToADS[3 * i] = (anglesToADS[3 * i] <= 90) ? 90 - anglesToADS[3 * i] :-(anglesToADS[3 * i]-90);
+		anglesToADS[3*i+1] = ((acos((thigh[i].x * shank[i].x + thigh[i].z * shank[i].z) / (sqrt(thigh[i].x * thigh[i].x + thigh[i].z * thigh[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
+		anglesToADS[3*i+2] = ((acos((foot[i].x * shank[i].x + foot[i].z * shank[i].z) / (sqrt(foot[i].x * foot[i].x + foot[i].z * foot[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
 	}
 	
 }
@@ -210,32 +257,41 @@ bool DataProcess::exportGaitData()
 {
 	
 	mapTo3D(); 
-	joint_angles_pre = joint_angles;
+	filtedAngle_pre = filtedAngles;
 	getJointAngle(); 
 	// 滤波后存放到joint_angles
-	joint_angles[0] = lpf0.update(eura_angles[0]);
-	joint_angles[1]= lpf1.update(eura_angles[1]);
-	joint_angles[2] = lpf2.update(eura_angles[2]);
-	joint_angles[3] = lpf3.update(eura_angles[3]);
-	joint_angles[4] = lpf4.update(eura_angles[4]);
-	joint_angles[5] = lpf5.update(eura_angles[5]);
+	filtedAngles[0] = lpf0.update(anglesToADS[0]);
+	filtedAngles[1]= lpf1.update(anglesToADS[1]);
+	filtedAngles[2] = lpf2.update(anglesToADS[2]);
+	filtedAngles[3] = lpf3.update(anglesToADS[3]);
+	filtedAngles[4] = lpf4.update(anglesToADS[4]);
+	filtedAngles[5] = lpf5.update(anglesToADS[5]);
 	for (int angle = 0; angle < 6; angle++)
 	{
 		// 输出未经滤波的真实角度
-		angles_file << eura_angles[angle] << ",";
+		angles_file << anglesToADS[angle] << ",";
 		// 输出滤波后的数据
-		angles_file << joint_angles[angle] << ",";
+		angles_file << filtedAngles[angle] << ",";
 		// 更正欧拉角为两帧之间的差值，之前使用了eura_angles做他用，只是为了节省内存
-		eura_angles[angle] = joint_angles[angle] - joint_angles_pre[angle];
+		anglesToADS[angle] = filtedAngles[angle] - filtedAngle_pre[angle];
 		// 输出欧拉角度到文件
-		eura_file << eura_angles[angle] << ",";
+		eura_file << anglesToADS[angle] << ",";
+		// 注意最终输出给ads的其实是真实值
+		anglesToADS[angle] = filtedAngles[angle];
+	}
+	// 输出数据正确标志位
+	eura_file << anglesToADS[6] << ",";
+	// 将左右腿的数值交换数值，以供控制系统使用
+	for (int angle = 0; angle < 3; angle++)
+	{
+		std::swap(anglesToADS[angle], anglesToADS[angle + 3]);
 	}
 	angles_file << "\n";
 	eura_file << "\n";
 	if (AdsOpened) // 必须作此判断，否则Ads会消耗近5秒的时间，应该是在重试
 	{
 		//通过句柄向PLC写入数组
-		nErr = AdsSyncWriteReq(pAddr, ADSIGRP_SYM_VALBYHND, lHdlVar2, sizeof(eura_angles), eura_angles);
+		nErr = AdsSyncWriteReq(pAddr, ADSIGRP_SYM_VALBYHND, lHdlVar2, sizeof(anglesToADS), anglesToADS);
 		if (nErr) std::cerr << "Error: AdsSyncReadReq: " << nErr << '\n';
 	}
 	return true;
@@ -265,6 +321,14 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		sortChessboardCorners(corners_upper);
 		cv::drawChessboardCorners(images[camera_set * 2], boardsize, corners_upper, found);
 		cv::drawChessboardCorners(images[camera_set * 2+1], boardsize, corners_lower, found);
+		cv::namedWindow("corners", 0);
+		cv::Mat combine, combine1, combine2;
+		cv::hconcat(images[2], images[0], combine1);
+		cv::hconcat(images[3], images[1], combine2);
+		cv::vconcat(combine1, combine2, combine);
+		cv::resize(combine, combine, cv::Size(1024, 1024));
+		cv::imshow("corners", combine);
+		cv::waitKey(0);
 		p0 = mapTo3D(camera_set, corners_upper[0], corners_lower[0]);
 		p1 = mapTo3D(camera_set, corners_upper[2], corners_lower[2]);
 		p2 = mapTo3D(camera_set, corners_upper[6], corners_lower[6]);
@@ -303,14 +367,7 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		std::cout << "rotation matrix:\n" << Rotation[camera_set] << std::endl;
 		Transform[camera_set] = cv::Point3f(transform);
 	}
-	cv::namedWindow("corners", 0);
-	cv::Mat combine, combine1, combine2;
-	cv::hconcat(images[2], images[0], combine1);
-	cv::hconcat(images[3], images[1], combine2);
-	cv::vconcat(combine1, combine2, combine);
-	cv::resize(combine, combine, cv::Size(1024, 1024));
-	cv::imshow("corners", combine);
-	cv::waitKey(0);
+	
 	GotWorldFrame = true;
 	cv::FileStorage fs("FrameDefine.yml", cv::FileStorage::WRITE);
 	if (fs.isOpened())
