@@ -244,10 +244,12 @@ void DataProcess::getJointAngle()
 		std::cout << "shank " << i << " " << shank[i] << std::endl;
 		std::cout << "foot " << i << " " << foot[i] << std::endl;*/
 		// 通过这种余角的方式计算，避免角度从0跳动到360附近，而是呈现正负跳动的形式
-		anglesToADS[3 * i] = cv::fastAtan2(thigh[i].z, thigh[i].x);
-		anglesToADS[3 * i] = (anglesToADS[3 * i] <= 90) ? 90 - anglesToADS[3 * i] :-(anglesToADS[3 * i]-90);
-		anglesToADS[3*i+1] = ((acos((thigh[i].x * shank[i].x + thigh[i].z * shank[i].z) / (sqrt(thigh[i].x * thigh[i].x + thigh[i].z * thigh[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
-		anglesToADS[3*i+2] = ((acos((foot[i].x * shank[i].x + foot[i].z * shank[i].z) / (sqrt(foot[i].x * foot[i].x + foot[i].z * foot[i].z) * sqrt(shank[i].x * shank[i].x + shank[i].z * shank[i].z)))) / pi) * 180;
+		anglesToADS[3 * i] = 90.0 - cv::fastAtan2(thigh[i].z, thigh[i].x);
+		anglesToADS[3 * i + 1] = 90.0 - cv::fastAtan2(shank[i].z, shank[i].x);
+		anglesToADS[3 * i + 2] = 90.0 - cv::fastAtan2(foot[i].z, foot[i].x);
+		// see README for why we're doing this way
+		anglesToADS[3 * i + 2] = anglesToADS[3 * i + 2] - anglesToADS[3 * i + 1];
+		anglesToADS[3 * i + 1] = anglesToADS[3*i] - anglesToADS[3 * i + 1];
 	}
 	
 }
