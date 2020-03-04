@@ -1,7 +1,7 @@
-// 此文件用于初始化跟踪 
+// 此文件是追踪器的定义文件
+// 其负责双侧标记点的追踪 
 #include "Tracker.hpp"
 #include <algorithm>
-
 
 Tracker::Tracker():threshold(100),TrackerAutoIntialized(false)
 {
@@ -99,7 +99,7 @@ bool Tracker:: initMarkerPosition(int camera_index)
 	}
 }
 
-//获取标记点、标记点对的位置
+//更新标记点、标记点对的位置
 bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 {
 	ColorThresholding(camera_index);
