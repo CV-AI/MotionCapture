@@ -10,7 +10,7 @@
 #include <sstream>
 #include <vector>
 //TwinCAT需要的两个头文件
-#include <Windows.h> // Ads需要Windows.h,但是不敢动ads本身的文件，所以放在这儿
+#include <Windows.h> // Ads需要Windows.h
 #include "TcAdsDef.h"
 #include "TcAdsAPI.h"
 #include "DigitalFilters.h"

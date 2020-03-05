@@ -17,7 +17,9 @@
  *  a number of cameras, NodeMapCallback serves as a good introduction to 
  *  programming with callbacks and events, and SaveToAvi exhibits video creation.
  */
- 
+ /*
+	此文件调用Spinnaker SDK，完成配置相机、取图像等操作
+ */
 #include "Spinnaker.h"
 #include "SpinGenApi/SpinnakerGenApi.h"
 #include <iostream>
