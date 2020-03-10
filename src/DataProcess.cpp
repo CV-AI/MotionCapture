@@ -2,11 +2,11 @@
 #include <algorithm>
 #include <iostream>
 
-DataProcess::DataProcess() :GotWorldFrame(false)
+DataProcess::DataProcess()
 {
-	GotWorldFrame = false;
-	AdsOpened = false;
-	filtedAngles = { 0,0,0,0,0,0 };
+	GotWorldFrame = false; // whether we have established world frame(coordinate system)
+	AdsOpened = false; // whether the ads portal to control system opened
+	filtedAngles = { 0,0,0,0,0,0 }; // initialize angles to zero
 	filtedAngle_pre = { 0,0,0,0,0,0 };
 	
 	angles_file.open("angles.csv");
@@ -14,9 +14,9 @@ DataProcess::DataProcess() :GotWorldFrame(false)
 	cv::FileStorage fs_calib("calib_params.yml", cv::FileStorage::READ);
 	if (fs_calib.isOpened())
 	{
+		// read camera calibration parameters from YAML 
 		for (int camera = 0; camera < NUM_CAMERAS; camera++)
 		{
-			
 			// IntrinsicMatrix generated in matlab must be transposed to use in opencv（data in yml file is already transposed)
 			char* str = new char[strlen("cameraMatrix")+1];
 			sprintf(str, "%s%d", "cameraMatrix", camera);
@@ -56,14 +56,12 @@ DataProcess::DataProcess() :GotWorldFrame(false)
 	// 立体校正的时候需要两幅图像共面并且行对准，以使得立体匹配更方便
 	// 使的两幅图像共面的方法就是把两个相机平面投影到一个公共的成像平面上，这样每幅图像投影到公共平面
 	//  就需要一个旋转矩阵R, stereoRectify()这个函数计算的就是从图像平面投影到公共成像平面的的旋转矩阵Rl,Rr.
-	//  RlRr就是左右相机平面共面的校正旋转矩阵，左相机经过Rl旋转，右相机经过Rr旋转之后，两幅图像就已经共面了；
+	//  Rl Rr就是左右相机平面共面的校正旋转矩阵，左相机经过Rl旋转，右相机经过Rr旋转之后，两幅图像就已经共面了；
 	//  其中Pl Pr为两个相机的校正内参矩阵(3x4,最后一列为0),也可以称为相机坐标系到像素坐标系的投影矩阵，
 	//  Q 为像素坐标系与相机坐标系之间的重投影矩阵；
 
 	cv::Rect validROIL, validROIR;
 
-
-	// 双目标定
 	cv::stereoRectify(cameraMatrix[0], distorCoeff[0], cameraMatrix[1], distorCoeff[1], cv::Size(2048, 2048),
 		rotationMatLeft, translationMatLeft, Rectify[0], Rectify[1], Projection[0], Projection[1], Q_left,
 		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
@@ -76,6 +74,8 @@ DataProcess::DataProcess() :GotWorldFrame(false)
 	cv::FileStorage fs("FrameDefine.yml", cv::FileStorage::READ);
 	if (fs.isOpened())
 	{
+		// read matrixs that created in previous run to define world frame
+		// 读入前一次运行时使用的矩阵以定义世界坐标系
 		fs["R0"] >> Rotation[0];
 		fs["R1"] >> Rotation[1];
 		fs["T0"] >> Transform[0];
@@ -88,7 +88,7 @@ DataProcess::DataProcess() :GotWorldFrame(false)
 
 DataProcess::~DataProcess()
 {
-	// 打开的文件一定要关闭
+	// opened files should be close when not needed
 	angles_file.close();
 	eura_file.close();
 }
