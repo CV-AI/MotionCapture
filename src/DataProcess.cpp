@@ -104,6 +104,7 @@ void DataProcess::mapTo3D()
 		{
 			centerPnt.push_back(points[camera][marker]);
 		}
+		// 消除镜头畸变造成的误差
 		cv::undistortPoints(centerPnt, undistortedPnt, cameraMatrix[camera], distorCoeff[camera], Rectify[camera], Projection[camera]);
 		centerPnt.clear();
 		for (int marker = 0; marker < 6; marker++)
@@ -121,7 +122,6 @@ void DataProcess::mapTo3D()
 	}	
 	
 	std::vector<cv::Vec3f> disparityVecLeft, disparityVecRight;
-
 	for (int marker = 0; marker < 6; marker++)
 	{
 		disparityVecLeft.push_back(cv::Vec3f(mapped_points[0][marker].x,
@@ -130,9 +130,11 @@ void DataProcess::mapTo3D()
 			mapped_points[2][marker].y, mapped_points[2][marker].y - mapped_points[3][marker].y));
 	}
 	std::vector<cv::Vec3f> MarkerPosVecL, MarkerPosVecR;
+	// 由标记点的图像坐标计算出相机坐标系中的三位坐标
 	cv::perspectiveTransform(disparityVecLeft, MarkerPosVecL, Q_left);
 	cv::perspectiveTransform(disparityVecRight, MarkerPosVecR, Q_right);
 	
+	// 将原点相机坐标系移动到世界坐标系
 	for (int marker = 0; marker < 6; marker++)
 	{
 		MarkerPosVecL[marker] += cv::Vec3f(Transform[0]);
@@ -146,6 +148,7 @@ void DataProcess::mapTo3D()
 			std::cout << "3D Pos before frame change:Right " << marker << " : " << MarkerPosVecR[marker] << std::endl;
 		}
 	}
+	// 乘以旋转矩阵
 	cv::perspectiveTransform(MarkerPosVecL, MarkerPosVecL, Rotation[0]);
 	cv::perspectiveTransform(MarkerPosVecR, MarkerPosVecR, Rotation[1]);
 	for (int marker = 0; marker < NUM_MARKERS; marker++)
@@ -158,18 +161,22 @@ void DataProcess::mapTo3D()
 			std::cout << "3D Pos of Camera 1, Marker " << marker << " : " << MarkerPos3D[1][marker] << std::endl;
 		}
 	}
+	// 根据一对标记点的距离判断是否跟丢
 	if (vecDistInited)
 	{
+		// sgementModule是当前帧两个标记点之间距离与上一帧距离之差
+		// 这个差值过大就说明出现了跟踪错误
 		for (size_t segment = 0; segment < NUM_MARKER_SET; segment++)
 		{
 			segmentModule[segment].push_back(cv::norm(MarkerPosVecL[2*segment] - MarkerPosVecL[2*segment + 1]
 									- initialVecLeft[segment]));
 			segmentModule[segment + 3].push_back(cv::norm(MarkerPosVecR[2 * segment] - MarkerPosVecR[2 * segment + 1]
 									- initialVecRight[segment]));
-			
-			std::cout << "segment module " << segment << " : " << segmentModule[segment][0] << std::endl;
-			std::cout << "segment module " << segment+3 << " : " << segmentModule[segment+3][0] << std::endl;
-			
+			if (_PRINT_PROCESS)
+			{
+				std::cout << "segment module " << segment << " : " << segmentModule[segment][0] << std::endl;
+				std::cout << "segment module " << segment+3 << " : " << segmentModule[segment+3][0] << std::endl;
+			}
 		}
 		if (segmentModule[0].size() > lenCache)
 		{
@@ -187,9 +194,11 @@ void DataProcess::mapTo3D()
 			{
 				sum += ele;
 			}
+			// 如果出现了差值变化过大的情况，那么说明发生了跟踪错误
+			// 这时应该向控制系统报警
 			if (sum / segmentModule[segment].size() > epsilon[segment])
 			{
-				anglesToADS[6] = -1;
+				anglesToADS[6] = -1; // ADS 报警位
 			}
 		}
 		
@@ -247,7 +256,7 @@ void DataProcess::getJointAngle()
 		anglesToADS[3 * i] = 90.0 - cv::fastAtan2(thigh[i].z, thigh[i].x);
 		anglesToADS[3 * i + 1] = 90.0 - cv::fastAtan2(shank[i].z, shank[i].x);
 		anglesToADS[3 * i + 2] = 90.0 - cv::fastAtan2(foot[i].z, foot[i].x);
-		// see README for why we're doing this way
+		// check README for why we're doing this way
 		anglesToADS[3 * i + 2] = anglesToADS[3 * i + 2] - anglesToADS[3 * i + 1];
 		anglesToADS[3 * i + 1] = anglesToADS[3*i] - anglesToADS[3 * i + 1];
 	}
