@@ -353,7 +353,7 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 			vectors[i] = scale(vectors[i]);
 		}
 		// 相机坐标系到自定义坐标系的转换矩阵
-		cv::Mat rotation = cv::Mat(3, 3, CV_32FC1, vectors.data()); // 应该是转置后求逆的，但是他是正交矩阵所以不需
+		cv::Mat rotation = cv::Mat(3, 3, CV_32FC1, vectors.data()); 
 		//std::cout << vectors[0] << std::endl;
 		
 		std::cout << "transform matrix:\n" << transform << std::endl;

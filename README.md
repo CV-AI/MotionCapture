@@ -34,7 +34,9 @@
     src // 源文件所在文件夹
     include // 头文件所在文件夹
     lib // 静态链接库文件（TWinCat）
-[matlab脚本](save_camera_calib_to_yml.m)的作用是将matlab双目标定工具箱生成的标定结果转换为OpenCV可读的yaml格式，即[calib_params.yml](calib_params.yml)。
+    utils // 一些项目相关的工具以及YAML文件实例
+
+[matlab脚本](utils/save_camera_calib_to_yml.m)的作用是将matlab双目标定工具箱生成的标定结果转换为OpenCV可读的yaml格式，即[calib_params.yml](utils/calib_params.yml)。
 
 ### 一些定义方式
 
@@ -70,6 +72,8 @@
 
 ## TODO
 
+    - 坐标系的变换有问题，应当是R*P_c + P_corg
     - 整体速度取决于三个部分：1. 处理的速度； 2. 获取图像的速度（同步帧率）3. 前两者之间的同步问题
 	- 移除不必要的Try catch 语句， 避免程序在出现严重错误时仍然运行 
     - FindWorldFrame函数很丑陋，需要优化
+
