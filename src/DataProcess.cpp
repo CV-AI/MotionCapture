@@ -76,8 +76,6 @@ DataProcess::DataProcess()
 	{
 		// read matrixs that created in previous run to define world frame
 		// 读入前一次运行时使用的矩阵以定义世界坐标系
-		fs["R0"] >> Rotation[0];
-		fs["R1"] >> Rotation[1];
 		fs["T0"] >> Transform[0];
 		fs["T1"] >> Transform[1];
 		GotWorldFrame = true;
@@ -130,27 +128,13 @@ void DataProcess::mapTo3D()
 			mapped_points[2][marker].y, mapped_points[2][marker].y - mapped_points[3][marker].y));
 	}
 	std::vector<cv::Vec3f> MarkerPosVecL, MarkerPosVecR;
-	// 由标记点的图像坐标计算出相机坐标系中的三位坐标
+	// 由标记点的图像坐标计算出相机坐标系C中的三维坐标
 	cv::perspectiveTransform(disparityVecLeft, MarkerPosVecL, Q_left);
 	cv::perspectiveTransform(disparityVecRight, MarkerPosVecR, Q_right);
-	
-	// 将原点相机坐标系移动到世界坐标系
-	for (int marker = 0; marker < 6; marker++)
-	{
-		MarkerPosVecL[marker] += cv::Vec3f(Transform[0]);
-		MarkerPosVecR[marker] += cv::Vec3f(Transform[1]);
-	}
-	if (_PRINT_PROCESS)
-	{
-		for (int marker = 0; marker < NUM_MARKERS; marker++)
-		{
-			std::cout << "3D Pos before frame change:Left  " << marker << " : " << MarkerPosVecL[marker] << std::endl;
-			std::cout << "3D Pos before frame change:Right " << marker << " : " << MarkerPosVecR[marker] << std::endl;
-		}
-	}
-	// 乘以旋转矩阵
-	cv::perspectiveTransform(MarkerPosVecL, MarkerPosVecL, Rotation[0]);
-	cv::perspectiveTransform(MarkerPosVecR, MarkerPosVecR, Rotation[1]);
+
+	// 乘以转换矩阵，转换到世界坐标系
+	cv::perspectiveTransform(MarkerPosVecL, MarkerPosVecL, Transform[0]);
+	cv::perspectiveTransform(MarkerPosVecR, MarkerPosVecR, Transform[1]);
 	for (int marker = 0; marker < NUM_MARKERS; marker++)
 	{
 		MarkerPos3D[0][marker] = cv::Point3f(MarkerPosVecL[marker]);
@@ -332,19 +316,11 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		sortChessboardCorners(corners_upper);
 		cv::drawChessboardCorners(images[camera_set * 2], boardsize, corners_upper, found);
 		cv::drawChessboardCorners(images[camera_set * 2+1], boardsize, corners_lower, found);
-		cv::namedWindow("corners", 0);
-		cv::Mat combine, combine1, combine2;
-		cv::hconcat(images[2], images[0], combine1);
-		cv::hconcat(images[3], images[1], combine2);
-		cv::vconcat(combine1, combine2, combine);
-		cv::resize(combine, combine, cv::Size(1024, 1024));
-		cv::imshow("corners", combine);
-		cv::waitKey(0);
+		
 		p0 = mapTo3D(camera_set, corners_upper[0], corners_lower[0]);
 		p1 = mapTo3D(camera_set, corners_upper[2], corners_lower[2]);
 		p2 = mapTo3D(camera_set, corners_upper[6], corners_lower[6]);
 		vectors[1] = p1 - p0;
-		cv::Point3f transform = -p0;
 		vectors[2] = p2 - p0;
 		vectors[0] = crossing(vectors[2], vectors[1]);
 		vectors[2] = crossing(vectors[0], vectors[1]);
@@ -352,39 +328,41 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		{
 			vectors[i] = scale(vectors[i]);
 		}
-		// 相机坐标系到自定义坐标系的转换矩阵
-		cv::Mat rotation = cv::Mat(3, 3, CV_32FC1, vectors.data()); 
-		//std::cout << vectors[0] << std::endl;
 		
-		std::cout << "transform matrix:\n" << transform << std::endl;
 		for (int row = 0; row < 4; row++)
 		{
-			for (int col = 0; col < 4; col++)
+			for (int col = 0; col < 3; col++)
 			{
-				if (row < 3 && col < 3)
+				// 前三行前三列组成的便是旋转矩阵R
+				// R指的是相机坐标系C在世界坐标系W里的表示
+				if (row < 3)
 				{
-					Rotation[camera_set](row, col) = rotation.at<float>(row, col);
-				}
-				else if (row == 3 && col == 3)
-				{
-					Rotation[camera_set](row, col) = 1;
+					Transform[camera_set](row, col) = vectors[row][col]; 
 				}
 				else
 				{
-					Rotation[camera_set](row, col) = 0;
+					Transform[camera_set](row, col) = 0;
 				}
 			}
 		}
-		std::cout << "rotation matrix:\n" << Rotation[camera_set] << std::endl;
-		Transform[camera_set] = cv::Point3f(transform);
+		Transform[cemera_set](3, 3) = 1;
+		// 相机坐标系C的原点在世界坐标系W中的表示, 注意符号
+		Transform[cemera_set](0, 3) = -p0.x;
+		Transform[cemera_set](1, 3) = -p0.y;
+		Transform[cemera_set](2, 3) = -p0.z;
 	}
-	
+	cv::namedWindow("corners", 0);
+	cv::Mat combine, combine1, combine2;
+	cv::hconcat(images[2], images[0], combine1);
+	cv::hconcat(images[3], images[1], combine2);
+	cv::vconcat(combine1, combine2, combine);
+	cv::resize(combine, combine, cv::Size(1024, 1024));
+	cv::imshow("corners", combine);
+	cv::waitKey(0);
 	GotWorldFrame = true;
 	cv::FileStorage fs("FrameDefine.yml", cv::FileStorage::WRITE);
 	if (fs.isOpened())
 	{
-		fs<< "R0" << Rotation[0];
-		fs<<"R1"<< Rotation[1];
 		fs << "T0" << Transform[0];
 		fs << "T1" << Transform[1];
 	}
