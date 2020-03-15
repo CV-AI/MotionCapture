@@ -247,10 +247,9 @@ void DataProcess::getJointAngle()
 	
 }
 
-// 输出角度信息到文件，通过Ads向PLC发送步态角
+// 输出角度信息到文件，并通过Ads向PLC发送步态角
 bool DataProcess::exportGaitData()
 {
-	
 	mapTo3D(); 
 	filtedAngle_pre = filtedAngles;
 	getJointAngle(); 
@@ -296,7 +295,7 @@ bool DataProcess::exportGaitData()
 bool DataProcess::FindWorldFrame(cv::Mat images[4])
 {
 	cv::Size boardsize(3, 3);
-	cv::Point3f vector_x, vector_y, vector_z, p0, p1,p2;
+	cv::Point3f p0, p1,p2;
 	
 	for (int camera_set = 0; camera_set < NUM_CAMERAS / 2; camera_set++)
 	{
@@ -308,15 +307,11 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		if (!found) return false;
 		
 		sortChessboardCorners(corners_lower);
-		/*for (int i = 0; i < corners_lower.size(); i++)
-		{
-			std::cout << corners_lower[i] << "\t";
-		}
-		std::cout << std::endl;*/
 		sortChessboardCorners(corners_upper);
 		cv::drawChessboardCorners(images[camera_set * 2], boardsize, corners_upper, found);
 		cv::drawChessboardCorners(images[camera_set * 2+1], boardsize, corners_lower, found);
 		
+		// 找出世界坐标系三个坐标轴在相机坐标系中的坐标
 		p0 = mapTo3D(camera_set, corners_upper[0], corners_lower[0]);
 		p1 = mapTo3D(camera_set, corners_upper[2], corners_lower[2]);
 		p2 = mapTo3D(camera_set, corners_upper[6], corners_lower[6]);
@@ -328,7 +323,6 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		{
 			vectors[i] = scale(vectors[i]);
 		}
-		
 		for (int row = 0; row < 4; row++)
 		{
 			for (int col = 0; col < 3; col++)
@@ -370,7 +364,7 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 }
 
 
-// 计算叉乘(使用opencv的函数而不用自己的以避免意外）
+// 计算叉乘
 cv::Point3f crossing(cv::Point3f u, cv::Point3f v)
 {
 	cv::Mat_<float> Mat_u(3, 1), Mat_v(3,1), result;
@@ -391,7 +385,6 @@ cv::Point3f scale(cv::Point3f u)
 // 使棋盘格按照从右下角到左上角的Z字形顺序排列，以确保计算时使用的是同一个点在两个相机里的投影
 void sortChessboardCorners(std::vector<cv::Point2f> &corners)
 {	
-
 	std::sort(corners.begin(), corners.end(), comparePointY);
 	for (unsigned int i = 0; i < 3; i++)
 	{

@@ -9,7 +9,6 @@
 #include <opencv2/imgproc.hpp>
 #include <sstream>
 #include <vector>
-//TwinCAT需要的两个头文件
 #include <Windows.h> // Ads需要Windows.h
 #include "TcAdsDef.h"
 #include "TcAdsAPI.h"
