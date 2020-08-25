@@ -1,7 +1,7 @@
-// 此文件用于初始化跟踪 
+// 此文件是追踪器的定义文件
+// 其负责双侧标记点的追踪 
 #include "Tracker.hpp"
 #include <algorithm>
-
 
 Tracker::Tracker():threshold(100),TrackerAutoIntialized(false)
 {
@@ -12,6 +12,7 @@ Tracker::Tracker():threshold(100),TrackerAutoIntialized(false)
 Tracker::~Tracker()
 {
 }
+// 对静态变量进行初始化
 cv::Mat Tracker:: image;
 cv::Scalar Tracker::CorlorsChosen(0,0,0);
 bool Tracker::getColors = false;
@@ -98,14 +99,14 @@ bool Tracker:: initMarkerPosition(int camera_index)
 	}
 }
 
-//获取标记点、标记点对的位置
+//更新标记点、标记点对的位置
 bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 {
 	ColorThresholding(camera_index);
 	cv::erode(detectWindow, detectWindow, mask_erode);
 	cv::morphologyEx(detectWindow, detectWindow, cv::MORPH_CLOSE, mask);
 	std::vector<std::vector<cv::Point>>contours;
-	cv::findContours(detectWindow, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+	cv::findContours(detectWindow, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
 	std::sort(contours.begin(), contours.end(), compareContourAreas);
 	if (contours.size() >=2)
 	{
@@ -227,6 +228,7 @@ bool Tracker::FilterInitialImage()
 	return true;
 }
 
+// 多线程同时更新追踪器
 DWORD WINAPI UpdateTracker(LPVOID lpParam)
 {
 	TrackerParameters para = *((TrackerParameters*)lpParam);

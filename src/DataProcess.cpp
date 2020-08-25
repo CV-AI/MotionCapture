@@ -2,11 +2,11 @@
 #include <algorithm>
 #include <iostream>
 
-DataProcess::DataProcess() :GotWorldFrame(false)
+DataProcess::DataProcess()
 {
-	GotWorldFrame = false;
-	AdsOpened = false;
-	filtedAngles = { 0,0,0,0,0,0 };
+	GotWorldFrame = false; // whether we have established world frame(coordinate system)
+	AdsOpened = false; // whether the ads portal to control system opened
+	filtedAngles = { 0,0,0,0,0,0 }; // initialize angles to zero
 	filtedAngle_pre = { 0,0,0,0,0,0 };
 	
 	angles_file.open("angles.csv");
@@ -14,9 +14,9 @@ DataProcess::DataProcess() :GotWorldFrame(false)
 	cv::FileStorage fs_calib("calib_params.yml", cv::FileStorage::READ);
 	if (fs_calib.isOpened())
 	{
+		// read camera calibration parameters from YAML 
 		for (int camera = 0; camera < NUM_CAMERAS; camera++)
 		{
-			
 			// IntrinsicMatrix generated in matlab must be transposed to use in opencv（data in yml file is already transposed)
 			char* str = new char[strlen("cameraMatrix")+1];
 			sprintf(str, "%s%d", "cameraMatrix", camera);
@@ -56,14 +56,12 @@ DataProcess::DataProcess() :GotWorldFrame(false)
 	// 立体校正的时候需要两幅图像共面并且行对准，以使得立体匹配更方便
 	// 使的两幅图像共面的方法就是把两个相机平面投影到一个公共的成像平面上，这样每幅图像投影到公共平面
 	//  就需要一个旋转矩阵R, stereoRectify()这个函数计算的就是从图像平面投影到公共成像平面的的旋转矩阵Rl,Rr.
-	//  RlRr就是左右相机平面共面的校正旋转矩阵，左相机经过Rl旋转，右相机经过Rr旋转之后，两幅图像就已经共面了；
+	//  Rl Rr就是左右相机平面共面的校正旋转矩阵，左相机经过Rl旋转，右相机经过Rr旋转之后，两幅图像就已经共面了；
 	//  其中Pl Pr为两个相机的校正内参矩阵(3x4,最后一列为0),也可以称为相机坐标系到像素坐标系的投影矩阵，
 	//  Q 为像素坐标系与相机坐标系之间的重投影矩阵；
 
 	cv::Rect validROIL, validROIR;
 
-
-	// 双目标定
 	cv::stereoRectify(cameraMatrix[0], distorCoeff[0], cameraMatrix[1], distorCoeff[1], cv::Size(2048, 2048),
 		rotationMatLeft, translationMatLeft, Rectify[0], Rectify[1], Projection[0], Projection[1], Q_left,
 		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
@@ -76,6 +74,8 @@ DataProcess::DataProcess() :GotWorldFrame(false)
 	cv::FileStorage fs("FrameDefine.yml", cv::FileStorage::READ);
 	if (fs.isOpened())
 	{
+		// read matrixs that created in previous run to define world frame
+		// 读入前一次运行时使用的矩阵以定义世界坐标系
 		fs["R0"] >> Rotation[0];
 		fs["R1"] >> Rotation[1];
 		fs["T0"] >> Transform[0];
@@ -88,7 +88,7 @@ DataProcess::DataProcess() :GotWorldFrame(false)
 
 DataProcess::~DataProcess()
 {
-	// 打开的文件一定要关闭
+	// opened files should be close when not needed
 	angles_file.close();
 	eura_file.close();
 }
@@ -104,6 +104,7 @@ void DataProcess::mapTo3D()
 		{
 			centerPnt.push_back(points[camera][marker]);
 		}
+		// 消除镜头畸变造成的误差
 		cv::undistortPoints(centerPnt, undistortedPnt, cameraMatrix[camera], distorCoeff[camera], Rectify[camera], Projection[camera]);
 		centerPnt.clear();
 		for (int marker = 0; marker < 6; marker++)
@@ -121,7 +122,6 @@ void DataProcess::mapTo3D()
 	}	
 	
 	std::vector<cv::Vec3f> disparityVecLeft, disparityVecRight;
-
 	for (int marker = 0; marker < 6; marker++)
 	{
 		disparityVecLeft.push_back(cv::Vec3f(mapped_points[0][marker].x,
@@ -130,9 +130,11 @@ void DataProcess::mapTo3D()
 			mapped_points[2][marker].y, mapped_points[2][marker].y - mapped_points[3][marker].y));
 	}
 	std::vector<cv::Vec3f> MarkerPosVecL, MarkerPosVecR;
+	// 由标记点的图像坐标计算出相机坐标系中的三位坐标
 	cv::perspectiveTransform(disparityVecLeft, MarkerPosVecL, Q_left);
 	cv::perspectiveTransform(disparityVecRight, MarkerPosVecR, Q_right);
 	
+	// 将原点相机坐标系移动到世界坐标系
 	for (int marker = 0; marker < 6; marker++)
 	{
 		MarkerPosVecL[marker] += cv::Vec3f(Transform[0]);
@@ -146,6 +148,7 @@ void DataProcess::mapTo3D()
 			std::cout << "3D Pos before frame change:Right " << marker << " : " << MarkerPosVecR[marker] << std::endl;
 		}
 	}
+	// 乘以旋转矩阵
 	cv::perspectiveTransform(MarkerPosVecL, MarkerPosVecL, Rotation[0]);
 	cv::perspectiveTransform(MarkerPosVecR, MarkerPosVecR, Rotation[1]);
 	for (int marker = 0; marker < NUM_MARKERS; marker++)
@@ -158,18 +161,22 @@ void DataProcess::mapTo3D()
 			std::cout << "3D Pos of Camera 1, Marker " << marker << " : " << MarkerPos3D[1][marker] << std::endl;
 		}
 	}
+	// 根据一对标记点的距离判断是否跟丢
 	if (vecDistInited)
 	{
+		// sgementModule是当前帧两个标记点之间距离与上一帧距离之差
+		// 这个差值过大就说明出现了跟踪错误
 		for (size_t segment = 0; segment < NUM_MARKER_SET; segment++)
 		{
 			segmentModule[segment].push_back(cv::norm(MarkerPosVecL[2*segment] - MarkerPosVecL[2*segment + 1]
 									- initialVecLeft[segment]));
 			segmentModule[segment + 3].push_back(cv::norm(MarkerPosVecR[2 * segment] - MarkerPosVecR[2 * segment + 1]
 									- initialVecRight[segment]));
-			
-			std::cout << "segment module " << segment << " : " << segmentModule[segment][0] << std::endl;
-			std::cout << "segment module " << segment+3 << " : " << segmentModule[segment+3][0] << std::endl;
-			
+			if (_PRINT_PROCESS)
+			{
+				std::cout << "segment module " << segment << " : " << segmentModule[segment][0] << std::endl;
+				std::cout << "segment module " << segment+3 << " : " << segmentModule[segment+3][0] << std::endl;
+			}
 		}
 		if (segmentModule[0].size() > lenCache)
 		{
@@ -187,9 +194,11 @@ void DataProcess::mapTo3D()
 			{
 				sum += ele;
 			}
+			// 如果出现了差值变化过大的情况，那么说明发生了跟踪错误
+			// 这时应该向控制系统报警
 			if (sum / segmentModule[segment].size() > epsilon[segment])
 			{
-				anglesToADS[6] = -1;
+				anglesToADS[6] = -1; // ADS 报警位
 			}
 		}
 		
@@ -247,7 +256,7 @@ void DataProcess::getJointAngle()
 		anglesToADS[3 * i] = 90.0 - cv::fastAtan2(thigh[i].z, thigh[i].x);
 		anglesToADS[3 * i + 1] = 90.0 - cv::fastAtan2(shank[i].z, shank[i].x);
 		anglesToADS[3 * i + 2] = 90.0 - cv::fastAtan2(foot[i].z, foot[i].x);
-		// see README for why we're doing this way
+		// check README for why we're doing this way
 		anglesToADS[3 * i + 2] = anglesToADS[3 * i + 2] - anglesToADS[3 * i + 1];
 		anglesToADS[3 * i + 1] = anglesToADS[3*i] - anglesToADS[3 * i + 1];
 	}
@@ -344,7 +353,7 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 			vectors[i] = scale(vectors[i]);
 		}
 		// 相机坐标系到自定义坐标系的转换矩阵
-		cv::Mat rotation = cv::Mat(3, 3, CV_32FC1, vectors.data()); // 应该是转置后求逆的，但是他是正交矩阵所以不需
+		cv::Mat rotation = cv::Mat(3, 3, CV_32FC1, vectors.data()); 
 		//std::cout << vectors[0] << std::endl;
 		
 		std::cout << "transform matrix:\n" << transform << std::endl;

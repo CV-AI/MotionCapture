@@ -3,7 +3,6 @@
 
 #include <fstream>
 #include <deque>
-//#include <opencv2/opencv.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc/types_c.h>
@@ -11,7 +10,7 @@
 #include <sstream>
 #include <vector>
 //TwinCAT需要的两个头文件
-#include <Windows.h> // Ads需要Windows.h,但是不敢动ads本身的文件，所以放在这儿
+#include <Windows.h> // Ads需要Windows.h
 #include "TcAdsDef.h"
 #include "TcAdsAPI.h"
 #include "DigitalFilters.h"
@@ -43,7 +42,6 @@ public:
 	std::ofstream angles_file;
 	// eura angles 即前后两帧之间的角度差
 	std::ofstream eura_file;
-	// 相机的数目
 	
 	void mapTo3D();
 	
@@ -83,6 +81,7 @@ public:
 	cv::Matx44f Rotation[2];
 	// 相机坐标系到世界坐标系的位移
 	cv::Point3f Transform[2];
+	// Ads 通讯的一些变量
 	bool AdsOpened;
 	long      nErr, nPort;	//定义端口变量
 	AmsAddr   Addr;		//定义AMS地址变量

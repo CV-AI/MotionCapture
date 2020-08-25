@@ -1,3 +1,6 @@
+/*
+	这个文件实现双目标定，然而效果极差，考虑废弃
+*/
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/highgui/highgui.hpp>
