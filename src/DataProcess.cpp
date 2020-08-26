@@ -266,7 +266,6 @@ void DataProcess::getJointAngle()
 // 输出角度信息到文件，通过Ads向PLC发送步态角
 bool DataProcess::exportGaitData()
 {
-	
 	mapTo3D(); 
 	filtedAngle_pre = filtedAngles;
 	getJointAngle(); 

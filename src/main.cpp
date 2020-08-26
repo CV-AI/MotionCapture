@@ -159,11 +159,7 @@ int main(int /*argc*/, char** /*argv*/)
 		}
 		HANDLE* grabThreads = new HANDLE[NUM_CAMERAS];
 		HANDLE* trackerThreads = new HANDLE[NUM_CAMERAS];
-
-
-		
-        
-        //cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0); 
+		//cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0); 
 
 		// acquire images and do something
 		// main part of this program
@@ -210,7 +206,6 @@ int main(int /*argc*/, char** /*argv*/)
 				start_tracking = std::chrono::high_resolution_clock::now();
 				std::chrono::duration<double> time_acquiring = start_tracking - start_acquiring;
 				std::cout << "Acquiring time on camera " << ": " << time_acquiring.count() << std::endl;
-
 
 				// pCam = NULL;
 				if (tracker.TrackerAutoIntialized)
