@@ -299,7 +299,7 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 	
 	for (int camera_set = 0; camera_set < NUM_CAMERAS / 2; camera_set++)
 	{
-		std::vector<cv::Point3f> vectors(3);
+		std::vector<cv::Point3f> unit_vectors(3);
 		std::vector<cv::Point2f> corners_upper, corners_lower;
 		bool found = cv::findChessboardCorners(images[2 * camera_set], boardsize, corners_upper);
 		// found 为false时， findChessboardCorners不再执行
@@ -315,28 +315,32 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		p0 = mapTo3D(camera_set, corners_upper[0], corners_lower[0]);
 		p1 = mapTo3D(camera_set, corners_upper[2], corners_lower[2]);
 		p2 = mapTo3D(camera_set, corners_upper[6], corners_lower[6]);
-		vectors[1] = p1 - p0;
-		vectors[2] = p2 - p0;
-		vectors[0] = crossing(vectors[2], vectors[1]);
-		vectors[2] = crossing(vectors[0], vectors[1]);
+		unit_vectors[1] = p1 - p0;
+		unit_vectors[2] = p2 - p0;
+		unit_vectors[0] = crossing(unit_vectors[2], unit_vectors[1]);
+		unit_vectors[2] = crossing(unit_vectors[0], unit_vectors[1]);
 		for (int i = 0; i < 3; i++)
 		{
-			vectors[i] = scale(vectors[i]);
+			unit_vectors[i] = scale(unit_vectors[i]);
 		}
-		for (int row = 0; row < 4; row++)
+		for (int row = 0; row < 3; row++)
 		{
 			// 前三行前三列组成的便是旋转矩阵R
-			// R指的是相机坐标系C在世界坐标系W里的表示
-			Transform[camera_set](row, 0) = vectors[row].x;
-			Transform[camera_set](row, 1) = vectors[row].y;
-			Transform[camera_set](row, 2) = vectors[row].z;
+			// R中的行是世界坐标系W的单位矢量在相机坐标系C中的表达
+			Transform[camera_set](row, 0) = unit_vectors[row].x;
+			Transform[camera_set](row, 1) = unit_vectors[row].y;
+			Transform[camera_set](row, 2) = unit_vectors[row].z;
 			Transform[camera_set](row, 3) = 0;
+			Transform[camera_set](3, row) = 0;
 		}
-		// 相机坐标系C的原点在世界坐标系W中的表示, 注意符号
-		Transform[camera_set](0, 3) = -p0.x;
-		Transform[camera_set](1, 3) = -p0.y;
-		Transform[camera_set](2, 3) = -p0.z;
 		Transform[camera_set](3, 3) = 1;
+		cv::Matx41f W_origin_C = { p0.x, p0.y, p0.z, 1};
+		cv::Matx41f C_origin_W = -Transform[camera_set] * W_origin_C;
+		// 相机坐标系C的原点在世界坐标系W中的表示, 注意符号
+		for(int row=0;row<3;row++)
+		{ 
+			Transform[camera_set](row, 3) = C_origin_W(row);
+		}
 	}
 	cv::namedWindow("corners", 0);
 	cv::Mat combine, combine1, combine2;
@@ -374,6 +378,7 @@ cv::Point3f scale(cv::Point3f u)
 	float length = std::sqrt(pow(u.x, 2)+ pow(u.y,2)+pow(u.z,2));
 	return u/length;
 }
+
 
 // 使棋盘格按照从右下角到左上角的Z字形顺序排列，以确保计算时使用的是同一个点在两个相机里的投影
 void sortChessboardCorners(std::vector<cv::Point2f> &corners)
