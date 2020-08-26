@@ -6,10 +6,10 @@
 
 ### 依赖
 
-    - OpenCV（只在4.x版本测试过）
-    - Matlab(需要stereo calibration 工具箱)
-    - Spinnaker SDK（这是相机的SDK）
-    - TwinCat （这是Ads通讯的依赖，可选）
+  - OpenCV（只在4.x版本测试过）
+  - Matlab(需要stereo calibration 工具箱)
+  - Spinnaker SDK（这是相机的SDK）
+  - TwinCat （这是Ads通讯的依赖，可选）
 
 ### 生成
 
@@ -54,7 +54,10 @@
   - 原点在相机坐标系中的位置便是世界坐标系到相机坐标系的位移向量, 设为T
   - 所以R.inv是相机坐标系到世界坐标系的旋转矩阵，由于旋转矩阵都是正交矩阵，所以R.inv == R.Transpose
   - 而-T便是相机坐标系到世界坐标系的位移向量
-  - 故 ${}^{W}P={}^{W}_{C}R\times{}^CP+ P_{corg}$ 
+  - 故 
+$$
+  {}^{W}P={}^{W}_{C}R\times{}^CP+ P_{corg}
+$$ 
 
 ## 四、步态角的定义
 
@@ -72,7 +75,10 @@
 
 ## TODO
 
-  - 坐标系的变换有问题，应当是 ${}^{W}P={}^{W}_{C}R\times{}^CP+ P_{corg}$
+  - 坐标系的变换有问题，应当是 
+$$
+{}^{W}P={}^{W}_{C}R\times{}^CP+ P_{corg}
+$$
   - 整体速度取决于三个部分：1. 处理的速度； 2. 获取图像的速度（同步帧率）3. 前两者之间的同步问题
   - 移除不必要的Try catch 语句， 避免程序在出现严重错误时仍然运行 
   - FindWorldFrame函数很丑陋，需要优化
