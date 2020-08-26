@@ -9,7 +9,6 @@
 #include <opencv2/imgproc.hpp>
 #include <sstream>
 #include <vector>
-//TwinCAT需要的两个头文件
 #include <Windows.h> // Ads需要Windows.h
 #include "TcAdsDef.h"
 #include "TcAdsAPI.h"
@@ -77,10 +76,8 @@ public:
 	// 左右两副相机对，下方相机相对上方相机的位移
 	cv::Mat translationMatLeft, translationMatRight;
 	cv::Mat Rectify[4], Projection[4]; // will be computed by cv::stereoRectify()
-	// 相机坐标系到世界坐标系的旋转矩阵
-	cv::Matx44f Rotation[2];
-	// 相机坐标系到世界坐标系的位移
-	cv::Point3f Transform[2];
+	// 相机坐标系到世界坐标系的变换矩阵：包括了R和T
+	cv::Matx44f Transform[2];
 	// Ads 通讯的一些变量
 	bool AdsOpened;
 	long      nErr, nPort;	//定义端口变量
