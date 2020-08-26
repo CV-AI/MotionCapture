@@ -325,25 +325,18 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		}
 		for (int row = 0; row < 4; row++)
 		{
-			for (int col = 0; col < 3; col++)
-			{
-				// 前三行前三列组成的便是旋转矩阵R
-				// R指的是相机坐标系C在世界坐标系W里的表示
-				if (row < 3)
-				{
-					Transform[camera_set](row, col) = vectors[row][col]; 
-				}
-				else
-				{
-					Transform[camera_set](row, col) = 0;
-				}
-			}
+			// 前三行前三列组成的便是旋转矩阵R
+			// R指的是相机坐标系C在世界坐标系W里的表示
+			Transform[camera_set](row, 0) = vectors[row].x;
+			Transform[camera_set](row, 1) = vectors[row].y;
+			Transform[camera_set](row, 2) = vectors[row].z;
+			Transform[camera_set](row, 3) = 0;
 		}
-		Transform[camera_set](3, 3) = 1;
 		// 相机坐标系C的原点在世界坐标系W中的表示, 注意符号
 		Transform[camera_set](0, 3) = -p0.x;
 		Transform[camera_set](1, 3) = -p0.y;
 		Transform[camera_set](2, 3) = -p0.z;
+		Transform[camera_set](3, 3) = 1;
 	}
 	cv::namedWindow("corners", 0);
 	cv::Mat combine, combine1, combine2;
