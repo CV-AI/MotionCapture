@@ -339,11 +339,11 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 				}
 			}
 		}
-		Transform[cemera_set](3, 3) = 1;
+		Transform[camera_set](3, 3) = 1;
 		// 相机坐标系C的原点在世界坐标系W中的表示, 注意符号
-		Transform[cemera_set](0, 3) = -p0.x;
-		Transform[cemera_set](1, 3) = -p0.y;
-		Transform[cemera_set](2, 3) = -p0.z;
+		Transform[camera_set](0, 3) = -p0.x;
+		Transform[camera_set](1, 3) = -p0.y;
+		Transform[camera_set](2, 3) = -p0.z;
 	}
 	cv::namedWindow("corners", 0);
 	cv::Mat combine, combine1, combine2;
