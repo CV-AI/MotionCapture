@@ -11,9 +11,10 @@ DataProcess::DataProcess()
 	
 	angles_file.open("angles.csv");
 	eura_file.open("eura.csv");
-	cv::FileStorage fs_calib("calib_params.yml", cv::FileStorage::READ);
+	cv::FileStorage fs_calib("D:\\MotionCapture\\build\\Release\\calib_params.yml", cv::FileStorage::READ);
 	if (fs_calib.isOpened())
 	{
+		std::cout << "calib_params.yml opened!" << std::endl;
 		// read camera calibration parameters from YAML 
 		for (int camera = 0; camera < NUM_CAMERAS; camera++)
 		{
@@ -71,16 +72,19 @@ DataProcess::DataProcess()
 		rotationMatRight, translationMatRight, Rectify[2], Rectify[3], Projection[2], Projection[3], Q_right,
 		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
 	std::cout << "disparity map matrix for RIGHT cameras: \n" << Q_right << std::endl;
-	cv::FileStorage fs("FrameDefine.yml", cv::FileStorage::READ);
-	if (fs.isOpened())
+	
+	/* 暂时注释
+	cv::FileStorage fs_read("FrameDefine.yml", cv::FileStorage::READ);
+	
+	if (fs_read.isOpened())
 	{
 		// read matrixs that created in previous run to define world frame
 		// 读入前一次运行时使用的矩阵以定义世界坐标系
-		fs["T0"] >> Transform[0];
-		fs["T1"] >> Transform[1];
+		fs_read["T0"] >> Transform[0];
+		fs_read["T1"] >> Transform[1];
 		GotWorldFrame = true;
-		std::cout << "----!!!!! Use file to initialize Rotation and Transform matrix -----!!!!!" << std::endl;
-	}
+		std::cout << "----!!!!! Use file to initialize World Frame Rotation and Transform matrix -----!!!!!" << std::endl;
+	}*/
 }
 
 
@@ -342,6 +346,8 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 			Transform[camera_set](row, 3) = C_origin_W(row);
 		}
 	}
+
+	std::cout << "find11111111111111111111111111111111111111"<<std::endl;
 	cv::namedWindow("corners", 0);
 	cv::Mat combine, combine1, combine2;
 	cv::hconcat(images[2], images[0], combine1);
@@ -351,12 +357,15 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 	cv::imshow("corners", combine);
 	cv::waitKey(0);
 	GotWorldFrame = true;
+
 	cv::FileStorage fs("FrameDefine.yml", cv::FileStorage::WRITE);
 	if (fs.isOpened())
 	{
+		std::cout << "open11111111111111111";
 		fs << "T0" << Transform[0];
 		fs << "T1" << Transform[1];
 	}
+	
 	return true;
 }
 

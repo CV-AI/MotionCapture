@@ -169,17 +169,17 @@ int main(int /*argc*/, char** /*argv*/)
 				cv::imshow("CONCAT", combine);
 
 				int key = cv::waitKey(1);
-				if (key == 27)
+				if (key == 27) // esc
 				{
 					status = false;
 				}
 				if (key == 32) // space
 				{
 
-					string string0 = "LeftUpper/" + to_string(num_Acquisition) + ".jpg";
-					string string1 = "LeftLower/" + to_string(num_Acquisition) + ".jpg";
-					string string2 = "RightUpper/" + to_string(num_Acquisition) + ".jpg";
-					string string3 = "RightLower/" + to_string(num_Acquisition) + ".jpg";
+					string string0 = "D:\\MotionCapture\\build\\LeftUpper\\" + to_string(num_Acquisition) + ".jpg";   //"LeftUpper/"
+					string string1 = "D:\\MotionCapture\\build\\LeftLower\\" + to_string(num_Acquisition) + ".jpg";
+					string string2 = "D:\\MotionCapture\\build\\RightUpper\\" + to_string(num_Acquisition) + ".jpg";
+					string string3 = "D:\\MotionCapture\\build\\RightLower\\" + to_string(num_Acquisition) + ".jpg";
 					cv::imwrite(string0, images[0]);
 					cv::imwrite(string1, images[1]);
 					cv::imwrite(string2, images[2]);

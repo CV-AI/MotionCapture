@@ -286,6 +286,7 @@ int main(int /*argc*/, char** /*argv*/)
 #endif
 					)
 				{
+					
 					cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
 					cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
 					cv::imshow("Right_Upper", tracker.ReceivedImages[2]);
@@ -297,11 +298,12 @@ int main(int /*argc*/, char** /*argv*/)
 					cv::destroyWindow("Right_Lower");
 				}
 #ifdef TRANS_FRAME
-
+			
 				if (!dataProcess.GotWorldFrame)
 				{
 					try
 					{
+					
 						bool found = dataProcess.FindWorldFrame(tracker.ReceivedImages);
 						if (found)
 						{
