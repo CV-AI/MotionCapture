@@ -321,8 +321,8 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		p2 = mapTo3D(camera_set, corners_upper[6], corners_lower[6]);
 		unit_vectors[1] = p1 - p0;
 		unit_vectors[2] = p2 - p0;
-		unit_vectors[0] = crossing(unit_vectors[2], unit_vectors[1]);
-		unit_vectors[2] = crossing(unit_vectors[0], unit_vectors[1]);
+		unit_vectors[0] = unit_vectors[2].cross(unit_vectors[1]);
+		unit_vectors[2] = unit_vectors[0].cross(unit_vectors[1]);
 		for (int i = 0; i < 3; i++)
 		{
 			unit_vectors[i] = scale(unit_vectors[i]);
@@ -370,17 +370,6 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 }
 
 
-// 计算叉乘
-cv::Point3f crossing(cv::Point3f u, cv::Point3f v)
-{
-	cv::Mat_<float> Mat_u(3, 1), Mat_v(3,1), result;
-	Mat_u(0, 0) = u.x; Mat_v(0, 0) = Mat_v(0, 0);
-	Mat_u(1, 0) = u.y; Mat_v(1, 0) = v.y;
-	Mat_u(2, 0) = u.z; Mat_v(2, 0) = v.z;
-	result = Mat_u.cross(Mat_v);
-	return cv::Point3f(result(0,0), result(1,0), result(2,0));
-	//return cv::Point3f(u.y * v.z - v.y * u.z, u.z * v.x - v.z * u.x, u.x * v.y - u.y * v.x);
-}
 // 归一化向量
 cv::Point3f scale(cv::Point3f u)
 {

@@ -15,7 +15,6 @@
 #include "DigitalFilters.h"
 #include "ConfigParams.hpp"
 
-cv::Point3f crossing(cv::Point3f u, cv::Point3f v);
 cv::Point3f scale(cv::Point3f u);
 void sortChessboardCorners(std::vector<cv::Point2f> &corners);
 bool comparePointY(cv::Point2f pnt0, cv::Point2f pnt1);
