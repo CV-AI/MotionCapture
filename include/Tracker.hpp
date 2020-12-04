@@ -26,8 +26,8 @@ public:
 
 	// enable different tracker 
 	
-	static void Mouse_getColor(int event, int x, int y, int, void*);
-	static void Mouse_getRegion(int event, int x, int y, int, void*);
+	//static void Mouse_getColor(int event, int x, int y, int, void*);
+	//static void Mouse_getRegion(int event, int x, int y, int, void*);
 	static cv::Rect calibration_region;
 	bool initMarkerPosition(int camera_index);
 	bool updateMarkerPosition(int camera_index, int marker_set);
@@ -61,6 +61,8 @@ public:
 										{{110, 150}, {110, 110}, {120, 100} } };
 	int threshold;
 	bool TrackerAutoIntialized;
+	// 用于遮掩环境光干扰的mask
+	cv::Mat ambient_light_masks[NUM_CAMERAS];
 };
 class TrackerParameters
 {

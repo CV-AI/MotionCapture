@@ -34,7 +34,7 @@ void Tracker::ColorThresholding(int marker_index)
 {
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
 	//cv::cvtColor(detectWindow, detectWindow, CV_RGB2HSV);
-	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED, MIN_SATURATION, MIN_VALUE), cv::Scalar(MAX_H_RED, MAX_SATURATION, MAX_VALUE), rangeRes);
+	cv::inRange(detectWindow, LOWER_RED, UPPER_RED, rangeRes);
 	detectWindow = rangeRes;
 }
 
@@ -43,7 +43,7 @@ void Tracker::ColorThresholding()
 {
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow_Initial.size(), CV_8UC1);
 	//cv::cvtColor(detectWindow_Initial, detectWindow_Initial, CV_RGB2HSV);
-	cv::inRange(detectWindow_Initial, cv::Scalar(MIN_H_RED, MIN_SATURATION, MIN_VALUE), cv::Scalar(MAX_H_RED, MAX_SATURATION, MAX_VALUE), rangeRes);
+	cv::inRange(detectWindow_Initial, LOWER_RED, UPPER_RED, rangeRes);
 	detectWindow_Initial = rangeRes;
 }
 
@@ -65,18 +65,18 @@ bool Tracker:: initMarkerPosition(int camera_index)
 	std::vector<std::vector<cv::Point>>contours;
 	cv::findContours(masked_window, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
 	std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
-	//cv::drawContours(ReceivedImages[camera_index], contours, -1, cv::Scalar(150, 100, 0), 2);//-1 means draw all contours
 	
-	std::sort(contours.begin(), contours.end(), compareContourAreas);
-	//contours = std::vector<std::vector<cv::Point>>(contours.begin(), contours.begin() + 6);
-	
-	if (contours.size() >= 6)
+	if (contours.size() == NUM_MARKERS)
 	{
+		std::sort(contours.begin(), contours.end(), compareContourAreas);
 		//std::vector<std::vector<cv::Point>>::const_iterator it = contours.begin();
 		// 找到contour的boundingRect的中心
 		for (int i = 0; i < 6; i++)
 		{
-			std::cout << "contour size" << contours[i].size() << std::endl;
+			if (_PRINT_PROCESS)
+			{
+				std::cout << "contour size" << contours[i].size() << std::endl;
+			}
 			currentPos[camera_index][i] = cv::minAreaRect(contours[i]).center;
 		}
 		RectifyMarkerPos(camera_index);
@@ -92,7 +92,7 @@ bool Tracker:: initMarkerPosition(int camera_index)
 	}
 	else
 	{
-		std::cout << "No enough contours: " << contours.size() << std::endl;
+		std::cout << "Camera " <<camera_index<<" Incorrect Number of Contours: " << contours.size() << std::endl;
 		return false;
 	}
 }

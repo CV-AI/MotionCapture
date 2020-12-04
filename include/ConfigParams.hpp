@@ -27,13 +27,9 @@ static bool TRACKING = true;
 // 是否把中间处理过程的输出打印出来
 const bool _PRINT_PROCESS = false;
 // MAX and MIN H, S, V 
-// for color threshold
-const int MAX_H_RED = 255;
-const int MIN_H_RED = 240;
-const int MAX_SATURATION = 255;
-const int MIN_SATURATION = 210;
-const int MAX_VALUE = 255;
-const int MIN_VALUE = 210;
+// for color thresholding
+cv::Scalar UPPER_RED = cv::Scalar(255, 255, 255);
+cv::Scalar LOWER_RED = cv::Scalar(240, 210, 210);
 // number of cameras and markers
 const const int NUM_CAMERAS = 4;
 const const int NUM_MARKERS = 6;
