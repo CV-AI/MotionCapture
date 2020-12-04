@@ -8,7 +8,6 @@ Tracker::Tracker():threshold(100),TrackerAutoIntialized(false)
 	cv::Point momentum[NUM_CAMERAS] = { cv::Point(0,0), cv::Point(0,0),cv::Point(0,0), cv::Point(0,0) };
 }
 
-
 Tracker::~Tracker()
 {
 }
@@ -91,7 +90,6 @@ bool Tracker:: initMarkerPosition(int camera_index)
 		cv::destroyWindow("detectwindow");
 		return true;
 	}
-	
 	else
 	{
 		std::cout << "No enough contours: " << contours.size() << std::endl;
@@ -110,12 +108,6 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 	std::sort(contours.begin(), contours.end(), compareContourAreas);
 	if (contours.size() >=2)
 	{
-		/*cv::Rect br_u = cv::boundingRect(contours[0]);
-		int center_x_u = cvRound( br_u.x + br_u.width * 0.5); 
-		int center_y_u = cvRound(br_u.y + br_u.height * 0.5);
-		cv::Rect br_l = cv::boundingRect(contours[1]);
-		int center_x_l = cvRound(br_l.x + br_l.width * 0.5);
-		int center_y_l = cvRound(br_l.y + br_l.height * 0.5);*/
 		cv::Point2f center_0 = cv::minAreaRect(contours[0]).center;
 		cv::Point2f center_1 = cv::minAreaRect(contours[1]).center;
 		
