@@ -34,7 +34,7 @@ bool compareContourAreas(std::vector<cv::Point> contour1, std::vector<cv::Point>
 void Tracker::ColorThresholding(int marker_index)
 {
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
-	cv::cvtColor(detectWindow, detectWindow, CV_RGB2HSV);
+	//cv::cvtColor(detectWindow, detectWindow, CV_RGB2HSV);
 	cv::inRange(detectWindow, cv::Scalar(MIN_H_RED, MIN_SATURATION, MIN_VALUE), cv::Scalar(MAX_H_RED, MAX_SATURATION, MAX_VALUE), rangeRes);
 	detectWindow = rangeRes;
 }
@@ -43,7 +43,7 @@ void Tracker::ColorThresholding(int marker_index)
 void Tracker::ColorThresholding()
 {
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow_Initial.size(), CV_8UC1);
-	cv::cvtColor(detectWindow_Initial, detectWindow_Initial, CV_RGB2HSV);
+	//cv::cvtColor(detectWindow_Initial, detectWindow_Initial, CV_RGB2HSV);
 	cv::inRange(detectWindow_Initial, cv::Scalar(MIN_H_RED, MIN_SATURATION, MIN_VALUE), cv::Scalar(MAX_H_RED, MAX_SATURATION, MAX_VALUE), rangeRes);
 	detectWindow_Initial = rangeRes;
 }
