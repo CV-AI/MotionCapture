@@ -3,7 +3,7 @@ left_params = load('left.mat');
 right_params = load('right.mat');
 left_stereo = left_params.left;
 right_stereo = right_params.right;
-fileID = fopen('build/calib_params.yml', 'w');
+fileID = fopen('calib_params.yml', 'w');
 % write header
 fprintf(fileID, "%s\n%s\n", "%YAML:1.0", "---");
 % write distortion

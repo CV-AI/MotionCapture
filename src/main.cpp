@@ -311,7 +311,7 @@ int main(int /*argc*/, char** /*argv*/)
 						}
 						else
 						{
-							cout << "Faild find world coordinate system!\a\a\a" << endl;
+							cout << "Faild to find world coordinate system!\a\a\a" << endl;
 						}
 					}
 					catch (cv::Exception& e)

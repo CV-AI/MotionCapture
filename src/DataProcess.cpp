@@ -73,7 +73,6 @@ DataProcess::DataProcess()
 		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
 	std::cout << "disparity map matrix for RIGHT cameras: \n" << Q_right << std::endl;
 	
-	/* 暂时注释
 	cv::FileStorage fs_read("FrameDefine.yml", cv::FileStorage::READ);
 	
 	if (fs_read.isOpened())
@@ -84,7 +83,7 @@ DataProcess::DataProcess()
 		fs_read["T1"] >> Transform[1];
 		GotWorldFrame = true;
 		std::cout << "----!!!!! Use file to initialize World Frame Rotation and Transform matrix -----!!!!!" << std::endl;
-	}*/
+	}
 }
 
 
@@ -347,7 +346,6 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		}
 	}
 
-	std::cout << "find11111111111111111111111111111111111111"<<std::endl;
 	cv::namedWindow("corners", 0);
 	cv::Mat combine, combine1, combine2;
 	cv::hconcat(images[2], images[0], combine1);
@@ -361,7 +359,6 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 	cv::FileStorage fs("FrameDefine.yml", cv::FileStorage::WRITE);
 	if (fs.isOpened())
 	{
-		std::cout << "open11111111111111111";
 		fs << "T0" << Transform[0];
 		fs << "T1" << Transform[1];
 	}
