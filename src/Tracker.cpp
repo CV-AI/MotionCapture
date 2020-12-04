@@ -135,7 +135,7 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 	else
 	{
 		// TODO: 如果使用颜色跟踪失败则需要使用其他跟踪方法
-		std::cout << "Contours numbers are wrong:  " << contours.size() << std::endl;
+		std::cout << "Number of contours is wrong:  " << contours.size() << std::endl;
 		return false;
 	}
 }
