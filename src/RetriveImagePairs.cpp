@@ -166,6 +166,7 @@ int main(int /*argc*/, char** /*argv*/)
 				cv::hconcat(images[3], images[1], combine2);
 				cv::vconcat(combine1, combine2, combine);
 				cv::resize(combine, combine, cv::Size(1024, 1024));
+				cv::cvtColor(combine, combine, cv::COLOR_RGB2BGR);
 				cv::imshow("CONCAT", combine);
 
 				int key = cv::waitKey(1);
@@ -173,7 +174,7 @@ int main(int /*argc*/, char** /*argv*/)
 				{
 					status = false;
 				}
-				if (key == 32) // space
+				else if (key == 32) // space
 				{
 					string string0 = "E:\\MotionCaptureImages\\LeftUpper\\" + to_string(num_Acquisition) + ".jpg"; 
 					string string1 = "E:\\MotionCaptureImages\\LeftLower\\" + to_string(num_Acquisition) + ".jpg";
@@ -186,7 +187,10 @@ int main(int /*argc*/, char** /*argv*/)
 					std::cout << "Add image pairs " << num_Acquisition << std::endl;
 					num_Acquisition++;
 				}
-				
+				else if (key == 97)
+				{
+					cv::imwrite("E:\\MotionCaptureImages\\combine.jpg", combine);
+				}
 			}
 		}
 		catch (Spinnaker::Exception& e)

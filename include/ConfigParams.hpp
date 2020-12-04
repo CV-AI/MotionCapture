@@ -19,7 +19,7 @@ const int64_t numBuffers = 2;
 // 想要设定的帧率（目前来说还无法正常工作）
 const float frameRate = 80.0f;
 // 曝光时间，以微秒为单位
-static float exposureTimeToSet = 4000.0f;
+static float exposureTimeToSet = 800.0f;
 const bool SetExposureManual = true;
 // 在标定世界坐标系时设为false
 static bool TRACKING = true;
@@ -28,10 +28,10 @@ static bool TRACKING = true;
 const bool _PRINT_PROCESS = false;
 // MAX and MIN H, S, V 
 // for color threshold
-const int MAX_H_RED = 20;
-const int MIN_H_RED = 0;
-const int MAX_SATURATION = 15;
-const int MIN_SATURATION = 0;
+const int MAX_H_RED = 255;
+const int MIN_H_RED = 240;
+const int MAX_SATURATION = 255;
+const int MIN_SATURATION = 210;
 const int MAX_VALUE = 255;
 const int MIN_VALUE = 210;
 // number of cameras and markers
