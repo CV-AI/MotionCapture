@@ -51,7 +51,7 @@ void Tracker::ColorThresholding()
 bool Tracker:: initMarkerPosition(int camera_index)
 {	
 	ColorThresholding();
-	cv::erode(detectWindow_Initial, detectWindow_Initial, mask_erode);
+	//cv::erode(detectWindow_Initial, detectWindow_Initial, mask_erode);
 	/*cv::namedWindow("detectwindow_erode", 0);
 	cv::imshow("detectwindow_erode", detectWindow_Initial);*/
 	cv::morphologyEx(detectWindow_Initial, detectWindow_Initial, cv::MORPH_CLOSE, mask);
@@ -101,7 +101,7 @@ bool Tracker:: initMarkerPosition(int camera_index)
 bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 {
 	ColorThresholding(camera_index);
-	cv::erode(detectWindow, detectWindow, mask_erode);
+	//cv::erode(detectWindow, detectWindow, mask_erode);
 	cv::morphologyEx(detectWindow, detectWindow, cv::MORPH_CLOSE, mask);
 	std::vector<std::vector<cv::Point>>contours;
 	cv::findContours(detectWindow, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
