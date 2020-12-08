@@ -11,7 +11,7 @@ DataProcess::DataProcess()
 	
 	angles_file.open("angles.csv");
 	eura_file.open("eura.csv");
-	cv::FileStorage fs_calib("D:\\MotionCapture\\build\\Release\\calib_params.yml", cv::FileStorage::READ);
+	cv::FileStorage fs_calib("D:\\total\\MotionCapture\\utils\\calib_params.yml", cv::FileStorage::READ);
 	if (fs_calib.isOpened())
 	{
 		std::cout << "calib_params.yml opened!" << std::endl;
@@ -56,24 +56,26 @@ DataProcess::DataProcess()
 	
 	// 立体校正的时候需要两幅图像共面并且行对准，以使得立体匹配更方便
 	// 使的两幅图像共面的方法就是把两个相机平面投影到一个公共的成像平面上，这样每幅图像投影到公共平面
-	//  就需要一个旋转矩阵R, stereoRectify()这个函数计算的就是从图像平面投影到公共成像平面的的旋转矩阵Rl,Rr.
-	//  Rl Rr就是左右相机平面共面的校正旋转矩阵，左相机经过Rl旋转，右相机经过Rr旋转之后，两幅图像就已经共面了；
-	//  其中Pl Pr为两个相机的校正内参矩阵(3x4,最后一列为0),也可以称为相机坐标系到像素坐标系的投影矩阵，
+	//  就需要一个旋转矩阵R, stereoRectify()这个函数计算的就是从图像平面投影到公共成像平面的的旋转矩阵Rectify[0], Rectify[1].
+	//  Rectify[0], Rectify[1]就是上下相机平面共面的校正旋转矩阵，
+	//  上相机经过Rectify[0]旋转，下相机经过Rectify[1]旋转之后，两幅图像就已经共面了；
+	//  其中Projection[0], Projection[1]为两个相机的校正内参矩阵(3x4,最后一列为0),也可以称为相机坐标系到像素坐标系的投影矩阵，
 	//  Q 为像素坐标系与相机坐标系之间的重投影矩阵；
 
 	cv::Rect validROIL, validROIR;
 
+	// 计算左侧双目相机的参数（从机器人看向相机的左侧）
 	cv::stereoRectify(cameraMatrix[0], distorCoeff[0], cameraMatrix[1], distorCoeff[1], cv::Size(2048, 2048),
 		rotationMatLeft, translationMatLeft, Rectify[0], Rectify[1], Projection[0], Projection[1], Q_left,
 		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
 	std::cout << "disparity map matrix for LEFT cameras: \n" << Q_left << std::endl;
-
+	// 计算右侧双目相机的参数（从机器人看向相机的右侧）
 	cv::stereoRectify(cameraMatrix[2], distorCoeff[2], cameraMatrix[3], distorCoeff[3], cv::Size(2048, 2048),
 		rotationMatRight, translationMatRight, Rectify[2], Rectify[3], Projection[2], Projection[3], Q_right,
 		cv::CALIB_ZERO_DISPARITY, -1, cv::Size(2048, 2048), &validROIL, &validROIR);
 	std::cout << "disparity map matrix for RIGHT cameras: \n" << Q_right << std::endl;
 	
-	cv::FileStorage fs_read("FrameDefine.yml", cv::FileStorage::READ);
+	cv::FileStorage fs_read("D:\\total\\MotionCapture\\utils\\FrameDefine.yml", cv::FileStorage::READ);
 	
 	if (fs_read.isOpened())
 	{

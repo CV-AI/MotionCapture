@@ -29,6 +29,11 @@ bool compareContourAreas(std::vector<cv::Point> contour1, std::vector<cv::Point>
 	return (i > j); // 从大到小排序
 }
 
+bool compareContourHeight(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2) {
+	float i = cv::minAreaRect(contour1).center.y;
+	float j = cv::minAreaRect(contour2).center.y;
+	return (i < j); // 从小到大排序，也可以说是从高到低排序
+}
 // 通过HSV颜色空间进行阈值化处理，能较好地避免光照影响
 void Tracker::ColorThresholding(int marker_index)
 {
@@ -68,8 +73,6 @@ bool Tracker:: initMarkerPosition(int camera_index)
 	
 	if (contours.size() == NUM_MARKERS)
 	{
-		std::sort(contours.begin(), contours.end(), compareContourAreas);
-		//std::vector<std::vector<cv::Point>>::const_iterator it = contours.begin();
 		// 找到contour的boundingRect的中心
 		for (int i = 0; i < 6; i++)
 		{
@@ -109,7 +112,7 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 	{
 		// 如果只有两个标记的在检测框中
 		// 那么按照高度排序即可
-		std::sort(contours.begin(), contours.end(), compareContourAreas);
+		std::sort(contours.begin(), contours.end(), compareContourHeight);
 		cv::Point2f center_0 = cv::minAreaRect(contours[0]).center;
 		cv::Point2f center_1 = cv::minAreaRect(contours[1]).center;
 		
@@ -120,7 +123,7 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 	{
 		// 如果出现了三个标记点，很可能是因为足部的标记点进入了小腿部分的检测框
 		// 这时，可以确定最高的那个点是属于小腿的
-		std::sort(contours.begin(), contours.end(), compareContourAreas);
+		std::sort(contours.begin(), contours.end(), compareContourHeight);
 		cv::Point2f center_0 = cv::minAreaRect(contours[0]).center;
 		currentPos[camera_index][2 * marker_set] = center_0 + cv::Point2f(detectPosition);
 
@@ -197,6 +200,7 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 bool Tracker::RectifyMarkerPos(int camera_index)
 {
 	int i, j, change=1;
+	// 对于0-3号标记点，利用y值判断label 是否准确
 	for (i = 0; i < NUM_MARKERS - 1 && change!=0; i++)
     {
         change=0;
