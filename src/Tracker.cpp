@@ -230,7 +230,6 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 	bool success = true;
 	cv::Point detectRegionPosition;
 	cv::Rect detectRect;
-	
 	switch (tracker_type)
 	{
 	case ByDetection:
