@@ -286,7 +286,6 @@ int main(int /*argc*/, char** /*argv*/)
 #endif
 					)
 				{
-					
 					cv::imshow("Left_Upper", tracker.ReceivedImages[0]);
 					cv::imshow("Left_Lower", tracker.ReceivedImages[1]);
 					cv::imshow("Right_Upper", tracker.ReceivedImages[2]);
@@ -323,7 +322,6 @@ int main(int /*argc*/, char** /*argv*/)
 				cv::Mat combine, combine1, combine2;
 				cv::hconcat(tracker.ReceivedImages[2], tracker.ReceivedImages[0], combine1);
 				cv::hconcat(tracker.ReceivedImages[3], tracker.ReceivedImages[1], combine2);
-				//combine1.push_back(combine2);
 				cv::vconcat(combine1, combine2, combine);
 				cv::imshow("CONCAT", combine);
 				int key = cv::waitKey(1);

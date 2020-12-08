@@ -51,7 +51,7 @@ void Tracker::ColorThresholding()
 bool Tracker:: initMarkerPosition(int camera_index)
 {	
 	ColorThresholding();
-	cv::erode(detectWindow_Initial, detectWindow_Initial, mask_erode);
+	//cv::erode(detectWindow_Initial, detectWindow_Initial, mask_erode);
 	/*cv::namedWindow("detectwindow_erode", 0);
 	cv::imshow("detectwindow_erode", detectWindow_Initial);*/
 	cv::morphologyEx(detectWindow_Initial, detectWindow_Initial, cv::MORPH_CLOSE, mask);
@@ -101,28 +101,41 @@ bool Tracker:: initMarkerPosition(int camera_index)
 bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 {
 	ColorThresholding(camera_index);
-	cv::erode(detectWindow, detectWindow, mask_erode);
+	//cv::erode(detectWindow, detectWindow, mask_erode);
 	cv::morphologyEx(detectWindow, detectWindow, cv::MORPH_CLOSE, mask);
 	std::vector<std::vector<cv::Point>>contours;
 	cv::findContours(detectWindow, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
-	std::sort(contours.begin(), contours.end(), compareContourAreas);
-	if (contours.size() >=2)
+	if (contours.size() ==2)
 	{
+		// 如果只有两个标记的在检测框中
+		// 那么按照高度排序即可
+		std::sort(contours.begin(), contours.end(), compareContourAreas);
 		cv::Point2f center_0 = cv::minAreaRect(contours[0]).center;
 		cv::Point2f center_1 = cv::minAreaRect(contours[1]).center;
 		
-		if (center_0.y < center_1.y)
+		currentPos[camera_index][2 * marker_set] = center_0 + cv::Point2f(detectPosition);
+		currentPos[camera_index][2 * marker_set + 1] = center_1 + cv::Point2f(detectPosition);
+	}
+	else if (contours.size() == 3)
+	{
+		// 如果出现了三个标记点，很可能是因为足部的标记点进入了小腿部分的检测框
+		// 这时，可以确定最高的那个点是属于小腿的
+		std::sort(contours.begin(), contours.end(), compareContourAreas);
+		cv::Point2f center_0 = cv::minAreaRect(contours[0]).center;
+		currentPos[camera_index][2 * marker_set] = center_0 + cv::Point2f(detectPosition);
+
+		cv::Point2f p0 = cv::minAreaRect(contours[1]).center + cv::Point2f(detectPosition);
+		cv::Point2f p1 = cv::minAreaRect(contours[2]).center + cv::Point2f(detectPosition);
+		cv::Point2f prev = previousPos[camera_index][2 * marker_set + 1];
+		// 然后根据前一帧的位置确定第二点（更靠近前一帧的是正确的）
+		if (pointDist(p0, prev) < pointDist(p1, prev))
 		{
-			currentPos[camera_index][2 * marker_set] = center_0 + cv::Point2f(detectPosition);
-			currentPos[camera_index][2 * marker_set + 1] = center_1 + cv::Point2f(detectPosition);
+			currentPos[camera_index][2 * marker_set + 1] = p0;
 		}
 		else
 		{
-			currentPos[camera_index][2 * marker_set + 1] = center_0 + cv::Point2f(detectPosition);
-			currentPos[camera_index][2 * marker_set] = center_1 + cv::Point2f(detectPosition);
+			currentPos[camera_index][2 * marker_set + 1] = p1;
 		}
-		currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
-		return true;
 	}
 	else
 	{
@@ -130,6 +143,8 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 		std::cout << "Number of contours is wrong:  " << contours.size() << std::endl;
 		return false;
 	}
+	currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
+	return true;
 }
 
 // 为了方便使用，初始化tracker时都应该实际使用ByDetection（使用其他的tracker都需要自行画出框图）
@@ -218,6 +233,12 @@ bool Tracker::FilterInitialImage()
 {
 	//TODO: clearify images for tracker initialization
 	return true;
+}
+
+float pointDist(const cv::Point2f& p0, const cv::Point2f& p1)
+{
+	// we don't calculate sqaure root because it's not important to our goal
+	return pow(p0.x-p1.x,2)+pow(p0.y-p1.y,2);
 }
 
 // 多线程同时更新追踪器
