@@ -245,6 +245,18 @@ float pointDist(const cv::Point2f& p0, const cv::Point2f& p1)
 	return pow(p0.x-p1.x,2)+pow(p0.y-p1.y,2);
 }
 
+std::vector<int> decodeErrorMarkerSets(int code)
+{
+	if (code == 0)
+	{
+		return std::vector<int> {};
+	}
+	else if (code == 1)
+	{
+		return std::vector<int> {1};
+	}
+}
+
 // 多线程同时更新追踪器
 DWORD WINAPI UpdateTracker(LPVOID lpParam)
 {
@@ -253,6 +265,7 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 	Tracker* trackerPtr = para.trackerPtr;
 	TrackerType tracker_type = para.tracker_type;
 	bool success = true;
+	DWORD error_code = 9;
 	cv::Point detectRegionPosition;
 	cv::Rect detectRect;
 	switch (tracker_type)
@@ -289,7 +302,19 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 			detectRect = cv::Rect((*trackerPtr).detectPosition.x, (*trackerPtr).detectPosition.y, window_size_x, window_size_y);
 			
 			(*trackerPtr).detectWindow = (*trackerPtr).ReceivedImages[camera_index](detectRect).clone(); 
-			success = (*trackerPtr).updateMarkerPosition(camera_index,j) && success;
+			success = (*trackerPtr).updateMarkerPosition(camera_index,j);
+			if (!success)
+			{
+				// 如果error_code是默认状态，那么这是第一次发生错误
+				if (error_code == 9)
+				{
+					error_code = j;
+				}
+				else
+				{
+					error_code = error_code * 10 + j;
+				}
+			}
 			(*trackerPtr).momentum[j] = weight*((*trackerPtr).currentPosSet[camera_index][j] - (*trackerPtr).previousPosSet[camera_index][j]);
 		}
 		break;
@@ -300,5 +325,5 @@ DWORD WINAPI UpdateTracker(LPVOID lpParam)
 	default:
 		break;
 	}
-	return success;
+	return error_code;
 }

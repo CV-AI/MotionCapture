@@ -55,15 +55,15 @@ public:
 	bool RectifyMarkerPos(int);
 	// 每个检测窗口的大小
 	const cv::Point2i detectWindowDim[NUM_CAMERAS][NUM_MARKER_SET] = { 
-										{{80, 120}, {70, 115}, {90, 90} },
-										{{80, 120}, {70, 115}, {90, 90} },
-										{{80, 120}, {70, 115}, {90, 90} },
-										{{80, 120}, {70, 115}, {90, 90} } };
+										{{90, 130}, {80, 115}, {100, 90} },
+										{{90, 130}, {80, 115}, {100, 90} },
+										{{90, 130}, {80, 105}, {90, 90} },
+										{{90, 130}, {80, 105}, {90, 90} }};
 	int threshold;
 	bool TrackerAutoIntialized;
 	// 用于遮掩环境光干扰的mask
 	cv::Mat ambient_light_masks[NUM_CAMERAS];
-};
+}; 
 class TrackerParameters
 {
 public:
@@ -82,6 +82,8 @@ public:
 	}
 };
 float pointDist(const cv::Point2f& p0, const cv::Point2f& p1);
+std::vector<int> decodeErrorMarkerSets(int);
+int encodeErrorMarkerSets(std::vector<int>);
 DWORD WINAPI UpdateTracker(LPVOID lpParam);
 
 

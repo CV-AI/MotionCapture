@@ -10,7 +10,9 @@ DataProcess::DataProcess()
 	filtedAngle_pre = { 0,0,0,0,0,0 };
 	
 	angles_file.open("angles.csv");
+	angles_file << "LHip" << "," << "LHipFiltered" << "," << "LKnee" << "," << "LKneeFiltered" << "," << "LAnkle" << "," << "LAnkleFiltered" << "," << "RHip" << "," << "RHipFiltered" << "," << "RKnee" << "," << "RKneeFiltered" << "," << "RAnkle" <<","<< "RAnkleFiltered" << "\n";
 	eura_file.open("eura.csv");
+	eura_file << "LHip" << "," << "LKnee" << "," << "LAnkle" << "," << "RHip" << "," << "RKnee" << "," << "RAnkle" << "\n";
 	cv::FileStorage fs_calib("D:\\total\\MotionCapture\\utils\\calib_params.yml", cv::FileStorage::READ);
 	if (fs_calib.isOpened())
 	{
@@ -81,6 +83,7 @@ DataProcess::DataProcess()
 	{
 		// read matrixs that created in previous run to define world frame
 		// 读入前一次运行时使用的矩阵以定义世界坐标系
+		std::cout << "Succeefully opened FrameDefien.yml" << std::endl;
 		fs_read["T0"] >> Transform[0];
 		fs_read["T1"] >> Transform[1];
 		GotWorldFrame = true;

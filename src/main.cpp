@@ -233,12 +233,11 @@ int main(int /*argc*/, char** /*argv*/)
 						BOOL rc = GetExitCodeThread(trackerThreads[j], &exitcode);
 						if (!rc)
 						{
-							cout << "Handle error from GetExitCodeThread() returned for camera at index " << j << endl;
+							cout << "----- Handle error from GetExitCodeThread() returned for camera at index " << j << endl;
 						}
-						else if (!exitcode)
+						else if (exitcode != 9)
 						{
-							cout << "Tracking thread for camera at index " << j << " exited with errors."
-								"Please check onscreen print outs for error details" << endl;
+							cout << "-----Tracking thread for camera " << j << " exited with errors on marker sets: " << exitcode<<".-----" << endl;
 						}
 					}
 					
