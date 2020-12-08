@@ -205,7 +205,7 @@ int main(int /*argc*/, char** /*argv*/)
 				
 				start_tracking = std::chrono::high_resolution_clock::now();
 				std::chrono::duration<double> time_acquiring = start_tracking - start_acquiring;
-				std::cout << "Acquiring time on camera " << ": " << time_acquiring.count() << std::endl;
+				//std::cout << "Acquiring time on camera " << ": " << time_acquiring.count() << std::endl;
 
 				// pCam = NULL;
 				if (tracker.TrackerAutoIntialized)
@@ -259,7 +259,7 @@ int main(int /*argc*/, char** /*argv*/)
 					}
 					finish_tracking = std::chrono::high_resolution_clock::now();
 					std::chrono::duration<double> time_tracking = finish_tracking - start_tracking;
-					std::cout << "Time on tracking " << ": " << time_tracking.count() << std::endl;
+					//std::cout << "Time on tracking " << ": " << time_tracking.count() << std::endl;
 					for (int camera_index = 0; camera_index < NUM_CAMERAS; camera_index++)
 					{
 						for (int marker_inex = 0; marker_inex < NUM_MARKERS; marker_inex++)
@@ -276,7 +276,7 @@ int main(int /*argc*/, char** /*argv*/)
 					dataProcess.exportGaitData();
 					stop_export = std::chrono::high_resolution_clock::now();
 					std::chrono::duration<double> time_export = stop_export - finish_tracking;
-					std::cout << "Time on export gait data: " << time_export.count() << std::endl;
+					//std::cout << "Time on export gait data: " << time_export.count() << std::endl;
 				}
 
 				if (/*tracker.getColors && */!tracker.TrackerAutoIntialized
@@ -301,7 +301,6 @@ int main(int /*argc*/, char** /*argv*/)
 				{
 					try
 					{
-					
 						bool found = dataProcess.FindWorldFrame(tracker.ReceivedImages);
 						if (found)
 						{

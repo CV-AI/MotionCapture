@@ -144,6 +144,9 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 	{
 		// TODO: 如果使用颜色跟踪失败则需要使用其他跟踪方法
 		std::cout << "Number of contours is wrong:  " << contours.size() << std::endl;
+		char* str = new char[15];
+		sprintf(str, "%s%i%s%i.jpg", "camera", camera_index, "set", marker_set);
+		cv::imwrite(str, detectWindow);
 		return false;
 	}
 	currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);

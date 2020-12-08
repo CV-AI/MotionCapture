@@ -233,26 +233,19 @@ cv::Point3f DataProcess::mapTo3D(int camera_set, cv::Point upper_point, cv::Poin
 // 获取关节角度
 void DataProcess::getJointAngle()
 {
-	
 	// 所有的坐标现在已经转换到自定义坐标系，矢状面是x-z平面， 额状面是y-z平面
 	for (int i = 0; i < 2; i++)
 	{
-
 		thigh[i] = MarkerPos3D[i][1] - MarkerPos3D[i][0];
 		shank[i] = MarkerPos3D[i][3] - MarkerPos3D[i][2];
 		foot[i] = MarkerPos3D[i][5] - MarkerPos3D[i][4];
-		/*std::cout << "thigh " << i << " " << thigh[i] << std::endl;
-		std::cout << "shank " << i << " " << shank[i] << std::endl;
-		std::cout << "foot " << i << " " << foot[i] << std::endl;*/
-		// 通过这种余角的方式计算，避免角度从0跳动到360附近，而是呈现正负跳动的形式
-		anglesToADS[3 * i] = 90.0 - cv::fastAtan2(thigh[i].z, thigh[i].x);
-		anglesToADS[3 * i + 1] = 90.0 - cv::fastAtan2(shank[i].z, shank[i].x);
-		anglesToADS[3 * i + 2] = 90.0 - cv::fastAtan2(foot[i].z, foot[i].x);
-		// check README for why we're doing this way
-		anglesToADS[3 * i + 2] = anglesToADS[3 * i + 2] - anglesToADS[3 * i + 1];
-		anglesToADS[3 * i + 1] = anglesToADS[3*i] - anglesToADS[3 * i + 1];
+		double hip = cv::fastAtan2(thigh[i].z, thigh[i].x);
+		double knee = cv::fastAtan2(shank[i].z, shank[i].x);
+		double ankle = cv::fastAtan2(foot[i].z, foot[i].x);
+		anglesToADS[3 * i] = hip - 270.0;
+		anglesToADS[3 * i + 1] = -(anglesToADS[3 * i] - knee);
+		anglesToADS[3 * i + 2] = anglesToADS[3 * i + 1] - ankle;
 	}
-	
 }
 
 // 输出角度信息到文件，并通过Ads向PLC发送步态角
@@ -282,14 +275,14 @@ bool DataProcess::exportGaitData()
 		anglesToADS[angle] = filtedAngles[angle];
 	}
 	// 输出数据正确标志位
-	eura_file << anglesToADS[6] << ",";
+	eura_file << anglesToADS[6];
+	angles_file << "\n";
+	eura_file << "\n";
 	// 将左右腿的数值交换数值，以供控制系统使用
 	for (int angle = 0; angle < 3; angle++)
 	{
 		std::swap(anglesToADS[angle], anglesToADS[angle + 3]);
 	}
-	angles_file << "\n";
-	eura_file << "\n";
 	if (AdsOpened) // 必须作此判断，否则Ads会消耗近5秒的时间，应该是在重试
 	{
 		//通过句柄向PLC写入数组
@@ -303,7 +296,7 @@ bool DataProcess::exportGaitData()
 bool DataProcess::FindWorldFrame(cv::Mat images[4])
 {
 	cv::Size boardsize(3, 3);
-	cv::Point3f p0, p1,p2;
+	cv::Point3f p0, p1, p2;
 	
 	for (int camera_set = 0; camera_set < NUM_CAMERAS / 2; camera_set++)
 	{
@@ -323,10 +316,10 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 		p0 = mapTo3D(camera_set, corners_upper[0], corners_lower[0]);
 		p1 = mapTo3D(camera_set, corners_upper[2], corners_lower[2]);
 		p2 = mapTo3D(camera_set, corners_upper[6], corners_lower[6]);
-		unit_vectors[1] = p1 - p0;
+		unit_vectors[1] = p0 - p1;
 		unit_vectors[2] = p2 - p0;
-		unit_vectors[0] = unit_vectors[2].cross(unit_vectors[1]);
-		unit_vectors[2] = unit_vectors[0].cross(unit_vectors[1]);
+		unit_vectors[0] = unit_vectors[1].cross(unit_vectors[2]); // x轴指向相机一侧
+		unit_vectors[2] = unit_vectors[0].cross(unit_vectors[1]); // z轴竖直向上
 		for (int i = 0; i < 3; i++)
 		{
 			unit_vectors[i] = scale(unit_vectors[i]);
@@ -361,7 +354,7 @@ bool DataProcess::FindWorldFrame(cv::Mat images[4])
 	cv::waitKey(0);
 	GotWorldFrame = true;
 
-	cv::FileStorage fs("FrameDefine.yml", cv::FileStorage::WRITE);
+	cv::FileStorage fs("D:\\total\\MotionCapture\\utils\\FrameDefine.yml", cv::FileStorage::WRITE);
 	if (fs.isOpened())
 	{
 		fs << "T0" << Transform[0];

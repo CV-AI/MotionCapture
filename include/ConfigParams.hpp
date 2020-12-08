@@ -19,7 +19,7 @@ const int64_t numBuffers = 2;
 // 想要设定的帧率（目前来说还无法正常工作）
 const float frameRate = 80.0f;
 // 曝光时间，以微秒为单位
-static float exposureTimeToSet = 400.0f;
+static float exposureTimeToSet = 500.0f;
 //static float exposureTimeToSet = 11000.0f;
 const bool SetExposureManual = true;
 // 在标定世界坐标系时设为false
@@ -30,7 +30,7 @@ const bool _PRINT_PROCESS = false;
 // MAX and MIN H, S, V 
 // for color thresholding
 const cv::Scalar UPPER_RED = cv::Scalar(255, 255, 255);
-const cv::Scalar LOWER_RED = cv::Scalar(220, 220, 220);
+const cv::Scalar LOWER_RED = cv::Scalar(230, 230, 230);
 // number of cameras and markers
 const int NUM_CAMERAS = 4;
 const int NUM_MARKERS = 6;
