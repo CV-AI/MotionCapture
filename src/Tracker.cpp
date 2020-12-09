@@ -13,7 +13,6 @@ Tracker::~Tracker()
 }
 // 对静态变量进行初始化
 cv::Mat Tracker:: image;
-cv::Scalar Tracker::CorlorsChosen(0,0,0);
 bool Tracker::getColors = false;
 cv::Rect Tracker::calibration_region;
 cv::Mat Tracker::ReceivedImages[NUM_CAMERAS];
@@ -34,47 +33,79 @@ bool compareContourHeight(std::vector<cv::Point> contour1, std::vector<cv::Point
 	float j = cv::minAreaRect(contour2).center.y;
 	return (i < j); // 从小到大排序，也可以说是从高到低排序
 }
-// 通过HSV颜色空间进行阈值化处理，能较好地避免光照影响
-void Tracker::ColorThresholding(int camera_index)
-{
-	cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
-	//cv::cvtColor(detectWindow, detectWindow, CV_RGB2HSV);
-	cv::inRange(detectWindow, LOWER_RED, UPPER_RED, rangeRes);
-	detectWindow = rangeRes;
+
+bool compareContourX(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2) {
+	float i = cv::minAreaRect(contour1).center.x;
+	float j = cv::minAreaRect(contour2).center.x;
+	return (i < j); // 从小到大排序，也可以说是从左到右
 }
 
-// 通过HSV颜色空间进行阈值化处理，能较好地避免光照影响
-void Tracker::ColorThresholding()
+bool Tracker::autoInitMarkerPosition(int camera_index)
 {
-	cv::Mat rangeRes = cv::Mat::zeros(detectWindow_Initial.size(), CV_8UC1);
-	//cv::cvtColor(detectWindow_Initial, detectWindow_Initial, CV_RGB2HSV);
-	cv::inRange(detectWindow_Initial, LOWER_RED, UPPER_RED, rangeRes);
-	detectWindow_Initial = rangeRes;
-}
-
-// 通过contour获取六个标记点的起始位置
-bool Tracker:: initMarkerPosition(int camera_index)
-{	
-	ColorThresholding();
-	//cv::erode(detectWindow_Initial, detectWindow_Initial, mask_erode);
-	/*cv::namedWindow("detectwindow_erode", 0);
-	cv::imshow("detectwindow_erode", detectWindow_Initial);*/
-	cv::morphologyEx(detectWindow_Initial, detectWindow_Initial, cv::MORPH_CLOSE, mask);
+	cv::Mat binary = colorThresholding(detectWindow_Initial);
+	cv::morphologyEx(binary, binary, cv::MORPH_CLOSE, mask);
 	cv::namedWindow("detectwindow", 0);
-	cv::imshow("detectwindow", detectWindow_Initial);
-	calibration_region = cv::selectROI("detectwindow", detectWindow_Initial);
+	std::vector<std::vector<cv::Point>>contours;
+	cv::findContours(binary, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+	// 从左到右将contour排序
+	std::sort(contours.begin(), contours.end(), compareContourX);
+	// 对于0,1号相机，需要反转这个顺序
+	if (camera_index < 2)
+	{
+		std::reverse(contours.begin(), contours.end());
+	}
+	// 找到contour的boundingRect的中心
+	std::vector<cv::Point2f> selected_contour_centers;
+	for (int i = 0; i < NUM_MARKERS; i++)
+	{
+		if (_PRINT_PROCESS)
+		{
+			std::cout << "contour size" << contours[i].size() << std::endl;
+		}
+		currentPos[camera_index][i] = cv::minAreaRect(contours[i]).center;
+		selected_contour_centers.push_back(currentPos[camera_index][i]);
+	}
+	cv::Rect box = cv::boundingRect(selected_contour_centers);
+	cv::rectangle(binary, box, cv::Scalar(255,255,255));
+	cv::imshow("detectwindow", binary);
+	int key = cv::waitKey(0);
+	cv::destroyWindow("detectwindow");
+	if (key == 32) // press space
+	{
+		RectifyMarkerPos(camera_index);
+		for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
+		{
+			currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
+		}
+		std::cout << "Succeed to auto initialize marker position for camera " << camera_index << std::endl;
+		return true;
+	}
+	else
+	{
+		std::cout << "Failed to auto initialize marker postion for camera " << camera_index << ".\n";
+		std::cout << "Turn to manual..." << std::endl;
+		return false;
+	}
+}
+// 通过contour获取六个标记点的起始位置
+bool Tracker:: manualInitMarkerPosition(int camera_index)
+{	
+	cv::Mat binary = colorThresholding(detectWindow_Initial);
+	cv::morphologyEx(binary, binary, cv::MORPH_CLOSE, mask);
+	cv::namedWindow("detectwindow", 0);
+	cv::imshow("detectwindow", binary);
+	calibration_region = cv::selectROI("detectwindow", binary);
 	cv::Mat region_mask = cv::Mat::zeros(detectWindow_Initial.size(), CV_8UC1);
 	region_mask(calibration_region).setTo(255);
 	cv::Mat masked_window;
-	detectWindow_Initial.copyTo(masked_window, region_mask);
+	binary.copyTo(masked_window, region_mask);
 	std::vector<std::vector<cv::Point>>contours;
 	cv::findContours(masked_window, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
-	std::vector<std::vector<cv::Point>>::const_iterator itc = contours.begin();
 	
 	if (contours.size() == NUM_MARKERS)
 	{
 		// 找到contour的boundingRect的中心
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < NUM_MARKERS; i++)
 		{
 			if (_PRINT_PROCESS)
 			{
@@ -103,7 +134,7 @@ bool Tracker:: initMarkerPosition(int camera_index)
 //更新标记点、标记点对的位置
 bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 {
-	ColorThresholding(camera_index);
+	detectWindow = colorThresholding(detectWindow);
 	//cv::erode(detectWindow, detectWindow, mask_erode);
 	cv::morphologyEx(detectWindow, detectWindow, cv::MORPH_CLOSE, mask);
 	std::vector<std::vector<cv::Point>>contours;
@@ -168,11 +199,21 @@ bool Tracker::InitTracker(TrackerType tracker_type)
 			{
 				// i is the index of camera
 				detectWindow_Initial = ReceivedImages[i].clone();
-				// 如果把success放在前面，则success为false时，函数不会执行
-				success =  initMarkerPosition(i) && success;
+				if (autoInitMarkerPosition(i))
+				{
+					continue;
+				}
+				else
+				{
+					// 如果把success放在前面，则success为false时，函数不会执行
+					success = manualInitMarkerPosition(i) && success;
+				}
+			}
+			for (int i = 0; i < NUM_CAMERAS; i++)
+			{
 				for (int j = 0; j < NUM_MARKERS; j++)
 				{
-					std::cout <<"Inital position: "<< i << j << currentPos[i][j] << std::endl;
+					std::cout << "Inital position: " << i << j << currentPos[i][j] << std::endl;
 				}
 			}
 			if (success)
@@ -242,12 +283,6 @@ bool Tracker::RectifyMarkerPos(int camera_index)
 	return true;
 }
 
-bool Tracker::FilterInitialImage()
-{
-	//TODO: clearify images for tracker initialization
-	return true;
-}
-
 float pointDist(const cv::Point2f& p0, const cv::Point2f& p1)
 {
 	// we don't calculate sqaure root because it's not important to our goal
@@ -264,6 +299,13 @@ std::vector<int> decodeErrorMarkerSets(int code)
 	{
 		return std::vector<int> {1};
 	}
+}
+
+cv::Mat colorThresholding(const cv::Mat& color_img)
+{
+	cv::Mat rangeRes = cv::Mat::zeros(color_img.size(), CV_8UC1);
+	cv::inRange(color_img, LOWER_RED, UPPER_RED, rangeRes);
+	return rangeRes;
 }
 
 // 多线程同时更新追踪器

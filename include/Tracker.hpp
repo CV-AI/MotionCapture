@@ -19,17 +19,10 @@ class Tracker
 public:
 	Tracker();
 	~Tracker();
-
-	void ColorThresholding(int);
-	void ColorThresholding();
-	static cv::Scalar CorlorsChosen;
-
-	// enable different tracker 
 	
-	//static void Mouse_getColor(int event, int x, int y, int, void*);
-	//static void Mouse_getRegion(int event, int x, int y, int, void*);
 	static cv::Rect calibration_region;
-	bool initMarkerPosition(int camera_index);
+	bool manualInitMarkerPosition(int camera_index);
+	bool autoInitMarkerPosition(int camera_index);
 	bool updateMarkerPosition(int camera_index, int marker_set);
 	//void patternMatch();
 	// 类中的静态变量在各个对象中共用
@@ -49,9 +42,8 @@ public:
 	static cv::Point2f previousPosSet[NUM_CAMERAS][NUM_MARKER_SET];
 	// 动量：即前两帧的位置差
 	cv::Point2f momentum[NUM_MARKER_SET]; 
-
+	
 	bool InitTracker(TrackerType); 
-	bool FilterInitialImage();
 	bool RectifyMarkerPos(int);
 	// 每个检测窗口的大小
 	const cv::Point2i detectWindowDim[NUM_CAMERAS][NUM_MARKER_SET] = { 
@@ -62,7 +54,7 @@ public:
 	int threshold;
 	bool TrackerAutoIntialized;
 	// 用于遮掩环境光干扰的mask
-	cv::Mat ambient_light_masks[NUM_CAMERAS];
+	cv::FileStorage Roi_Area_File;
 }; 
 class TrackerParameters
 {
@@ -84,6 +76,7 @@ public:
 float pointDist(const cv::Point2f& p0, const cv::Point2f& p1);
 std::vector<int> decodeErrorMarkerSets(int);
 int encodeErrorMarkerSets(std::vector<int>);
+cv::Mat colorThresholding(const cv::Mat& color_img);
 DWORD WINAPI UpdateTracker(LPVOID lpParam);
 
 

@@ -145,7 +145,6 @@ int main(int /*argc*/, char** /*argv*/)
 				return -1;
 			}
 		}
-		//cv::waitKey(1500); // 等待1.5s,确保相机自动白平衡已经完成
 		// Create an array of CameraPtrs. This array maintenances smart pointer's reference
 		// count when CameraPtr is passed into grab thread as void pointer
 		AcquisitionParameters* paraList = new AcquisitionParameters[NUM_CAMERAS];
@@ -161,7 +160,6 @@ int main(int /*argc*/, char** /*argv*/)
 		}
 		HANDLE* grabThreads = new HANDLE[NUM_CAMERAS];
 		HANDLE* trackerThreads = new HANDLE[NUM_CAMERAS];
-		//cv::setMouseCallback("Left_Upper", tracker.Mouse_getColor, 0); 
 
 		// acquire images and do something
 		// main part of this program
@@ -209,7 +207,6 @@ int main(int /*argc*/, char** /*argv*/)
 				std::chrono::duration<double> time_acquiring = start_tracking - start_acquiring;
 				//std::cout << "Acquiring time on camera " << ": " << time_acquiring.count() << std::endl;
 
-				// pCam = NULL;
 				if (tracker.TrackerAutoIntialized)
 				{
 					memcpy(tracker.previousPosSet, tracker.currentPosSet, sizeof(tracker.currentPosSet));
