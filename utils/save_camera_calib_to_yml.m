@@ -6,6 +6,7 @@ right_stereo = right_params.right;
 fileID = fopen('calib_params.yml', 'w');
 % write header
 fprintf(fileID, "%s\n%s\n", "%YAML:1.0", "---");
+
 % write distortion
 dist(:,1) = [left_stereo.CameraParameters1.RadialDistortion left_stereo.CameraParameters1.TangentialDistortion];
 dist(:,2) = [left_stereo.CameraParameters2.RadialDistortion left_stereo.CameraParameters2.TangentialDistortion];
@@ -39,6 +40,7 @@ for c=1:4
     end
     fprintf(fileID, "]\n");
 end
+
 % translation of camera2 in left and right camera pair
 Translation(:,:,1) = left_stereo.TranslationOfCamera2;
 Translation(:,:,2) = right_stereo.TranslationOfCamera2;
@@ -53,7 +55,9 @@ for c=1:2
     end
     fprintf(fileID, "]\n");
 end
+
 % rotation of camera2 in left and right camera pair
+% note that they are inversed
 Rotation(:,:,1) = left_stereo.RotationOfCamera2.';
 Rotation(:,:,2) = right_stereo.RotationOfCamera2.';
 for c=1:2

@@ -26,7 +26,7 @@ const bool SetExposureManual = true;
 static bool TRACKING = true;
 
 // 是否把中间处理过程的输出打印出来
-const bool _PRINT_PROCESS = true;
+const bool _PRINT_PROCESS = false;
 // MAX and MIN H, S, V 
 // for color thresholding
 const cv::Scalar UPPER_RED = cv::Scalar(255, 255, 255);

@@ -121,7 +121,7 @@ void DataProcess::mapTo3D()
 		{
 			for (int marker = 0; marker < 6; marker++)
 			{
-				std::cout << "Marker Pos Global" << camera << " marker " << marker << " " << points[camera][marker] << ". After undistortion: " << mapped_points[camera][marker] << std::endl;
+				std::cout << "Marker Global Camera " << camera << " marker " << marker << " " << points[camera][marker] << ". Undistorted: " << mapped_points[camera][marker] << std::endl;
 			}
 		}
 	}	
@@ -138,7 +138,19 @@ void DataProcess::mapTo3D()
 	// 由标记点的图像坐标计算出相机坐标系C中的三维坐标
 	cv::perspectiveTransform(disparityVecLeft, MarkerPosVecL, Q_left);
 	cv::perspectiveTransform(disparityVecRight, MarkerPosVecR, Q_right);
-
+	if (_PRINT_PROCESS)
+	{
+		printf("Before mapping to Global Frame:\n");
+		for (int marker = 0; marker < NUM_MARKERS; marker++)
+		{
+			std::cout<< "CameraSet 0, Marker " << marker << " : " << MarkerPosVecL[marker] << "\n";
+		}
+		for (int marker = 0; marker < NUM_MARKERS; marker++)
+		{
+			std::cout << "CameraSet 1, Marker " << marker << " : " << MarkerPosVecR[marker] << "\n";
+		}
+		std::cout << std::endl;
+	}
 	// 乘以转换矩阵，转换到世界坐标系
 	cv::perspectiveTransform(MarkerPosVecL, MarkerPosVecL, Transform[0]);
 	cv::perspectiveTransform(MarkerPosVecR, MarkerPosVecR, Transform[1]);
@@ -146,11 +158,19 @@ void DataProcess::mapTo3D()
 	{
 		MarkerPos3D[0][marker] = cv::Point3f(MarkerPosVecL[marker]);
 		MarkerPos3D[1][marker] = cv::Point3f(MarkerPosVecR[marker]);
-		if (_PRINT_PROCESS)
+	}
+	if (_PRINT_PROCESS)
+	{
+		printf("---After mapping to Global Frame---\n");
+		for (int marker = 0; marker < NUM_MARKERS; marker++)
 		{
-			std::cout << "CameraSet 0, Marker " << marker << " : " << MarkerPos3D[0][marker];
-			std::cout << "CameraSet 1, Marker " << marker << " : " << MarkerPos3D[1][marker] << std::endl;
+			std::cout << "CameraSet 0, Marker " << marker << " : " << MarkerPos3D[0][marker] << "\n";
 		}
+		for (int marker = 0; marker < NUM_MARKERS; marker++)
+		{
+			std::cout << "CameraSet 1, Marker " << marker << " : " << MarkerPos3D[1][marker] << "\n";
+		}
+		std::cout << std::endl;
 	}
 	// 根据一对标记点的距离判断是否跟丢
 	if (vecDistInited)
@@ -165,8 +185,8 @@ void DataProcess::mapTo3D()
 									- initialVecRight[segment]));
 			if (_PRINT_PROCESS)
 			{
-				std::cout << "segment module " << segment << " : " << segmentModule[segment][0] << std::endl;
-				std::cout << "segment module " << segment+3 << " : " << segmentModule[segment+3][0] << std::endl;
+				std::cout << "segment module " << segment << " : " << segmentModule[segment][0] << "\n";
+				std::cout << "segment module " << segment+3 << " : " << segmentModule[segment+3][0] << "\n";
 			}
 		}
 		if (segmentModule[0].size() > lenCache)

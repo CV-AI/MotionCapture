@@ -113,8 +113,10 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 		// 如果只有两个标记的在检测框中
 		// 那么按照高度排序即可
 		std::sort(contours.begin(), contours.end(), compareContourHeight);
-		cv::Point2f center_0 = cv::minAreaRect(contours[0]).center;
-		cv::Point2f center_1 = cv::minAreaRect(contours[1]).center;
+		cv::Point2f center_0, center_1;
+		float r_0, r_1;
+		cv::minEnclosingCircle(contours[0], center_0, r_0);
+		cv::minEnclosingCircle(contours[1], center_1, r_1);
 		
 		currentPos[camera_index][2 * marker_set] = center_0 + cv::Point2f(detectPosition);
 		currentPos[camera_index][2 * marker_set + 1] = center_1 + cv::Point2f(detectPosition);
@@ -124,19 +126,24 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 		// 如果出现了三个标记点，很可能是因为足部的标记点进入了小腿部分的检测框
 		// 这时，可以确定最高的那个点是属于小腿的
 		std::sort(contours.begin(), contours.end(), compareContourHeight);
-		cv::Point2f center_0 = cv::minAreaRect(contours[0]).center;
+		cv::Point2f center_0, p1, p2;
+		float _;
+		cv::minEnclosingCircle(contours[0], center_0, _);
 		currentPos[camera_index][2 * marker_set] = center_0 + cv::Point2f(detectPosition);
-		cv::Point2f p0 = cv::minAreaRect(contours[1]).center + cv::Point2f(detectPosition);
-		cv::Point2f p1 = cv::minAreaRect(contours[2]).center + cv::Point2f(detectPosition);
+
+		cv::minEnclosingCircle(contours[1], p1, _);
+		cv::minEnclosingCircle(contours[2], p2, _);
+		p1 = p1 + cv::Point2f(detectPosition);
+		p2 = p2 + cv::Point2f(detectPosition);
 		cv::Point2f prev = previousPos[camera_index][2 * marker_set + 1];
 		// 然后根据前一帧的位置确定第二点（更靠近前一帧的是正确的）
-		if (pointDist(p0, prev) < pointDist(p1, prev))
+		if (pointDist(p1, prev) < pointDist(p2, prev))
 		{
-			currentPos[camera_index][2 * marker_set + 1] = p0;
+			currentPos[camera_index][2 * marker_set + 1] = p1;
 		}
 		else
 		{
-			currentPos[camera_index][2 * marker_set + 1] = p1;
+			currentPos[camera_index][2 * marker_set + 1] = p2;
 		}
 	}
 	else
