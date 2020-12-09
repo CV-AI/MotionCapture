@@ -37,4 +37,5 @@ const int NUM_MARKERS = 6;
 
 const int NUM_MARKER_SET = 3;
 const double weight = 0.5;
+#define MY_PI 3.1415926;
 #endif // !_CONFIG_PARAMS_HEADER

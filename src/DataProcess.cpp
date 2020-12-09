@@ -262,8 +262,14 @@ void DataProcess::getJointAngle()
 		double knee = cv::fastAtan2(shank[i].z, shank[i].x);
 		double ankle = cv::fastAtan2(foot[i].z, foot[i].x);
 		anglesToADS[3 * i] = hip - 270.0;
-		anglesToADS[3 * i + 1] = -(hip - knee);
-		anglesToADS[3 * i + 2] = knee - ankle;
+		anglesToADS[3 * i + 1] = hip - knee;
+		if (270 < ankle)
+		{
+			anglesToADS[3 * i + 2] = ankle - knee;
+		}
+		else {
+			anglesToADS[3 * i + 2] = ankle + 360 - knee;
+		}
 	}
 }
 
