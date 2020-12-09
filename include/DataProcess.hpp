@@ -86,9 +86,8 @@ public:
 	char szVar2[20] = { "MAIN.VisionAngle" };
 };
 constexpr float dtUsed = 0.011; // 采样时间
-constexpr float cutoff = 3.0;
+constexpr float cutoff = 2.0; // 截止频率
 constexpr double tau = 1/(2*3.1415926*cutoff); // 滤波器的时间常数
-// Construct various filter with cutoff frequency of 0.5 Hz.
 // 无论是写成vector还是[]，最终会因为Filter对象没有被初始化而出错
 // 只有这种方式能初始化对象（可能是因为Filter的作者没有实现其他的初始化方式）
 static LowPassFilter2 lpf0(dtUsed, tau);

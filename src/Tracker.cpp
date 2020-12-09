@@ -35,7 +35,7 @@ bool compareContourHeight(std::vector<cv::Point> contour1, std::vector<cv::Point
 	return (i < j); // 从小到大排序，也可以说是从高到低排序
 }
 // 通过HSV颜色空间进行阈值化处理，能较好地避免光照影响
-void Tracker::ColorThresholding(int marker_index)
+void Tracker::ColorThresholding(int camera_index)
 {
 	cv::Mat rangeRes = cv::Mat::zeros(detectWindow.size(), CV_8UC1);
 	//cv::cvtColor(detectWindow, detectWindow, CV_RGB2HSV);
@@ -114,9 +114,9 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 		// 那么按照高度排序即可
 		std::sort(contours.begin(), contours.end(), compareContourHeight);
 		cv::Point2f center_0, center_1;
-		float r_0, r_1;
-		cv::minEnclosingCircle(contours[0], center_0, r_0);
-		cv::minEnclosingCircle(contours[1], center_1, r_1);
+		float _;
+		cv::minEnclosingCircle(contours[0], center_0, _);
+		cv::minEnclosingCircle(contours[1], center_1, _);
 		
 		currentPos[camera_index][2 * marker_set] = center_0 + cv::Point2f(detectPosition);
 		currentPos[camera_index][2 * marker_set + 1] = center_1 + cv::Point2f(detectPosition);
@@ -150,9 +150,6 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 	{
 		// TODO: 如果使用颜色跟踪失败则需要使用其他跟踪方法
 		std::cout << "Number of contours is wrong:  " << contours.size() << std::endl;
-		char* str = new char[15];
-		sprintf(str, "%s%i%s%i.jpg", "camera", camera_index, "set", marker_set);
-		cv::imwrite(str, detectWindow);
 		return false;
 	}
 	currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
@@ -234,9 +231,12 @@ bool Tracker::RectifyMarkerPos(int camera_index)
 	// 对于2，3号相机来说
 	else
 	{
-		if (currentPos[camera_index][4].x > currentPos[camera_index][5].x /*&& currentPos[camera_index][4].y > currentPos[camera_index][5].y*/)
+		if (currentPos[camera_index][4].x > currentPos[camera_index][5].x)
 		{
-			std::swap(currentPos[camera_index][4], currentPos[camera_index][5]);
+			if ((currentPos[camera_index][5].y - currentPos[camera_index][4].y) < 20)
+			{
+				std::swap(currentPos[camera_index][4], currentPos[camera_index][5]);
+			}
 		}
 	}
 	return true;
