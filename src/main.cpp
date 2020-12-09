@@ -24,6 +24,8 @@ using namespace std;
 int main(int /*argc*/, char** /*argv*/)
 {   
     // initialize
+	// 这个tracker是用于初始化一些公用的参数的，并不真正地用于追踪标记点
+	// trackerList 才是用于追踪标记点
     Tracker tracker;
 	DataProcess dataProcess;
 	bool status = true;

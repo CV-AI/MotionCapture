@@ -9,10 +9,14 @@ DataProcess::DataProcess()
 	filtedAngles = { 0,0,0,0,0,0 }; // initialize angles to zero
 	filtedAngle_pre = { 0,0,0,0,0,0 };
 	
-	angles_file.open("angles.csv");
-	angles_file << "LHip" << "," << "LHipFiltered" << "," << "LKnee" << "," << "LKneeFiltered" << "," << "LAnkle" << "," << "LAnkleFiltered" << "," << "RHip" << "," << "RHipFiltered" << "," << "RKnee" << "," << "RKneeFiltered" << "," << "RAnkle" <<","<< "RAnkleFiltered" << "\n";
-	eura_file.open("eura.csv");
-	eura_file << "LHip" << "," << "LKnee" << "," << "LAnkle" << "," << "RHip" << "," << "RKnee" << "," << "RAnkle" << "\n";
+	if (_WRITE_ANGLES_TO_FILE)
+	{
+		angles_file.open("angles.csv");
+		angles_file << "Frame," << "LHip," << "LKnee," << "LAnkle," << "RHip," << "RKnee," << "RAnkle," << "LHipFiltered," << "LKneeFiltered,"  << "LAnkleFiltered,"  << "RHipFiltered," << "RKneeFiltered," << "RAnkleFiltered\n";
+		eura_file.open("eura.csv");
+		eura_file << "Frame," << "LHip," << "LKnee," << "LAnkle," << "RHip," << "RKnee," << "RAnkle\n";
+	}
+	
 	cv::FileStorage fs_calib("D:\\total\\MotionCapture\\utils\\calib_params.yml", cv::FileStorage::READ);
 	if (fs_calib.isOpened())
 	{
@@ -95,8 +99,11 @@ DataProcess::DataProcess()
 DataProcess::~DataProcess()
 {
 	// opened files should be closed when not needed
-	angles_file.close();
-	eura_file.close();
+	if (_WRITE_ANGLES_TO_FILE)
+	{
+		angles_file.close();
+		eura_file.close();
+	}
 }
 
 // 将捕捉到的标记点从图像坐标系转换到相机坐标系
@@ -286,23 +293,42 @@ bool DataProcess::exportGaitData()
 	filtedAngles[3] = lpf3.update(anglesToADS[3]);
 	filtedAngles[4] = lpf4.update(anglesToADS[4]);
 	filtedAngles[5] = lpf5.update(anglesToADS[5]);
-	for (int angle = 0; angle < 6; angle++)
+
+	if (_WRITE_ANGLES_TO_FILE)
 	{
-		// 输出未经滤波的真实角度
-		angles_file << anglesToADS[angle] << ",";
-		// 输出滤波后的数据
-		angles_file << filtedAngles[angle] << ",";
-		// 更正欧拉角为两帧之间的差值，之前使用了eura_angles做他用，只是为了节省内存
-		anglesToADS[angle] = filtedAngles[angle] - filtedAngle_pre[angle];
-		// 输出欧拉角度到文件
-		eura_file << anglesToADS[angle] << ",";
-		// 注意最终输出给ads的其实是真实值
-		anglesToADS[angle] = filtedAngles[angle];
+		angles_file << currentFrameCnt << ",";
+		eura_file << currentFrameCnt << ",";
+		currentFrameCnt++;
+		for (int angle = 0; angle < 6; angle++)
+		{
+			// 输出未经滤波的真实角度
+			angles_file << anglesToADS[angle] << ",";
+			// 更正欧拉角为两帧之间的差值，之前使用了eura_angles做他用，只是为了节省内存
+			anglesToADS[angle] = filtedAngles[angle] - filtedAngle_pre[angle];
+			// 输出欧拉角度到文件
+			eura_file << anglesToADS[angle] << ",";
+			// 注意最终输出给ads的其实是真实值
+			anglesToADS[angle] = filtedAngles[angle];
+		}
+		for (int angle = 0; angle < 6; angle++)
+		{
+			// 输出滤波后的数据
+			angles_file << filtedAngles[angle] << ",";
+		}
+		// 输出数据正确标志位
+		eura_file << anglesToADS[6];
+		angles_file << "\n";
+		eura_file << "\n";
 	}
-	// 输出数据正确标志位
-	eura_file << anglesToADS[6];
-	angles_file << "\n";
-	eura_file << "\n";
+	else
+	{
+		for (int angle = 0; angle < 6; angle++)
+		{
+			// 注意最终输出给ads的其实是真实值
+			anglesToADS[angle] = filtedAngles[angle];
+		}
+	}
+	
 	// 将左右腿的数值交换数值，以供控制系统使用
 	for (int angle = 0; angle < 3; angle++)
 	{

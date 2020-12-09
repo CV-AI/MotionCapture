@@ -27,6 +27,8 @@ static bool TRACKING = true;
 
 // 是否把中间处理过程的输出打印出来
 const bool _PRINT_PROCESS = false;
+// 是否将角度值保存到文件
+const bool _WRITE_ANGLES_TO_FILE = true;
 // MAX and MIN H, S, V 
 // for color thresholding
 const cv::Scalar UPPER_RED = cv::Scalar(255, 255, 255);
@@ -37,5 +39,4 @@ const int NUM_MARKERS = 6;
 
 const int NUM_MARKER_SET = 3;
 const double weight = 0.5;
-#define MY_PI 3.1415926;
 #endif // !_CONFIG_PARAMS_HEADER

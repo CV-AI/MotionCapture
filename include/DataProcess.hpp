@@ -42,7 +42,7 @@ public:
 	std::ofstream eura_file;
 	
 	void mapTo3D();
-	
+	size_t currentFrameCnt = 0;
 	cv::Point3f mapTo3D(int, cv::Point, cv::Point);
 	void getJointAngle();
 	
