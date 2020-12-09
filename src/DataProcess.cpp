@@ -94,7 +94,7 @@ DataProcess::DataProcess()
 
 DataProcess::~DataProcess()
 {
-	// opened files should be close when not needed
+	// opened files should be closed when not needed
 	angles_file.close();
 	eura_file.close();
 }
@@ -121,8 +121,7 @@ void DataProcess::mapTo3D()
 		{
 			for (int marker = 0; marker < 6; marker++)
 			{
-				std::cout << "Marker Pos after adding offset " << camera << " marker " << marker << " " << points[camera][marker] << std::endl;
-				std::cout << "After undistort mapping" << mapped_points[camera][marker] << std::endl;
+				std::cout << "Marker Pos Global" << camera << " marker " << marker << " " << points[camera][marker] << ". After undistortion: " << mapped_points[camera][marker] << std::endl;
 			}
 		}
 	}	
@@ -149,8 +148,8 @@ void DataProcess::mapTo3D()
 		MarkerPos3D[1][marker] = cv::Point3f(MarkerPosVecR[marker]);
 		if (_PRINT_PROCESS)
 		{
-			std::cout << "3D Pos of Camera 0, Marker " << marker << " : " << MarkerPos3D[0][marker] << std::endl;
-			std::cout << "3D Pos of Camera 1, Marker " << marker << " : " << MarkerPos3D[1][marker] << std::endl;
+			std::cout << "CameraSet 0, Marker " << marker << " : " << MarkerPos3D[0][marker];
+			std::cout << "CameraSet 1, Marker " << marker << " : " << MarkerPos3D[1][marker] << std::endl;
 		}
 	}
 	// 根据一对标记点的距离判断是否跟丢
@@ -214,8 +213,8 @@ cv::Point3f DataProcess::mapTo3D(int camera_set, cv::Point upper_point, cv::Poin
 	std::vector<cv::Point2f> temp_u;
 	std::vector<cv::Point2f> temp_l;
 	std::vector<cv::Point3f> disparityVec, MarkerPosVec;
-	temp_u.push_back(cv::Point2f(upper_point + offset[2*camera_set]));
-	temp_l.push_back(cv::Point2f(lower_point+ offset[2 * camera_set+1]));
+	temp_u.push_back(cv::Point2f(upper_point + offset[2 * camera_set]));
+	temp_l.push_back(cv::Point2f(lower_point+ offset[2 * camera_set + 1]));
 	cv::undistortPoints(temp_u, temp_u, cameraMatrix[2 * camera_set], distorCoeff[2 * camera_set], Rectify[2 * camera_set], Projection[2 * camera_set]);
 	cv::undistortPoints(temp_l, temp_l, cameraMatrix[2 * camera_set+1], distorCoeff[2 * camera_set + 1], Rectify[2 * camera_set + 1], Projection[2 * camera_set + 1]);
 	disparityVec.push_back(cv::Point3f(temp_u[0].x, temp_u[0].y, temp_u[0].y - temp_l[0].y));
@@ -243,8 +242,8 @@ void DataProcess::getJointAngle()
 		double knee = cv::fastAtan2(shank[i].z, shank[i].x);
 		double ankle = cv::fastAtan2(foot[i].z, foot[i].x);
 		anglesToADS[3 * i] = hip - 270.0;
-		anglesToADS[3 * i + 1] = -(anglesToADS[3 * i] - knee);
-		anglesToADS[3 * i + 2] = anglesToADS[3 * i + 1] - ankle;
+		anglesToADS[3 * i + 1] = -(hip - knee);
+		anglesToADS[3 * i + 2] = knee - ankle;
 	}
 }
 

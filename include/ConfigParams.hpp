@@ -26,11 +26,11 @@ const bool SetExposureManual = true;
 static bool TRACKING = true;
 
 // 是否把中间处理过程的输出打印出来
-const bool _PRINT_PROCESS = false;
+const bool _PRINT_PROCESS = true;
 // MAX and MIN H, S, V 
 // for color thresholding
 const cv::Scalar UPPER_RED = cv::Scalar(255, 255, 255);
-const cv::Scalar LOWER_RED = cv::Scalar(230, 230, 230);
+const cv::Scalar LOWER_RED = cv::Scalar(240, 235, 235);
 // number of cameras and markers
 const int NUM_CAMERAS = 4;
 const int NUM_MARKERS = 6;

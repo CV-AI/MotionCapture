@@ -126,7 +126,6 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 		std::sort(contours.begin(), contours.end(), compareContourHeight);
 		cv::Point2f center_0 = cv::minAreaRect(contours[0]).center;
 		currentPos[camera_index][2 * marker_set] = center_0 + cv::Point2f(detectPosition);
-
 		cv::Point2f p0 = cv::minAreaRect(contours[1]).center + cv::Point2f(detectPosition);
 		cv::Point2f p1 = cv::minAreaRect(contours[2]).center + cv::Point2f(detectPosition);
 		cv::Point2f prev = previousPos[camera_index][2 * marker_set + 1];
