@@ -16,13 +16,12 @@ using namespace Spinnaker::GenApi;
 using namespace Spinnaker::GenICam;
 using namespace std;
 
-// Example entry point; please see Enumeration example for more in-depth 
-// comments on preparing and cleaning up the system.
 int main(int /*argc*/, char** /*argv*/)
 {   
    
 	bool status = true;
 	TRACKING = false;
+	exposureTimeToSet = 11000.0f;
     // let the program know which camera to acquire image from
     
     cv::Mat image_LU, image_RU, image_RL, image_LL; // Left_Upper, Right_Upper, Right_Lower, Left_Lower

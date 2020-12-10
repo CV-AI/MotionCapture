@@ -16,11 +16,8 @@ static int64_t height[4] = { 800, 800, 800, 800 };
 static int64_t width[4] = { 576, 576, 576, 576 }; // multiple of 32
 // 在内存中缓存的图像数目，太大则占用内存，太小则影响同步处理
 const int64_t numBuffers = 2;
-// 想要设定的帧率（目前来说还无法正常工作）
-const float frameRate = 80.0f;
 // 曝光时间，以微秒为单位
 static float exposureTimeToSet = 500.0f;
-//static float exposureTimeToSet = 11000.0f;
 const bool SetExposureManual = true;
 // 在标定世界坐标系时设为false
 static bool TRACKING = true;
@@ -32,7 +29,7 @@ const bool _WRITE_ANGLES_TO_FILE = true;
 // MAX and MIN H, S, V 
 // for color thresholding
 const cv::Scalar UPPER_RED = cv::Scalar(255, 255, 255);
-const cv::Scalar LOWER_RED = cv::Scalar(230, 230, 230);
+const cv::Scalar LOWER_RED = cv::Scalar(225, 225, 225);
 // number of cameras and markers
 const int NUM_CAMERAS = 4;
 const int NUM_MARKERS = 6;

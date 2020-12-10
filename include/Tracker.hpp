@@ -74,7 +74,6 @@ public:
 	}
 };
 float pointDist(const cv::Point2f& p0, const cv::Point2f& p1);
-std::vector<int> decodeErrorMarkerSets(int);
 int encodeErrorMarkerSets(std::vector<int>);
 cv::Mat colorThresholding(const cv::Mat& color_img);
 DWORD WINAPI UpdateTracker(LPVOID lpParam);

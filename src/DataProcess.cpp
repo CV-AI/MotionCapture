@@ -434,7 +434,6 @@ void sortChessboardCorners(std::vector<cv::Point2f> &corners)
 	}
 }
 
-
 bool comparePointY(cv::Point2f pnt0, cv::Point2f pnt1)
 {
 	return pnt0.y > pnt1.y;

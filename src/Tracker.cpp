@@ -56,6 +56,11 @@ bool Tracker::autoInitMarkerPosition(int camera_index)
 	}
 	// 找到contour的boundingRect的中心
 	std::vector<cv::Point2f> selected_contour_centers;
+	if (contours.size() < NUM_MARKERS)
+	{
+		std::wcerr << "There is no enough contours" << std::endl;
+		return false;
+	}
 	for (int i = 0; i < NUM_MARKERS; i++)
 	{
 		if (_PRINT_PROCESS)
@@ -134,11 +139,11 @@ bool Tracker:: manualInitMarkerPosition(int camera_index)
 //更新标记点、标记点对的位置
 bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 {
-	detectWindow = colorThresholding(detectWindow);
+	cv::Mat binary = colorThresholding(detectWindow);
 	//cv::erode(detectWindow, detectWindow, mask_erode);
-	cv::morphologyEx(detectWindow, detectWindow, cv::MORPH_CLOSE, mask);
+	cv::morphologyEx(binary, binary, cv::MORPH_CLOSE, mask);
 	std::vector<std::vector<cv::Point>>contours;
-	cv::findContours(detectWindow, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+	cv::findContours(binary, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
 	if (contours.size() ==2)
 	{
 		// 如果只有两个标记的在检测框中
@@ -181,6 +186,11 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 	{
 		// TODO: 如果使用颜色跟踪失败则需要使用其他跟踪方法
 		std::cout << "Number of contours is wrong:  " << contours.size() << std::endl;
+		char* file = new char[12];
+		sprintf(file, "raw_c%im%i.jpg", camera_index, marker_set);
+		cv::imwrite(file, detectWindow);
+		sprintf(file, "bin_c%im%i.jpg", camera_index, marker_set);
+		cv::imwrite(file, binary);
 		return false;
 	}
 	currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
@@ -285,20 +295,8 @@ bool Tracker::RectifyMarkerPos(int camera_index)
 
 float pointDist(const cv::Point2f& p0, const cv::Point2f& p1)
 {
-	// we don't calculate sqaure root because it's not important to our goal
+	// 没有计算开方，因为没有必要
 	return pow(p0.x-p1.x,2)+pow(p0.y-p1.y,2);
-}
-
-std::vector<int> decodeErrorMarkerSets(int code)
-{
-	if (code == 0)
-	{
-		return std::vector<int> {};
-	}
-	else if (code == 1)
-	{
-		return std::vector<int> {1};
-	}
 }
 
 cv::Mat colorThresholding(const cv::Mat& color_img)
