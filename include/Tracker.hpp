@@ -49,8 +49,8 @@ public:
 	const cv::Point2i detectWindowDim[NUM_CAMERAS][NUM_MARKER_SET] = { 
 										{{60, 120}, {75, 120}, {90, 90} },
 										{{60, 120}, {75, 120}, {90, 90} },
-										{{60, 120}, {60, 110}, {90, 90} },
-										{{60, 120}, {60, 110}, {90, 90} }};
+										{{60, 120}, {60, 110}, {80, 90} },
+										{{60, 120}, {60, 110}, {80, 90} }};
 	int threshold;
 	bool TrackerAutoIntialized;
 	// 用于遮掩环境光干扰的mask

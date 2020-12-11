@@ -83,9 +83,9 @@ public:
 	AmsAddr   Addr;		//定义AMS地址变量
 	PAmsAddr  pAddr = &Addr;  	//定义端口地址变量
 	unsigned long lHdlVar2;   	//创建句柄
-	char szVar2[20] = { "MAIN.VisionAngle" };
+	char szVar2[20] = { "MAIN.VisionAngleIni" };
 };
-constexpr float dtUsed = 0.011; // 采样时间
+constexpr float dtUsed = 0.010; // 采样时间
 constexpr float cutoff = 2.0; // 截止频率
 constexpr double tau = 1/(2*3.1415926*cutoff); // 滤波器的时间常数
 // 无论是写成vector还是[]，最终会因为Filter对象没有被初始化而出错

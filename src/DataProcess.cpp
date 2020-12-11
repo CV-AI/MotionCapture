@@ -269,7 +269,7 @@ void DataProcess::getJointAngle()
 		double knee = cv::fastAtan2(shank[i].z, shank[i].x);
 		double ankle = cv::fastAtan2(foot[i].z, foot[i].x);
 		anglesToADS[3 * i] = hip - 270.0;
-		anglesToADS[3 * i + 1] = hip - knee;
+		anglesToADS[3 * i + 1] = knee - hip;
 		if (180 < ankle)
 		{
 			anglesToADS[3 * i + 2] = ankle - knee;
@@ -339,14 +339,18 @@ bool DataProcess::exportGaitData()
 		//通过句柄向PLC写入数组
 		nErr = AdsSyncWriteReq(pAddr, ADSIGRP_SYM_VALBYHND, lHdlVar2, sizeof(anglesToADS), anglesToADS);
 		if (nErr) std::cerr << "Error: AdsSyncReadReq: " << nErr << '\n';
-	}
+	}/*
+	else
+	{
+		printf("-----ADS is not opened-----\n");
+	}*/
 	return true;
 }
 
 // 为左右两个相机坐标系找到从相机坐标系到世界坐标系的转换矩阵
 bool DataProcess::FindWorldFrame(cv::Mat images[4])
 {
-	cv::Size boardsize(3, 3);
+	cv::Size boardsize(3, 3); 
 	cv::Point3f p0, p1, p2;
 	
 	for (int camera_set = 0; camera_set < NUM_CAMERAS / 2; camera_set++)
