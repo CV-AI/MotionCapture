@@ -12,7 +12,7 @@
 #include "ConfigParams.hpp"
 
 enum TrackerType { ByDetection, CV_KCF, ByColor };
-
+const int DETECT_WINDOW_BOUNDRY = 20;
 class Tracker
 {
 	
@@ -46,15 +46,11 @@ public:
 	bool InitTracker(TrackerType); 
 	bool RectifyMarkerPos(int);
 	// 每个检测窗口的大小
-	const cv::Point2i detectWindowDim[NUM_CAMERAS][NUM_MARKER_SET] = { 
-										{{60, 120}, {75, 120}, {90, 90} },
-										{{60, 120}, {75, 120}, {90, 90} },
-										{{60, 120}, {60, 110}, {80, 90} },
-										{{60, 120}, {60, 110}, {80, 90} }};
+	static cv::Point2i detectWindowDim[NUM_CAMERAS][NUM_MARKER_SET];
+	static cv::Point2i detectWindowDimMin[NUM_CAMERAS][NUM_MARKER_SET];
 	int threshold;
 	bool TrackerAutoIntialized;
-	// 用于遮掩环境光干扰的mask
-	cv::FileStorage Roi_Area_File;
+	void updateDetectWindowDims();
 }; 
 class TrackerParameters
 {
@@ -75,7 +71,7 @@ public:
 };
 float pointDist(const cv::Point2f& p0, const cv::Point2f& p1);
 int encodeErrorMarkerSets(std::vector<int>);
-cv::Mat colorThresholding(const cv::Mat& color_img);
+cv::Mat colorThresholding(const cv::Mat& color_img,bool tracking);
 DWORD WINAPI UpdateTracker(LPVOID lpParam);
 
 

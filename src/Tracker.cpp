@@ -15,6 +15,16 @@ Tracker::~Tracker()
 cv::Mat Tracker:: image;
 bool Tracker::getColors = false;
 cv::Rect Tracker::calibration_region;
+cv::Point2i Tracker::detectWindowDim[NUM_CAMERAS][NUM_MARKER_SET] = {
+										{{60, 120}, {65, 100}, {70, 80} },
+										{{60, 120}, {65, 100}, {70, 80} },
+										{{60, 120}, {60, 110}, {80, 80} },
+										{{60, 120}, {60, 110}, {80, 80} } };
+cv::Point2i Tracker::detectWindowDimMin[NUM_CAMERAS][NUM_MARKER_SET] = {
+										{{60, 80}, {65, 80}, {70, 80} },
+										{{60, 80}, {65, 80}, {70, 80} },
+										{{60, 80}, {60, 80}, {80, 80} },
+										{{60, 80}, {60, 80}, {80, 80} } };
 cv::Mat Tracker::ReceivedImages[NUM_CAMERAS];
 cv::Point2f Tracker::currentPos[NUM_CAMERAS][NUM_MARKERS];
 cv::Point2f Tracker::previousPos[NUM_CAMERAS][NUM_MARKERS];
@@ -42,7 +52,7 @@ bool compareContourX(std::vector<cv::Point> contour1, std::vector<cv::Point> con
 
 bool Tracker::autoInitMarkerPosition(int camera_index)
 {
-	cv::Mat binary = colorThresholding(detectWindow_Initial);
+	cv::Mat binary = colorThresholding(detectWindow_Initial, false);
 	cv::morphologyEx(binary, binary, cv::MORPH_CLOSE, mask);
 	cv::namedWindow("detectwindow", 0);
 	std::vector<std::vector<cv::Point>>contours;
@@ -95,7 +105,7 @@ bool Tracker::autoInitMarkerPosition(int camera_index)
 // 通过contour获取六个标记点的起始位置
 bool Tracker:: manualInitMarkerPosition(int camera_index)
 {	
-	cv::Mat binary = colorThresholding(detectWindow_Initial);
+	cv::Mat binary = colorThresholding(detectWindow_Initial, false);
 	cv::morphologyEx(binary, binary, cv::MORPH_CLOSE, mask);
 	cv::namedWindow("detectwindow", 0);
 	cv::imshow("detectwindow", binary);
@@ -139,7 +149,7 @@ bool Tracker:: manualInitMarkerPosition(int camera_index)
 //更新标记点、标记点对的位置
 bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 {
-	cv::Mat binary = colorThresholding(detectWindow);
+	cv::Mat binary = colorThresholding(detectWindow, true);
 	//cv::erode(detectWindow, detectWindow, mask_erode);
 	cv::morphologyEx(binary, binary, cv::MORPH_CLOSE, mask);
 	std::vector<std::vector<cv::Point>>contours;
@@ -186,11 +196,11 @@ bool Tracker::updateMarkerPosition(int camera_index, int marker_set)
 	{
 		// TODO: 如果使用颜色跟踪失败则需要使用其他跟踪方法
 		std::cout << "Number of contours is wrong:  " << contours.size() << std::endl;
-		char* file = new char[12];
-		sprintf(file, "raw_c%im%i.jpg", camera_index, marker_set);
-		cv::imwrite(file, detectWindow);
-		sprintf(file, "bin_c%im%i.jpg", camera_index, marker_set);
-		cv::imwrite(file, binary);
+		//char* file = new char[12];
+		//sprintf(file, "raw_c%im%i.jpg", camera_index, marker_set);
+		//cv::imwrite(file, detectWindow);
+		//sprintf(file, "bin_c%im%i.jpg", camera_index, marker_set);
+		//cv::imwrite(file, binary);
 		return false;
 	}
 	currentPosSet[camera_index][marker_set] = 0.5 * (currentPos[camera_index][2 * marker_set] + currentPos[camera_index][2 * marker_set + 1]);
@@ -284,13 +294,25 @@ bool Tracker::RectifyMarkerPos(int camera_index)
 	{
 		if (currentPos[camera_index][4].x > currentPos[camera_index][5].x)
 		{
-			if ((currentPos[camera_index][5].y - currentPos[camera_index][4].y) < 20)
-			{
-				std::swap(currentPos[camera_index][4], currentPos[camera_index][5]);
-			}
+			
+			std::swap(currentPos[camera_index][4], currentPos[camera_index][5]);
 		}
 	}
 	return true;
+}
+
+void Tracker::updateDetectWindowDims()
+{
+	for (int camera = 0; camera < NUM_CAMERAS; camera++)
+	{
+		for (int marker_set = 0; marker_set < NUM_MARKER_SET; marker_set++)
+		{
+			int dy = abs(currentPos[camera][marker_set*2].y - currentPos[camera][marker_set*2+1].y);
+			int dx = abs(currentPos[camera][marker_set*2].x - currentPos[camera][marker_set*2+1].x);
+			detectWindowDim[camera][marker_set].x = dx + DETECT_WINDOW_BOUNDRY;
+			detectWindowDim[camera][marker_set].y = dy + DETECT_WINDOW_BOUNDRY;
+		}
+	}
 }
 
 float pointDist(const cv::Point2f& p0, const cv::Point2f& p1)
@@ -299,10 +321,17 @@ float pointDist(const cv::Point2f& p0, const cv::Point2f& p1)
 	return pow(p0.x-p1.x,2)+pow(p0.y-p1.y,2);
 }
 
-cv::Mat colorThresholding(const cv::Mat& color_img)
+cv::Mat colorThresholding(const cv::Mat& color_img, bool tracking)
 {
 	cv::Mat rangeRes = cv::Mat::zeros(color_img.size(), CV_8UC1);
-	cv::inRange(color_img, LOWER_RED, UPPER_RED, rangeRes);
+	if (tracking)
+	{
+		cv::inRange(color_img, LOWER_RED_TRACK, UPPER_RED, rangeRes);
+	}
+	else
+	{
+		cv::inRange(color_img, LOWER_RED, UPPER_RED, rangeRes);
+	}
 	return rangeRes;
 }
 

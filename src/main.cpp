@@ -269,6 +269,7 @@ int main(int /*argc*/, char** /*argv*/)
 						}
 					}
 					dataProcess.exportGaitData();
+					tracker.updateDetectWindowDims();
 					stop_export = std::chrono::high_resolution_clock::now();
 					std::chrono::duration<double> time_export = stop_export - finish_tracking;
 					//std::cout << "Time on export gait data: " << time_export.count() << std::endl;

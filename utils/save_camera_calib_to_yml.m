@@ -66,7 +66,7 @@ for c=1:2
     for row=1:3
         for col=1:3
             fprintf(fileID, "%.9e", m(row,col));
-            if row<3 || col<3
+            if row<3 || col<3 
                 fprintf(fileID, ", "); % cannot add "," after last element
             end
         end
